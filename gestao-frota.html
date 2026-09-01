@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FrotaCTRL — Gestão de Frota</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body class="has-nav">
+<div id="loading" class="loading-screen">Carregando…</div>
+
+<div class="shell" id="shell" style="display:none;">
+  <div class="topbar">
+    <div class="topbar__brand"><div class="topbar__logo">F</div><div class="topbar__title">FrotaCTRL</div></div>
+    <div class="topbar__user" id="user-avatar">--</div>
+  </div>
+
+  <div class="page" id="view-fila">
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="section-title"><span>Pendências da Gestão de Frota</span></div>
+    <div id="lista-fila"></div>
+  </div>
+
+  <div class="page" id="view-equipamentos" style="display:none;">
+    <div class="section-title"><span>Equipamentos</span><button class="btn btn--ghost btn--sm" id="btn-novo-equip">+ Equipamento</button></div>
+    <div id="lista-equipamentos"></div>
+  </div>
+
+  <div class="page" id="view-chamados" style="display:none;">
+    <div class="section-title"><span>Todos os chamados</span></div>
+    <div id="lista-todos-chamados"></div>
+  </div>
+
+  <div class="page" id="view-perfil" style="display:none;">
+    <div class="section-title"><span>Minha conta</span></div>
+    <div class="kv-row"><span class="kv-row__k">Nome</span><span id="perfil-nome"></span></div>
+    <div class="kv-row"><span class="kv-row__k">E-mail</span><span id="perfil-email"></span></div>
+    <div class="kv-row"><span class="kv-row__k">Perfil</span><span>Gestão de Frota</span></div>
+    <a class="btn btn--secondary" href="dashboard.html" style="margin-top:16px;">Ver indicadores</a>
+    <button class="btn btn--danger" style="margin-top:10px;" onclick="logout()">Sair</button>
+  </div>
+
+  <div class="bottomnav">
+    <button class="navitem active" data-view="fila">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
+      Fila
+    </button>
+    <button class="navitem" data-view="equipamentos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h4l3-8 4 16 3-8h4"/></svg>
+      Frota
+    </button>
+    <button class="navitem" data-view="chamados">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 14l2 2 4-4"/></svg>
+      Chamados
+    </button>
+    <button class="navitem" data-view="perfil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+      Perfil
+    </button>
+  </div>
+</div>
+
+<!-- SHEET: ACIONAR FORNECEDOR -->
+<div class="overlay hidden" id="overlay-acionar">
+  <div class="sheet">
+    <div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Acionar fornecedor</h3><button class="close-x" data-close="overlay-acionar">✕</button></div>
+    <form id="form-acionar">
+      <input type="hidden" id="ac-chamado-id" />
+      <div class="field"><label>Fornecedor</label><select id="ac-fornecedor" required></select></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Acionar</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: EQUIPAMENTO -->
+<div class="overlay hidden" id="overlay-equip">
+  <div class="sheet">
+    <div class="sheet__handle"></div>
+    <div class="sheet__header"><h3 id="equip-titulo">Novo equipamento</h3><button class="close-x" data-close="overlay-equip">✕</button></div>
+    <form id="form-equip">
+      <input type="hidden" id="eq-id" />
+      <div class="grid-2">
+        <div class="field" style="margin-top:0;"><label>Nº da frota</label><input type="text" id="eq-numero" required /></div>
+        <div class="field" style="margin-top:0;"><label>Ano</label><input type="number" id="eq-ano" /></div>
+      </div>
+      <div class="field"><label>Tipo / modelo</label><input type="text" id="eq-modelo" required /></div>
+      <div class="grid-2">
+        <div class="field" style="margin-top:0;"><label>Fabricante</label><input type="text" id="eq-fabricante" /></div>
+        <div class="field" style="margin-top:0;"><label>Fornecedor</label><input type="text" id="eq-fornecedor-nome" /></div>
+      </div>
+      <div class="grid-2">
+        <div class="field" style="margin-top:0;"><label>Planta</label><select id="eq-planta"></select></div>
+        <div class="field" style="margin-top:0;"><label>Setor</label><select id="eq-setor"></select></div>
+      </div>
+      <div class="grid-2">
+        <div class="field" style="margin-top:0;"><label>Início locação</label><input type="date" id="eq-inicio" /></div>
+        <div class="field" style="margin-top:0;"><label>Contrato / valor mensal</label><input type="number" step="0.01" id="eq-contrato" /></div>
+      </div>
+      <div class="grid-2">
+        <div class="field" style="margin-top:0;"><label>Capacidade</label><input type="text" id="eq-capacidade" placeholder="Ex: 2,5t" /></div>
+        <div class="field" style="margin-top:0;"><label>Energia / combustível</label><input type="text" id="eq-energia" placeholder="Elétrico, GLP…" /></div>
+      </div>
+      <div class="grid-2">
+        <div class="field" style="margin-top:0;"><label>Criticidade</label><select id="eq-criticidade"></select></div>
+        <div class="field" style="margin-top:0;"><label>Backup disponível?</label><select id="eq-backup"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
+      </div>
+      <div class="grid-2">
+        <div class="field" style="margin-top:0;"><label>Status operacional</label><select id="eq-status"></select></div>
+        <div class="field" style="margin-top:0;"><label>Horímetro atual</label><input type="number" step="0.1" id="eq-horimetro" /></div>
+      </div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Salvar equipamento</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script src="gestao-frota.js"></script>
+</body>
+</html>

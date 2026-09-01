@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FrotaCTRL — Indicadores</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="loading" class="loading-screen">Carregando…</div>
+
+<div class="shell" id="shell" style="display:none; padding-bottom: 24px;">
+  <div class="topbar">
+    <button class="btn btn--ghost btn--sm" onclick="voltar()" style="width:auto;">← Voltar</button>
+    <div class="topbar__title">Indicadores</div>
+    <div style="width:34px;"></div>
+  </div>
+
+  <div class="page">
+    <div class="tabs">
+      <button class="active" data-tab="operacional">Operacional</button>
+      <button data-tab="mauuso">Mau uso</button>
+      <button data-tab="financeiro">Financeiro</button>
+      <button data-tab="recorrencia">Recorrência</button>
+    </div>
+
+    <div id="tab-operacional"></div>
+    <div id="tab-mauuso" style="display:none;"></div>
+    <div id="tab-financeiro" style="display:none;"></div>
+    <div id="tab-recorrencia" style="display:none;"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FrotaCTRL — Aprovador</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body class="has-nav">
+<div id="loading" class="loading-screen">Carregando…</div>
+
+<div class="shell" id="shell" style="display:none;">
+  <div class="topbar">
+    <div class="topbar__brand"><div class="topbar__logo">F</div><div class="topbar__title">FrotaCTRL</div></div>
+    <div class="topbar__user" id="user-avatar">--</div>
+  </div>
+
+  <div class="page" id="view-fila">
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="section-title"><span>Aguardando aprovação</span></div>
+    <div id="lista-fila"></div>
+  </div>
+
+  <div class="page" id="view-perfil" style="display:none;">
+    <div class="section-title"><span>Minha conta</span></div>
+    <div class="kv-row"><span class="kv-row__k">Nome</span><span id="perfil-nome"></span></div>
+    <div class="kv-row"><span class="kv-row__k">Perfil</span><span>Aprovador</span></div>
+    <button class="btn btn--danger" style="margin-top:24px;" onclick="logout()">Sair</button>
+  </div>
+
+  <div class="bottomnav">
+    <button class="navitem active" data-view="fila">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Aprovações
+    </button>
+    <button class="navitem" data-view="perfil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+      Perfil
+    </button>
+  </div>
+</div>
+
+<!-- SHEET: DECISÃO -->
+<div class="overlay hidden" id="overlay-decisao">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Decisão de aprovação</h3><button class="close-x" data-close="overlay-decisao">✕</button></div>
+    <form id="form-decisao">
+      <input type="hidden" id="dc-id" />
+      <div class="field"><label>Decisão</label>
+        <select id="dc-decisao"><option value="aprovado">Aprovar</option><option value="reprovado">Reprovar</option><option value="esclarecimento">Solicitar esclarecimento</option></select>
+      </div>
+      <div class="field"><label>Comentário</label><textarea id="dc-comentario" placeholder="Opcional"></textarea></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar decisão</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script src="aprovador.js"></script>
+</body>
+</html>

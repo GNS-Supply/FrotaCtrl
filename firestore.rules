@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() { return request.auth != null; }
+    function meuUsuario() { return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data; }
+    function souPerfil(p) { return logado() && meuUsuario().tipo == p; }
+    function souGestao() { return souPerfil('gestao_frota'); }
+    function souAdmin() { return souPerfil('administrador'); }
+    function souFornecedor() { return souPerfil('fornecedor'); }
+    function souManutencao() { return souPerfil('manutencao'); }
+    function souAprovador() { return souPerfil('aprovador'); }
+    function souSolicitante() { return souPerfil('solicitante'); }
+    // Perfis que podem atuar sobre um chamado além do próprio solicitante
+    function souAtorInterno() { return souGestao() || souAdmin() || souFornecedor() || souManutencao() || souAprovador(); }
+
+    match /usuarios/{userId} {
+      allow read: if logado();
+      allow create: if logado() && request.auth.uid == userId;
+      allow update: if logado() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    match /plantas/{id} {
+      allow read: if logado();
+      allow write: if souAdmin();
+    }
+    match /setores/{id} {
+      allow read: if logado();
+      allow write: if souAdmin();
+    }
+    match /configuracoes/{id} {
+      allow read: if logado();
+      allow write: if souAdmin();
+    }
+    match /contadores/{id} {
+      allow read: if logado();
+      allow write: if logado(); // incrementado via transação ao abrir chamado
+    }
+
+    match /equipamentos/{id} {
+      allow read: if logado();
+      allow create: if souGestao() || souAdmin();
+      allow update: if souGestao() || souAdmin() || souFornecedor();
+      allow delete: if souAdmin();
+    }
+
+    match /chamados/{id} {
+      allow read: if logado();
+      allow create: if souSolicitante() && request.resource.data.solicitanteId == request.auth.uid;
+      allow update: if souAtorInterno();
+      allow delete: if false;
+    }
+  }
+}

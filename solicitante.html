@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FrotaCTRL — Solicitante</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body class="has-nav">
+<div id="loading" class="loading-screen">Carregando…</div>
+
+<div class="shell" id="shell" style="display:none;">
+  <div class="topbar">
+    <div class="topbar__brand"><div class="topbar__logo">F</div><div class="topbar__title">FrotaCTRL</div></div>
+    <div class="topbar__user" id="user-avatar">--</div>
+  </div>
+
+  <div class="page" id="view-meus">
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="section-title"><span>Meus chamados</span></div>
+    <div id="lista-chamados"></div>
+  </div>
+
+  <div class="page" id="view-perfil" style="display:none;">
+    <div class="section-title"><span>Minha conta</span></div>
+    <div class="kv-row"><span class="kv-row__k">Nome</span><span id="perfil-nome"></span></div>
+    <div class="kv-row"><span class="kv-row__k">Empresa</span><span id="perfil-empresa"></span></div>
+    <div class="kv-row"><span class="kv-row__k">E-mail</span><span id="perfil-email"></span></div>
+    <div class="kv-row"><span class="kv-row__k">Perfil</span><span>Solicitante</span></div>
+    <button class="btn btn--danger" style="margin-top:24px;" onclick="logout()">Sair</button>
+  </div>
+
+  <div class="spacer-fab" id="fab-wrap"><button class="fab" id="btn-fab-chamado">+</button></div>
+
+  <div class="bottomnav">
+    <button class="navitem active" data-view="meus">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 14l2 2 4-4"/></svg>
+      Chamados
+    </button>
+    <button class="navitem" data-view="perfil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+      Perfil
+    </button>
+  </div>
+</div>
+
+<!-- SHEET: NOVO CHAMADO -->
+<div class="overlay hidden" id="overlay-chamado">
+  <div class="sheet">
+    <div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Abrir chamado</h3><button class="close-x" data-close="overlay-chamado">✕</button></div>
+    <form id="form-chamado">
+      <div class="field"><label>Equipamento (planta → setor → frota)</label>
+        <select id="ch-equipamento" required></select>
+      </div>
+      <div class="callout" id="ch-equip-info">Selecione um equipamento para ver planta e setor.</div>
+      <div class="grid-2">
+        <div class="field" style="margin-top:0;"><label>Turno</label>
+          <select id="ch-turno"><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="noite">Noite</option></select>
+        </div>
+        <div class="field" style="margin-top:0;"><label>Horímetro atual</label><input type="number" step="0.1" id="ch-horimetro" required /></div>
+      </div>
+      <div class="field"><label>Categoria da ocorrência</label><select id="ch-categoria"></select></div>
+      <div class="field"><label>Criticidade</label><select id="ch-criticidade"></select></div>
+      <div class="field"><label>Descrição da ocorrência</label><textarea id="ch-problema" required placeholder="Descreva sintoma, contexto e impacto"></textarea></div>
+      <div class="field"><label>Impacto e segurança</label><textarea id="ch-impacto" placeholder="Parado? Risco? Pode operar?"></textarea></div>
+      <div class="field"><label>Fotos / vídeos (opcional)</label><input type="file" id="ch-fotos" accept="image/*" multiple capture="environment" /></div>
+      <button type="submit" class="btn btn--primary" id="btn-enviar-chamado" style="margin-top:20px;">Enviar chamado</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script src="solicitante.js"></script>
+</body>
+</html>
