@@ -49,6 +49,89 @@ function configurarForms() {
   document.getElementById("form-planta").addEventListener("submit", salvarPlanta);
   document.getElementById("form-setor").addEventListener("submit", salvarSetor);
   document.getElementById("form-parametros").addEventListener("submit", salvarParametros);
+  document.getElementById("form-novo-usuario").addEventListener("submit", cadastrarUsuario);
+}
+
+// ---------- Cadastro de colaboradores/fornecedores pelo admin ----------
+// Criar uma conta de autenticação normalmente derrubaria a sessão do admin
+// (o Firebase Auth troca o usuário logado para o recém-criado). Para evitar
+// isso, a criação roda numa instância secundária do Firebase, isolada da
+// sessão principal; a gravação no Firestore usa a sessão principal (do
+// admin), que é quem tem permissão para criar o documento do novo usuário.
+function appAdminSecundario() {
+  const existente = firebase.apps.find((a) => a.name === "adminCreate");
+  return existente || firebase.initializeApp(firebaseConfig, "adminCreate");
+}
+
+async function cadastrarUsuario(e) {
+  e.preventDefault();
+  const tipo = document.getElementById("nu-tipo").value;
+  const nome = document.getElementById("nu-nome").value.trim();
+  const empresa = document.getElementById("nu-empresa").value.trim();
+  const telefone = document.getElementById("nu-telefone").value.trim();
+  const email = document.getElementById("nu-email").value.trim();
+  const senha = document.getElementById("nu-senha").value;
+  const btn = document.getElementById("btn-novo-usuario");
+  btn.disabled = true;
+  btn.textContent = "Cadastrando…";
+  try {
+    const appSec = appAdminSecundario();
+    const authSec = appSec.auth();
+    const cred = await authSec.createUserWithEmailAndPassword(email, senha);
+    await db.collection("usuarios").doc(cred.user.uid).set({
+      nome, empresa, telefone, email, tipo,
+      master: false,
+      bloqueado: false,
+      criadoPor: usuarioAtual.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await authSec.signOut();
+    e.target.reset();
+    carregarUsuarios();
+    alert(`Usuário ${nome} cadastrado como ${PERFIL_LABELS[tipo]}.`);
+  } catch (err) {
+    alert("Erro ao cadastrar usuário: " + (err.code === "auth/email-already-in-use" ? "este e-mail já está cadastrado." : err.message));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Cadastrar usuário";
+  }
+}
+
+// ---------- Usuários (trocar perfil / bloquear) ----------
+async function carregarUsuarios() {
+  const snap = await db.collection("usuarios").orderBy("criadoEm", "desc").get();
+  const usuarios = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  document.getElementById("lista-usuarios").innerHTML = usuarios.length
+    ? usuarios.map((u) => {
+        const protegido = u.master === true;
+        return `
+      <div class="list-row" style="align-items:flex-start; flex-direction:column; gap:8px;">
+        <div style="display:flex; justify-content:space-between; width:100%;">
+          <div><div class="list-row__title">${escapeHtml(u.nome)} ${protegido ? '<span class="chip chip--P1">MASTER</span>' : ""}</div><div class="list-row__sub">${escapeHtml(u.email)}${u.empresa ? " · " + escapeHtml(u.empresa) : ""}</div></div>
+          ${u.bloqueado ? '<span class="badge badge--red">Bloqueado</span>' : '<span class="badge badge--green">Ativo</span>'}
+        </div>
+        ${protegido ? '<div class="callout" style="margin:0;">Administrador master — perfil e bloqueio protegidos.</div>' : `
+        <div style="display:flex; gap:8px; width:100%;">
+          <select style="flex:1;" onchange="alterarPerfil('${u.id}', this.value)">
+            ${optionsHtml(PERFIL_LABELS, u.tipo)}
+          </select>
+          <button class="btn btn--sm ${u.bloqueado ? "btn--primary" : "btn--secondary"}" onclick="alternarBloqueio('${u.id}', ${!!u.bloqueado})">${u.bloqueado ? "Desbloquear" : "Bloquear"}</button>
+        </div>`}
+      </div>`;
+      }).join("")
+    : `<div class="empty"><div class="empty__text">Nenhum usuário.</div></div>`;
+}
+
+async function alterarPerfil(uid, novoTipo) {
+  await db.collection("usuarios").doc(uid).update({ tipo: novoTipo });
+  carregarUsuarios();
+}
+
+async function alternarBloqueio(uid, bloqueadoAtual) {
+  const acao = bloqueadoAtual ? "desbloquear" : "bloquear";
+  if (!confirm(`Confirma ${acao} este usuário?`)) return;
+  await db.collection("usuarios").doc(uid).update({ bloqueado: !bloqueadoAtual });
+  carregarUsuarios();
 }
 
 // ---------- Plantas ----------
@@ -109,17 +192,4 @@ async function salvarParametros(e) {
     altaDias: parseInt(document.getElementById("pr-alta-dias").value) || 90
   });
   alert("Parâmetros salvos.");
-}
-
-// ---------- Usuários ----------
-async function carregarUsuarios() {
-  const snap = await db.collection("usuarios").orderBy("criadoEm", "desc").get();
-  const usuarios = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  document.getElementById("lista-usuarios").innerHTML = usuarios.length
-    ? usuarios.map((u) => `
-      <div class="list-row">
-        <div><div class="list-row__title">${escapeHtml(u.nome)}</div><div class="list-row__sub">${escapeHtml(u.email)}${u.empresa ? " · " + escapeHtml(u.empresa) : ""}</div></div>
-        <span class="badge badge--blue">${PERFIL_LABELS[u.tipo] || u.tipo}</span>
-      </div>`).join("")
-    : `<div class="empty"><div class="empty__text">Nenhum usuário.</div></div>`;
 }

@@ -61,7 +61,27 @@
     </div>
 
     <div id="sub-usuarios" style="display:none;">
-      <div class="section-title"><span>Usuários cadastrados</span></div>
+      <div class="section-title"><span>Cadastrar colaborador ou fornecedor</span></div>
+      <div class="callout">Use este cadastro para dar acesso a colaboradores internos (Gestão de Frota, Manutenção Magius, Aprovador, outros Administradores) ou fornecedores externos, já com o perfil definido.</div>
+      <form id="form-novo-usuario">
+        <div class="field"><label>Perfil</label>
+          <select id="nu-tipo">
+            <option value="solicitante">Solicitante</option>
+            <option value="gestao_frota">Gestão de Frota</option>
+            <option value="fornecedor">Fornecedor (externo)</option>
+            <option value="manutencao">Manutenção Magius</option>
+            <option value="aprovador">Aprovador</option>
+            <option value="administrador">Administrador</option>
+          </select>
+        </div>
+        <div class="field"><label>Nome completo</label><input type="text" id="nu-nome" required /></div>
+        <div class="field"><label>Empresa</label><input type="text" id="nu-empresa" /></div>
+        <div class="field"><label>Telefone</label><input type="tel" id="nu-telefone" /></div>
+        <div class="field"><label>E-mail</label><input type="email" id="nu-email" required /></div>
+        <div class="field"><label>Senha temporária</label><input type="password" id="nu-senha" required minlength="6" placeholder="A pessoa pode trocar depois" /></div>
+        <button type="submit" class="btn btn--primary" id="btn-novo-usuario" style="margin-top:16px;">Cadastrar usuário</button>
+      </form>
+      <div class="section-title" style="margin-top:26px;"><span>Usuários cadastrados</span></div>
       <div id="lista-usuarios"></div>
     </div>
   </div>

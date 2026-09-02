@@ -121,6 +121,11 @@ function requireAuth(perfilEsperado) {
         return;
       }
       const dados = snap.data();
+      if (dados.bloqueado) {
+        await auth.signOut();
+        window.location.href = "index.html?bloqueado=1";
+        return;
+      }
       if (perfilEsperado && dados.tipo !== perfilEsperado) {
         window.location.href = PERFIL_HOME[dados.tipo] || "index.html";
         return;

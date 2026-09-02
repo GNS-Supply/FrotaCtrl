@@ -16,8 +16,13 @@ service cloud.firestore {
 
     match /usuarios/{userId} {
       allow read: if logado();
-      allow create: if logado() && request.auth.uid == userId;
-      allow update: if logado() && request.auth.uid == userId;
+      // próprio usuário sempre pode criar/editar seu doc; admin pode criar
+      // (cadastro de colaborador/fornecedor) e editar outros, exceto o master
+      allow create: if logado() && (request.auth.uid == userId || souAdmin());
+      allow update: if logado() && (
+        request.auth.uid == userId ||
+        (souAdmin() && resource.data.master != true)
+      );
       allow delete: if false;
     }
 
@@ -29,7 +34,14 @@ service cloud.firestore {
       allow read: if logado();
       allow write: if souAdmin();
     }
-    match /configuracoes/{id} {
+    // Doc que registra se o ADM-MASTER já foi criado (bootstrap da plataforma).
+    // Precisa ser gravável por qualquer pessoa logada, pois no primeiro
+    // cadastro de todos ainda não existe nenhum administrador.
+    match /configuracoes/bootstrap {
+      allow read: if logado();
+      allow write: if logado();
+    }
+    match /configuracoes/parametros {
       allow read: if logado();
       allow write: if souAdmin();
     }

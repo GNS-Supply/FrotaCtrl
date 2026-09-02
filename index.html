@@ -27,17 +27,7 @@
     </form>
 
     <form id="form-cadastro" style="display:none;">
-      <div class="field">
-        <label>Perfil</label>
-        <select id="cad-tipo" required>
-          <option value="solicitante">Solicitante — abre chamados</option>
-          <option value="gestao_frota">Gestão de Frota — triagem, aciona, autoriza, libera</option>
-          <option value="fornecedor">Fornecedor — executa a manutenção</option>
-          <option value="manutencao">Manutenção Magius — valida mau uso</option>
-          <option value="aprovador">Aprovador — aprova valores</option>
-          <option value="administrador">Administrador — cadastros e parâmetros</option>
-        </select>
-      </div>
+      <div class="callout">Cadastro para uso interno. Sua conta entra como <strong>Solicitante</strong> — um administrador pode ajustar seu perfil depois. Se você for a primeira pessoa a se cadastrar nesta plataforma, torna-se automaticamente o Administrador master.</div>
       <div class="field"><label>Nome completo</label><input type="text" id="cad-nome" required /></div>
       <div class="field"><label>Empresa</label><input type="text" id="cad-empresa" /></div>
       <div class="field"><label>Telefone</label><input type="tel" id="cad-telefone" placeholder="(00) 00000-0000" /></div>
@@ -47,6 +37,7 @@
     </form>
 
     <div class="error-msg" id="error-msg"></div>
+    <div class="callout" id="bloqueado-msg" style="display:none; margin-top:14px;">Sua conta foi bloqueada pelo administrador. Fale com a Gestão de Frota ou com o Administrador da plataforma.</div>
   </div>
 </div>
 

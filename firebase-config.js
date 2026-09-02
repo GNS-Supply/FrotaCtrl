@@ -1,9 +1,6 @@
 // ============================================================
-// CONFIGURAÇÃO DO FIREBASE
-// Substitua os valores abaixo pelos dados do SEU projeto Firebase.
-// Console > Configurações do projeto > Seus apps > Config do SDK
+// CONFIGURAÇÃO DO FIREBASE — projeto FrotaCtrl
 // ============================================================
-import { initializeApp } from "firebase/app";
 const firebaseConfig = {
   apiKey: "AIzaSyCIolsvRucTxiXLpc2C4l1TyRsr535yhKs",
   authDomain: "frotactrl.firebaseapp.com",
@@ -15,7 +12,6 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-const app = initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();

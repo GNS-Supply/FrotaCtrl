@@ -63,7 +63,6 @@ formLogin.addEventListener("submit", async (e) => {
 formCadastro.addEventListener("submit", async (e) => {
   e.preventDefault();
   esconderErro();
-  const tipo = document.getElementById("cad-tipo").value;
   const nome = document.getElementById("cad-nome").value.trim();
   const empresa = document.getElementById("cad-empresa").value.trim();
   const telefone = document.getElementById("cad-telefone").value.trim();
@@ -73,8 +72,10 @@ formCadastro.addEventListener("submit", async (e) => {
   btn.disabled = true;
   try {
     const cred = await auth.createUserWithEmailAndPassword(email, senha);
+    const { tipo, master } = await determinarTipoInicial();
     await db.collection("usuarios").doc(cred.user.uid).set({
-      nome, empresa, telefone, email, tipo,
+      nome, empresa, telefone, email, tipo, master,
+      bloqueado: false,
       criadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });
     window.location.href = PERFIL_HOME[tipo] || "index.html";
@@ -84,6 +85,27 @@ formCadastro.addEventListener("submit", async (e) => {
   }
 });
 
+// O primeiro usuário a se cadastrar em toda a plataforma vira Administrador
+// master; todos os demais autocadastros entram como Solicitante (o
+// administrador pode mudar o perfil depois). Usa uma transação sobre um
+// documento "bootstrap" para evitar duas pessoas virarem master ao mesmo tempo.
+async function determinarTipoInicial() {
+  const ref = db.collection("configuracoes").doc("bootstrap");
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const jaExisteMaster = doc.exists && doc.data().admMasterCriado === true;
+    if (jaExisteMaster) {
+      return { tipo: "solicitante", master: false };
+    }
+    tx.set(ref, { admMasterCriado: true }, { merge: true });
+    return { tipo: "administrador", master: true };
+  });
+}
+
 auth.onAuthStateChanged((user) => {
   if (user) redirecionarPorPerfil(user.uid);
 });
+
+if (new URLSearchParams(window.location.search).get("bloqueado") === "1") {
+  document.getElementById("bloqueado-msg").style.display = "block";
+}

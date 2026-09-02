@@ -43,10 +43,31 @@ firestore.rules / storage.rules → regras de segurança (colar no console do Fi
 8. Suba os arquivos para a raiz do repositório e ative GitHub Pages em
    Settings → Pages → Deploy from branch → `main` → `/ (root)`
 
-**Primeiro uso**: cadastre pelo menos um usuário de cada perfil (a tela de
-cadastro pede para escolher o perfil). Depois, como **Administrador**,
-cadastre ao menos uma Planta e um Setor; como **Gestão de Frota**, cadastre
-os equipamentos antes de pedir para o Solicitante abrir chamados.
+**Primeiro uso**: a primeira pessoa a criar uma conta na tela de login vira
+automaticamente **Administrador master**, com permissões totais — veja
+"Cadastro de usuários" abaixo. Depois, como Administrador, cadastre ao
+menos uma Planta e um Setor; como Gestão de Frota, cadastre os
+equipamentos antes de pedir para o Solicitante abrir chamados.
+
+## Cadastro de usuários
+
+O cadastro é **interno** — não é uma tela pública de "crie sua conta e
+escolha seu perfil":
+
+- A **primeira conta** criada em toda a plataforma vira Administrador
+  **master** automaticamente (permissões totais, não pode ser bloqueado
+  ou ter o perfil alterado por outro admin).
+- Qualquer autocadastro **seguinte**, feito pela própria pessoa na tela de
+  login, entra sempre com o perfil **Solicitante** — sem escolha. Um
+  Administrador ajusta o perfil depois, se for o caso.
+- **Administradores** cadastram colaboradores internos (Gestão de Frota,
+  Manutenção Magius, Aprovador, outros Administradores) e fornecedores
+  externos diretamente pelo painel **Administrador → Usuários**, já
+  definindo o perfil e uma senha temporária.
+- Administradores também podem **trocar o perfil** de qualquer usuário
+  (exceto o master) e **bloquear/desbloquear** acessos a qualquer momento
+  — uma conta bloqueada é deslogada automaticamente na próxima tentativa
+  de uso.
 
 ## Perfis e responsabilidades
 
