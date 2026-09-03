@@ -11,39 +11,46 @@ service cloud.firestore {
     function souManutencao() { return souPerfil('manutencao'); }
     function souAprovador() { return souPerfil('aprovador'); }
     function souSolicitante() { return souPerfil('solicitante'); }
+    // Administrador é a conta master oculta (acesso irrestrito); Gestão de
+    // Frota tem, além das próprias funções, todas as permissões de cadastro
+    // (plantas, setores, parâmetros, usuários) que antes eram só do admin.
+    function souGestaoOuAdmin() { return souGestao() || souAdmin(); }
     // Perfis que podem atuar sobre um chamado além do próprio solicitante
     function souAtorInterno() { return souGestao() || souAdmin() || souFornecedor() || souManutencao() || souAprovador(); }
 
     match /usuarios/{userId} {
       allow read: if logado();
-      // próprio usuário sempre pode criar/editar seu doc; admin pode criar
-      // (cadastro de colaborador/fornecedor) e editar outros, exceto o master
-      allow create: if logado() && (request.auth.uid == userId || souAdmin());
+      // próprio usuário sempre pode criar/editar seu doc; Gestão de Frota
+      // (ou o admin master) pode cadastrar colaboradores/fornecedores e
+      // editar outros usuários — exceto a conta administrador, que fica
+      // protegida (não pode ser vista/alterada/bloqueada por ninguém além
+      // de si mesma).
+      allow create: if logado() && (request.auth.uid == userId || souGestaoOuAdmin());
       allow update: if logado() && (
         request.auth.uid == userId ||
-        (souAdmin() && resource.data.master != true)
+        (souGestaoOuAdmin() && resource.data.tipo != 'administrador')
       );
-      allow delete: if false;
+      allow delete: if souGestaoOuAdmin() && resource.data.tipo != 'administrador';
     }
 
     match /plantas/{id} {
       allow read: if logado();
-      allow write: if souAdmin();
+      allow write: if souGestaoOuAdmin();
     }
     match /setores/{id} {
       allow read: if logado();
-      allow write: if souAdmin();
+      allow write: if souGestaoOuAdmin();
     }
-    // Doc que registra se o ADM-MASTER já foi criado (bootstrap da plataforma).
-    // Precisa ser gravável por qualquer pessoa logada, pois no primeiro
-    // cadastro de todos ainda não existe nenhum administrador.
+    // Doc que registra se a conta master já foi criada (bootstrap da
+    // plataforma). Precisa ser gravável por qualquer pessoa logada, pois no
+    // primeiro cadastro de todos ainda não existe nenhum administrador.
     match /configuracoes/bootstrap {
       allow read: if logado();
       allow write: if logado();
     }
     match /configuracoes/parametros {
       allow read: if logado();
-      allow write: if souAdmin();
+      allow write: if souGestaoOuAdmin();
     }
     match /contadores/{id} {
       allow read: if logado();
@@ -52,9 +59,9 @@ service cloud.firestore {
 
     match /equipamentos/{id} {
       allow read: if logado();
-      allow create: if souGestao() || souAdmin();
-      allow update: if souGestao() || souAdmin() || souFornecedor();
-      allow delete: if souAdmin();
+      allow create: if souGestaoOuAdmin();
+      allow update: if souGestaoOuAdmin() || souFornecedor();
+      allow delete: if souGestaoOuAdmin();
     }
 
     match /chamados/{id} {

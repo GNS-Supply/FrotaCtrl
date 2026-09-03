@@ -7,7 +7,7 @@ let chamadoId = null;
 
 (async function init() {
   usuarioAtual = await requireAuth();
-  document.getElementById("user-avatar").textContent = iniciais(usuarioAtual.nome);
+  popularTopbarMeta(usuarioAtual);
 
   const params = new URLSearchParams(window.location.search);
   chamadoId = params.get("id");

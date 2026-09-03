@@ -8,7 +8,7 @@ let pareceresCache = [];
 
 (async function init() {
   usuarioAtual = await requireAuth("manutencao");
-  document.getElementById("user-avatar").textContent = iniciais(usuarioAtual.nome);
+  popularTopbarMeta(usuarioAtual);
   document.getElementById("perfil-nome").textContent = usuarioAtual.nome || "—";
 
   document.getElementById("loading").style.display = "none";

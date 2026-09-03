@@ -49,25 +49,40 @@ automaticamente **Administrador master**, com permissões totais — veja
 menos uma Planta e um Setor; como Gestão de Frota, cadastre os
 equipamentos antes de pedir para o Solicitante abrir chamados.
 
-## Cadastro de usuários
+## Conta master ("administrador") e cadastro de usuários
 
-O cadastro é **interno** — não é uma tela pública de "crie sua conta e
-escolha seu perfil":
+O perfil **"administrador"** não é mais um perfil operacional — é a conta
+**master**, reservada para quem mantém o site (o "desenvolvedor"):
 
-- A **primeira conta** criada em toda a plataforma vira Administrador
-  **master** automaticamente (permissões totais, não pode ser bloqueado
-  ou ter o perfil alterado por outro admin).
+- A **primeira conta** criada em toda a plataforma vira administrador
+  master automaticamente, com **acesso irrestrito a qualquer tela**
+  (`requireAuth` deixa essa conta passar por qualquer checagem de perfil).
+  Ela abre em `administrador.html`, um hub com atalhos para todos os
+  painéis.
+- Essa conta **nunca aparece na lista de usuários** e não pode ser criada
+  por ninguém pela interface — só existe pela primeira conta cadastrada,
+  ou editando o campo `tipo` diretamente no Firestore para quem precisar
+  assumir esse papel depois.
 - Qualquer autocadastro **seguinte**, feito pela própria pessoa na tela de
-  login, entra sempre com o perfil **Solicitante** — sem escolha. Um
-  Administrador ajusta o perfil depois, se for o caso.
-- **Administradores** cadastram colaboradores internos (Gestão de Frota,
-  Manutenção Magius, Aprovador, outros Administradores) e fornecedores
-  externos diretamente pelo painel **Administrador → Usuários**, já
-  definindo o perfil e uma senha temporária.
-- Administradores também podem **trocar o perfil** de qualquer usuário
-  (exceto o master) e **bloquear/desbloquear** acessos a qualquer momento
-  — uma conta bloqueada é deslogada automaticamente na próxima tentativa
-  de uso.
+  login, entra sempre com o perfil **Solicitante** — sem escolha.
+
+Todas as funções administrativas do dia a dia agora pertencem ao
+**Gestão de Frota**, na aba **Cadastros** do próprio painel dele:
+- Criar/editar/excluir **Plantas** e **Setores**
+- Editar os **Parâmetros de recorrência**
+- **Cadastrar** colaboradores internos ou fornecedores externos (com
+  perfil e senha temporária já definidos), **trocar o perfil** de
+  qualquer usuário, **bloquear/desbloquear** e **excluir** o acesso de
+  alguém
+
+Sobre "excluir" usuário: isso remove o perfil da pessoa no Firestore — ela
+é barrada no próximo carregamento da página (`requireAuth` verifica se o
+documento ainda existe). O login (conta no Firebase Authentication) não é
+apagado automaticamente junto, porque isso exige o Admin SDK (backend),
+fora do escopo de um app 100% estático — para remover de vez o login,
+apague a conta manualmente em Authentication no console do Firebase.
+"Bloquear" é o controle recomendado para o dia a dia; "Excluir" é para
+remover de vez do quadro de usuários.
 
 ## Perfis e responsabilidades
 

@@ -33,6 +33,74 @@
     <div id="lista-todos-chamados" class="card-list"></div>
   </div>
 
+  <div class="page" id="view-cadastros" style="display:none;">
+    <div class="tabs">
+      <button class="active" data-sub="plantas">Plantas</button>
+      <button data-sub="setores">Setores</button>
+      <button data-sub="parametros">Parâmetros</button>
+      <button data-sub="usuarios">Usuários</button>
+    </div>
+
+    <div id="sub-plantas">
+      <div class="section-title"><span>Plantas</span></div>
+      <form id="form-planta" class="grid-2" style="margin-bottom:14px;">
+        <input type="text" id="pl-nome" placeholder="Nome da planta" required style="grid-column: 1 / span 2;" />
+        <button type="submit" class="btn btn--primary btn--sm" style="grid-column: 1 / span 2;">Adicionar planta</button>
+      </form>
+      <div id="lista-plantas-admin"></div>
+    </div>
+
+    <div id="sub-setores" style="display:none;">
+      <div class="section-title"><span>Setores</span></div>
+      <form id="form-setor" style="margin-bottom:14px;">
+        <div class="field" style="margin-top:0;"><label>Planta</label><select id="st-planta" required></select></div>
+        <div class="field"><label>Nome do setor</label><input type="text" id="st-nome" required /></div>
+        <button type="submit" class="btn btn--primary btn--sm" style="margin-top:10px;">Adicionar setor</button>
+      </form>
+      <div id="lista-setores-admin"></div>
+    </div>
+
+    <div id="sub-parametros" style="display:none;">
+      <div class="section-title"><span>Parâmetros de recorrência</span></div>
+      <div class="callout">Define quando um equipamento entra em "Atenção" ou "Alta recorrência" com base na quantidade de chamados dentro de uma janela de dias.</div>
+      <form id="form-parametros">
+        <div class="grid-2">
+          <div class="field" style="margin-top:0;"><label>Atenção — qtd. chamados</label><input type="number" id="pr-atencao-qtd" min="1" required /></div>
+          <div class="field" style="margin-top:0;"><label>Atenção — janela (dias)</label><input type="number" id="pr-atencao-dias" min="1" required /></div>
+        </div>
+        <div class="grid-2">
+          <div class="field" style="margin-top:0;"><label>Alta — qtd. chamados</label><input type="number" id="pr-alta-qtd" min="1" required /></div>
+          <div class="field" style="margin-top:0;"><label>Alta — janela (dias)</label><input type="number" id="pr-alta-dias" min="1" required /></div>
+        </div>
+        <button type="submit" class="btn btn--primary" style="margin-top:16px;">Salvar parâmetros</button>
+      </form>
+    </div>
+
+    <div id="sub-usuarios" style="display:none;">
+      <div class="section-title"><span>Cadastrar colaborador ou fornecedor</span></div>
+      <div class="callout">Use este cadastro para dar acesso a colaboradores internos ou fornecedores externos, já com o perfil definido.</div>
+      <form id="form-novo-usuario">
+        <div class="field"><label>Perfil</label>
+          <select id="nu-tipo">
+            <option value="solicitante">Solicitante</option>
+            <option value="gestao_frota">Gestão de Frota</option>
+            <option value="fornecedor">Fornecedor (externo)</option>
+            <option value="manutencao">Manutenção Magius</option>
+            <option value="aprovador">Aprovador</option>
+          </select>
+        </div>
+        <div class="field"><label>Nome completo</label><input type="text" id="nu-nome" required /></div>
+        <div class="field"><label>Empresa</label><input type="text" id="nu-empresa" /></div>
+        <div class="field"><label>Telefone</label><input type="tel" id="nu-telefone" /></div>
+        <div class="field"><label>E-mail</label><input type="email" id="nu-email" required /></div>
+        <div class="field"><label>Senha temporária</label><input type="password" id="nu-senha" required minlength="6" placeholder="A pessoa pode trocar depois" /></div>
+        <button type="submit" class="btn btn--primary" id="btn-novo-usuario" style="margin-top:16px;">Cadastrar usuário</button>
+      </form>
+      <div class="section-title" style="margin-top:26px;"><span>Usuários cadastrados</span></div>
+      <div id="lista-usuarios"></div>
+    </div>
+  </div>
+
   <div class="page" id="view-perfil" style="display:none;">
     <div class="section-title"><span>Minha conta</span></div>
     <div class="kv-row"><span class="kv-row__k">Nome</span><span id="perfil-nome"></span></div>
@@ -54,6 +122,10 @@
     <button class="navitem" data-view="chamados">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 14l2 2 4-4"/></svg>
       Chamados
+    </button>
+    <button class="navitem" data-view="cadastros">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      Cadastros
     </button>
     <button class="navitem" data-view="perfil">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>

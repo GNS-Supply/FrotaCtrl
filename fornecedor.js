@@ -8,7 +8,7 @@ let historicoCache = [];
 
 (async function init() {
   usuarioAtual = await requireAuth("fornecedor");
-  document.getElementById("user-avatar").textContent = iniciais(usuarioAtual.nome);
+  popularTopbarMeta(usuarioAtual);
   document.getElementById("perfil-nome").textContent = usuarioAtual.nome || "—";
   document.getElementById("perfil-empresa").textContent = usuarioAtual.empresa || "—";
 

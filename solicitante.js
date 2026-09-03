@@ -8,7 +8,7 @@ let chamadosCache = [];
 
 (async function init() {
   usuarioAtual = await requireAuth("solicitante");
-  document.getElementById("user-avatar").textContent = iniciais(usuarioAtual.nome);
+  popularTopbarMeta(usuarioAtual);
   document.getElementById("perfil-nome").textContent = usuarioAtual.nome || "—";
   document.getElementById("perfil-empresa").textContent = usuarioAtual.empresa || "—";
   document.getElementById("perfil-email").textContent = usuarioAtual.email || "—";

@@ -12,7 +12,7 @@ let parametrosRecorrencia = { atencaoQtd: 2, atencaoDias: 90, altaQtd: 3, altaDi
 
 (async function init() {
   usuarioAtual = await requireAuth("gestao_frota");
-  document.getElementById("user-avatar").textContent = iniciais(usuarioAtual.nome);
+  popularTopbarMeta(usuarioAtual);
   document.getElementById("perfil-nome").textContent = usuarioAtual.nome || "—";
   document.getElementById("perfil-email").textContent = usuarioAtual.email || "—";
 
@@ -26,8 +26,13 @@ let parametrosRecorrencia = { atencaoQtd: 2, atencaoDias: 90, altaQtd: 3, altaDi
   escutarPlantasSetores();
   escutarEquipamentos();
   escutarChamados();
+  escutarUsuarios();
+  carregarParametrosForm();
   configurarNav();
+  configurarSubTabsCadastros();
   configurarOverlays();
+  configurarFormsCadastros();
+  aplicarMascaraTelefone(document.getElementById("nu-telefone"));
 })();
 
 function popularSelectsEstaticos() {
@@ -52,7 +57,7 @@ function configurarNav() {
       document.querySelectorAll(".navitem").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
-      ["fila", "equipamentos", "chamados", "perfil"].forEach((v) => (document.getElementById(`view-${v}`).style.display = v === view ? "block" : "none"));
+      ["fila", "equipamentos", "chamados", "cadastros", "perfil"].forEach((v) => (document.getElementById(`view-${v}`).style.display = v === view ? "block" : "none"));
     });
   });
 }
@@ -66,19 +71,47 @@ function configurarOverlays() {
 }
 function abrirFechar(id, abrir) { document.getElementById(id).classList.toggle("hidden", !abrir); }
 
-// ---------- Plantas / Setores (leitura — cadastro fica no painel do Administrador) ----------
+function configurarSubTabsCadastros() {
+  document.querySelectorAll("#view-cadastros .tabs button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#view-cadastros .tabs button").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const sub = btn.dataset.sub;
+      ["plantas", "setores", "parametros", "usuarios"].forEach((s) => (document.getElementById(`sub-${s}`).style.display = s === sub ? "block" : "none"));
+    });
+  });
+}
+
+function configurarFormsCadastros() {
+  document.getElementById("form-planta").addEventListener("submit", salvarPlanta);
+  document.getElementById("form-setor").addEventListener("submit", salvarSetor);
+  document.getElementById("form-parametros").addEventListener("submit", salvarParametros);
+  document.getElementById("form-novo-usuario").addEventListener("submit", cadastrarUsuario);
+}
+
+// ---------- Plantas / Setores (agora com editar/excluir — antes só listava) ----------
 function escutarPlantasSetores() {
   db.collection("plantas").orderBy("nome").onSnapshot((snap) => {
     plantasCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     const sel = document.getElementById("eq-planta");
     sel.innerHTML = plantasCache.length
       ? plantasCache.map((p) => `<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join("")
-      : `<option value="">Cadastre em Administrador</option>`;
+      : `<option value="">Cadastre em Cadastros → Plantas</option>`;
     atualizarSetoresSelect();
+    renderPlantasAdmin();
+    renderSetoresAdmin();
+
+    const selSt = document.getElementById("st-planta");
+    if (selSt) {
+      selSt.innerHTML = plantasCache.length
+        ? plantasCache.map((p) => `<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join("")
+        : `<option value="">Cadastre uma planta primeiro</option>`;
+    }
   });
   db.collection("setores").orderBy("nome").onSnapshot((snap) => {
     setoresCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     atualizarSetoresSelect();
+    renderSetoresAdmin();
   });
   document.getElementById("eq-planta").addEventListener("change", atualizarSetoresSelect);
 }
@@ -88,6 +121,224 @@ function atualizarSetoresSelect() {
   document.getElementById("eq-setor").innerHTML = doPlanta.length
     ? doPlanta.map((s) => `<option value="${s.id}">${escapeHtml(s.nome)}</option>`).join("")
     : `<option value="">Sem setores nesta planta</option>`;
+}
+
+function renderPlantasAdmin() {
+  const el = document.getElementById("lista-plantas-admin");
+  if (!el) return;
+  el.innerHTML = plantasCache.length
+    ? plantasCache.map((p) => `
+      <div class="list-row">
+        <input type="text" value="${escapeHtml(p.nome)}" style="flex:1; margin-right:8px;" onchange="renomearPlanta('${p.id}', this.value)" />
+        <button class="btn btn--secondary btn--sm" onclick="excluirPlanta('${p.id}', '${escapeHtml(p.nome).replace(/'/g, "\\'")}')">Excluir</button>
+      </div>`).join("")
+    : `<div class="empty"><div class="empty__text">Nenhuma planta cadastrada.</div></div>`;
+}
+async function salvarPlanta(e) {
+  e.preventDefault();
+  const nome = document.getElementById("pl-nome").value.trim();
+  if (!nome) return;
+  try {
+    await db.collection("plantas").add({ nome, criadoEm: firebase.firestore.FieldValue.serverTimestamp() });
+    e.target.reset();
+  } catch (err) {
+    alert("Erro ao adicionar planta: " + err.message);
+  }
+}
+async function renomearPlanta(id, novoNome) {
+  novoNome = novoNome.trim();
+  if (!novoNome) return;
+  try {
+    await db.collection("plantas").doc(id).update({ nome: novoNome });
+    // mantém os equipamentos com o nome congelado atualizado também
+    const eqs = equipamentosCache.filter((e) => e.plantaId === id);
+    await Promise.all(eqs.map((e) => db.collection("equipamentos").doc(e.id).update({ plantaNome: novoNome })));
+  } catch (err) {
+    alert("Erro ao renomear planta: " + err.message);
+  }
+}
+async function excluirPlanta(id, nome) {
+  if (!confirm(`Excluir a planta "${nome}"? Setores vinculados a ela deixarão de aparecer no cadastro de equipamentos.`)) return;
+  try {
+    await db.collection("plantas").doc(id).delete();
+  } catch (err) {
+    alert("Erro ao excluir planta: " + err.message);
+  }
+}
+
+function renderSetoresAdmin() {
+  const el = document.getElementById("lista-setores-admin");
+  if (!el) return;
+  el.innerHTML = setoresCache.length
+    ? setoresCache.map((s) => {
+        const planta = plantasCache.find((p) => p.id === s.plantaId);
+        return `
+      <div class="list-row">
+        <div style="flex:1;">
+          <input type="text" value="${escapeHtml(s.nome)}" style="margin-bottom:4px;" onchange="renomearSetor('${s.id}', this.value)" />
+          <div class="list-row__sub">${escapeHtml(planta ? planta.nome : "planta não encontrada")}</div>
+        </div>
+        <button class="btn btn--secondary btn--sm" onclick="excluirSetor('${s.id}', '${escapeHtml(s.nome).replace(/'/g, "\\'")}')">Excluir</button>
+      </div>`;
+      }).join("")
+    : `<div class="empty"><div class="empty__text">Nenhum setor cadastrado.</div></div>`;
+}
+async function salvarSetor(e) {
+  e.preventDefault();
+  const plantaId = document.getElementById("st-planta").value;
+  const nome = document.getElementById("st-nome").value.trim();
+  if (!plantaId || !nome) return;
+  try {
+    await db.collection("setores").add({ plantaId, nome, criadoEm: firebase.firestore.FieldValue.serverTimestamp() });
+    e.target.reset();
+  } catch (err) {
+    alert("Erro ao adicionar setor: " + err.message);
+  }
+}
+async function renomearSetor(id, novoNome) {
+  novoNome = novoNome.trim();
+  if (!novoNome) return;
+  try {
+    await db.collection("setores").doc(id).update({ nome: novoNome });
+    const eqs = equipamentosCache.filter((e) => e.setorId === id);
+    await Promise.all(eqs.map((e) => db.collection("equipamentos").doc(e.id).update({ setorNome: novoNome })));
+  } catch (err) {
+    alert("Erro ao renomear setor: " + err.message);
+  }
+}
+async function excluirSetor(id, nome) {
+  if (!confirm(`Excluir o setor "${nome}"?`)) return;
+  try {
+    await db.collection("setores").doc(id).delete();
+  } catch (err) {
+    alert("Erro ao excluir setor: " + err.message);
+  }
+}
+
+// ---------- Parâmetros de recorrência ----------
+async function carregarParametrosForm() {
+  const p = await obterParametrosRecorrencia();
+  document.getElementById("pr-atencao-qtd").value = p.atencaoQtd;
+  document.getElementById("pr-atencao-dias").value = p.atencaoDias;
+  document.getElementById("pr-alta-qtd").value = p.altaQtd;
+  document.getElementById("pr-alta-dias").value = p.altaDias;
+}
+async function salvarParametros(e) {
+  e.preventDefault();
+  try {
+    await db.collection("configuracoes").doc("parametros").set({
+      atencaoQtd: parseInt(document.getElementById("pr-atencao-qtd").value) || 2,
+      atencaoDias: parseInt(document.getElementById("pr-atencao-dias").value) || 90,
+      altaQtd: parseInt(document.getElementById("pr-alta-qtd").value) || 3,
+      altaDias: parseInt(document.getElementById("pr-alta-dias").value) || 90
+    });
+    parametrosRecorrencia = await obterParametrosRecorrencia();
+    renderEquipamentos();
+    alert("Parâmetros salvos.");
+  } catch (err) {
+    alert("Erro ao salvar parâmetros: " + err.message);
+  }
+}
+
+// ---------- Usuários (cadastrar / trocar perfil / bloquear / excluir) ----------
+// A conta "administrador" é oculta desta lista de propósito: é a conta
+// mestre (a primeira criada na plataforma), reservada para quem mantém o
+// site. Ela nunca aparece aqui nem pode ser criada por este formulário.
+let usuariosCache = [];
+function escutarUsuarios() {
+  db.collection("usuarios").orderBy("criadoEm", "desc").onSnapshot((snap) => {
+    usuariosCache = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((u) => u.tipo !== "administrador");
+    renderUsuarios();
+  });
+}
+
+function appAdminSecundario() {
+  const existente = firebase.apps.find((a) => a.name === "adminCreate");
+  return existente || firebase.initializeApp(firebaseConfig, "adminCreate");
+}
+
+async function cadastrarUsuario(e) {
+  e.preventDefault();
+  const tipo = document.getElementById("nu-tipo").value;
+  const nome = document.getElementById("nu-nome").value.trim();
+  const empresa = document.getElementById("nu-empresa").value.trim();
+  const telefone = document.getElementById("nu-telefone").value.trim();
+  const email = document.getElementById("nu-email").value.trim();
+  const senha = document.getElementById("nu-senha").value;
+  const btn = document.getElementById("btn-novo-usuario");
+  btn.disabled = true;
+  btn.textContent = "Cadastrando…";
+  try {
+    const appSec = appAdminSecundario();
+    const authSec = appSec.auth();
+    const cred = await authSec.createUserWithEmailAndPassword(email, senha);
+    await db.collection("usuarios").doc(cred.user.uid).set({
+      nome, empresa, telefone, email, tipo,
+      bloqueado: false,
+      criadoPor: usuarioAtual.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await authSec.signOut();
+    e.target.reset();
+    alert(`Usuário ${nome} cadastrado como ${PERFIL_LABELS[tipo]}.`);
+  } catch (err) {
+    alert("Erro ao cadastrar usuário: " + (err.code === "auth/email-already-in-use" ? "este e-mail já está cadastrado." : err.message));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Cadastrar usuário";
+  }
+}
+
+function renderUsuarios() {
+  const el = document.getElementById("lista-usuarios");
+  if (!el) return;
+  el.innerHTML = usuariosCache.length
+    ? usuariosCache.map((u) => `
+      <div class="list-row" style="align-items:flex-start; flex-direction:column; gap:8px;">
+        <div style="display:flex; justify-content:space-between; width:100%;">
+          <div><div class="list-row__title">${escapeHtml(u.nome)}</div><div class="list-row__sub">${escapeHtml(u.email)}${u.empresa ? " · " + escapeHtml(u.empresa) : ""}</div></div>
+          ${u.bloqueado ? '<span class="badge badge--red">Bloqueado</span>' : '<span class="badge badge--green">Ativo</span>'}
+        </div>
+        <div style="display:flex; gap:8px; width:100%; flex-wrap:wrap;">
+          <select style="flex:1; min-width:160px;" onchange="alterarPerfil('${u.id}', this.value)">
+            ${optionsHtml(PERFIL_LABELS_SEM_ADMIN(), u.tipo)}
+          </select>
+          <button class="btn btn--sm ${u.bloqueado ? "btn--primary" : "btn--secondary"}" onclick="alternarBloqueio('${u.id}', ${!!u.bloqueado})">${u.bloqueado ? "Desbloquear" : "Bloquear"}</button>
+          <button class="btn btn--sm btn--danger" onclick="excluirUsuario('${u.id}', '${escapeHtml(u.nome).replace(/'/g, "\\'")}')">Excluir</button>
+        </div>
+      </div>`).join("")
+    : `<div class="empty"><div class="empty__text">Nenhum usuário.</div></div>`;
+}
+function PERFIL_LABELS_SEM_ADMIN() {
+  const { administrador, ...resto } = PERFIL_LABELS;
+  return resto;
+}
+
+async function alterarPerfil(uid, novoTipo) {
+  try {
+    await db.collection("usuarios").doc(uid).update({ tipo: novoTipo });
+  } catch (err) {
+    alert("Erro ao alterar perfil: " + err.message);
+  }
+}
+
+async function alternarBloqueio(uid, bloqueadoAtual) {
+  const acao = bloqueadoAtual ? "desbloquear" : "bloquear";
+  if (!confirm(`Confirma ${acao} este usuário?`)) return;
+  try {
+    await db.collection("usuarios").doc(uid).update({ bloqueado: !bloqueadoAtual });
+  } catch (err) {
+    alert("Erro ao alterar bloqueio: " + err.message);
+  }
+}
+
+async function excluirUsuario(uid, nome) {
+  if (!confirm(`Excluir o acesso de "${nome}"? Isso remove o perfil dele da plataforma — a pessoa é desconectada imediatamente e não consegue mais entrar. (O login em si só é totalmente apagado direto no console do Firebase.)`)) return;
+  try {
+    await db.collection("usuarios").doc(uid).delete();
+  } catch (err) {
+    alert("Erro ao excluir usuário: " + err.message);
+  }
 }
 
 // ---------- Chamados ----------

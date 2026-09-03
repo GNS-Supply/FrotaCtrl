@@ -126,7 +126,7 @@ function requireAuth(perfilEsperado) {
         window.location.href = "index.html?bloqueado=1";
         return;
       }
-      if (perfilEsperado && dados.tipo !== perfilEsperado) {
+      if (perfilEsperado && dados.tipo !== perfilEsperado && dados.tipo !== "administrador") {
         window.location.href = PERFIL_HOME[dados.tipo] || "index.html";
         return;
       }
@@ -172,6 +172,20 @@ function badgeHtml(status, labels = STATUS_LABELS, colors = STATUS_COLORS) {
 function iniciais(nome) {
   if (!nome) return "?";
   return nome.trim().split(/\s+/).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+}
+
+// Preenche avatar + nome/perfil no topbar (nome/perfil só aparecem em telas
+// largas — ver .topbar__meta no CSS). Evita ter que editar o HTML de cada
+// uma das 6 páginas de perfil.
+function popularTopbarMeta(usuario) {
+  const avatar = document.getElementById("user-avatar");
+  if (!avatar) return;
+  avatar.textContent = iniciais(usuario.nome);
+  if (avatar.parentElement.querySelector(".topbar__meta")) return;
+  const meta = document.createElement("div");
+  meta.className = "topbar__meta";
+  meta.innerHTML = `<span class="topbar__meta-nome">${escapeHtml(usuario.nome)}</span><span class="topbar__meta-perfil">${PERFIL_LABELS[usuario.tipo] || ""}</span>`;
+  avatar.parentElement.insertBefore(meta, avatar);
 }
 function escapeHtml(str) {
   if (str == null) return "";
