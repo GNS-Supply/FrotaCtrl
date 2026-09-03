@@ -106,6 +106,8 @@ auth.onAuthStateChanged((user) => {
   if (user) redirecionarPorPerfil(user.uid);
 });
 
+aplicarMascaraTelefone(document.getElementById("cad-telefone"));
+
 if (new URLSearchParams(window.location.search).get("bloqueado") === "1") {
   document.getElementById("bloqueado-msg").style.display = "block";
 }

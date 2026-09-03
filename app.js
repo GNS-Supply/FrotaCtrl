@@ -232,3 +232,92 @@ function classificarRecorrencia(chamadosDoEquipamento, params) {
 }
 const RECORRENCIA_LABELS = { normal: "Normal", atencao: "Atenção", alta: "Alta recorrência" };
 const RECORRENCIA_COLORS = { normal: "muted", atencao: "amber", alta: "red" };
+
+// ---------- Responsável atual (de quem é a vez de agir) ----------
+const PROXIMO_RESPONSAVEL = {
+  registrado: "gestao_frota",
+  em_triagem: "gestao_frota",
+  fornecedor_acionado: "fornecedor",
+  atendimento_programado: "fornecedor",
+  em_avaliacao_tecnica: "fornecedor",
+  aguardando_documentacao_mau_uso: "fornecedor",
+  aguardando_validacao: "manutencao",
+  mau_uso_contestado: "gestao_frota",
+  aguardando_aprovacao: "aprovador",
+  aguardando_autorizacao: "gestao_frota",
+  em_manutencao: "fornecedor",
+  em_teste: "fornecedor",
+  liberado: "fornecedor",
+  reprovado: null,
+  concluido: null,
+  cancelado: null
+};
+function responsavelAtualHtml(status) {
+  const perfil = PROXIMO_RESPONSAVEL[status];
+  if (!perfil) return "";
+  return `<span class="badge badge--muted">Aguardando: ${PERFIL_LABELS[perfil]}</span>`;
+}
+
+// ---------- Máscaras de campo ----------
+// Telefone: (00) 00000-0000 (adapta para fixo de 10 dígitos também)
+function aplicarMascaraTelefone(el) {
+  if (!el) return;
+  el.setAttribute("inputmode", "numeric");
+  el.addEventListener("input", () => {
+    let v = el.value.replace(/\D/g, "").slice(0, 11);
+    if (v.length > 10) v = v.replace(/(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
+    else if (v.length > 5) v = v.replace(/(\d{2})(\d{4})(\d{0,4}).*/, "($1) $2-$3");
+    else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5}).*/, "($1) $2");
+    else if (v.length > 0) v = v.replace(/(\d{0,2}).*/, "($1");
+    el.value = v;
+  });
+}
+
+// Moeda: R$ 0.000,00 — digitação estilo calculadora (centavos da direita p/ esquerda)
+function aplicarMascaraMoeda(el) {
+  if (!el) return;
+  el.setAttribute("inputmode", "numeric");
+  el.setAttribute("placeholder", "R$ 0,00");
+  el.addEventListener("input", () => {
+    let v = el.value.replace(/\D/g, "");
+    if (!v) { el.value = ""; return; }
+    v = (parseInt(v, 10) / 100).toFixed(2);
+    const [intPart, decPart] = v.split(".");
+    el.value = "R$ " + intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + decPart;
+  });
+}
+function valorMoedaParaNumero(el) {
+  if (!el || !el.value) return 0;
+  const v = el.value.replace(/[^\d,]/g, "").replace(",", ".");
+  return parseFloat(v) || 0;
+}
+function definirValorMoeda(el, numero) {
+  if (!el) return;
+  if (numero == null || isNaN(numero)) { el.value = ""; return; }
+  const [intPart, decPart] = numero.toFixed(2).split(".");
+  el.value = "R$ " + intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + decPart;
+}
+
+// Número fracionado: 0.000,00 (ex: horímetro) — mesma digitação estilo calculadora, sem "R$"
+function aplicarMascaraFracionado(el) {
+  if (!el) return;
+  el.setAttribute("inputmode", "numeric");
+  el.addEventListener("input", () => {
+    let v = el.value.replace(/\D/g, "");
+    if (!v) { el.value = ""; return; }
+    v = (parseInt(v, 10) / 100).toFixed(2);
+    const [intPart, decPart] = v.split(".");
+    el.value = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + decPart;
+  });
+}
+function valorFracionadoParaNumero(el) {
+  if (!el || !el.value) return 0;
+  const v = el.value.replace(/\./g, "").replace(",", ".");
+  return parseFloat(v) || 0;
+}
+function definirValorFracionado(el, numero) {
+  if (!el) return;
+  if (numero == null || isNaN(numero)) { el.value = ""; return; }
+  const [intPart, decPart] = numero.toFixed(2).split(".");
+  el.value = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + decPart;
+}

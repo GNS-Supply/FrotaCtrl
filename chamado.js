@@ -38,6 +38,7 @@ function render(c) {
     <div class="pill-group" style="margin-top:8px;">
       ${badgeHtml(c.status)}
       ${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}
+      ${responsavelAtualHtml(c.status)}
     </div>
     <div style="font-size:12px; color:var(--text-dim); margin-top:8px;">${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")} · Aberto em ${formatarData(c.registradoEm)} por ${escapeHtml(c.solicitanteNome || "—")}</div>
   `;
@@ -46,13 +47,14 @@ function render(c) {
   const registradoMs = tsToMs(c.registradoEm);
   const acionadoMs = tsToMs(c.historico?.find((h) => h.status === "fornecedor_acionado")?.timestamp);
   const liberadoMs = tsToMs(c.liberadoEm);
-  const concluidoMs = tsToMs(c.concluidoEm);
   const tempoAteAcionamento = acionadoMs && registradoMs ? acionadoMs - registradoMs : null;
-  const tempoTotalParada = registradoMs ? (concluidoMs || liberadoMs || Date.now()) - registradoMs : null;
+  // O relógio de "parada" encerra quando a máquina volta a operar (liberada),
+  // não quando a documentação/faturamento é concluída depois.
+  const tempoTotalParada = registradoMs ? (liberadoMs || Date.now()) - registradoMs : null;
 
   document.getElementById("tempos-grid").innerHTML = `
     <div class="stat-card"><div class="stat-card__value">${msParaDuracao(tempoAteAcionamento)}</div><div class="stat-card__label">Até acionar fornecedor</div></div>
-    <div class="stat-card" style="grid-column: 1 / -1;"><div class="stat-card__value">${msParaDuracao(tempoTotalParada)}</div><div class="stat-card__label">Tempo total parado (registro → ${c.status === "concluido" ? "conclusão" : "agora"})</div></div>
+    <div class="stat-card" style="grid-column: 1 / -1;"><div class="stat-card__value">${msParaDuracao(tempoTotalParada)}</div><div class="stat-card__label">Tempo parado (registro → ${liberadoMs ? "liberação" : "agora"})</div></div>
   `;
 
   document.getElementById("c-categoria").textContent = c.categoria || "—";

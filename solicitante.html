@@ -20,7 +20,7 @@
   <div class="page" id="view-meus">
     <div class="stats-grid" id="stats-grid"></div>
     <div class="section-title"><span>Meus chamados</span></div>
-    <div id="lista-chamados"></div>
+    <div id="lista-chamados" class="card-list"></div>
   </div>
 
   <div class="page" id="view-perfil" style="display:none;">
@@ -60,7 +60,7 @@
         <div class="field" style="margin-top:0;"><label>Turno</label>
           <select id="ch-turno"><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="noite">Noite</option></select>
         </div>
-        <div class="field" style="margin-top:0;"><label>Horímetro atual</label><input type="number" step="0.1" id="ch-horimetro" required /></div>
+        <div class="field" style="margin-top:0;"><label>Horímetro atual</label><input type="text" id="ch-horimetro" required inputmode="numeric" placeholder="0,00" /></div>
       </div>
       <div class="field"><label>Categoria da ocorrência</label><select id="ch-categoria"></select></div>
       <div class="field"><label>Criticidade</label><select id="ch-criticidade"></select></div>

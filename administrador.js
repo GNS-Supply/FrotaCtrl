@@ -21,6 +21,7 @@ let setoresCache = [];
   configurarNav();
   configurarSubTabs();
   configurarForms();
+  aplicarMascaraTelefone(document.getElementById("nu-telefone"));
 })();
 
 function configurarNav() {

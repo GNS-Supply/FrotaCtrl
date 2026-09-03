@@ -55,7 +55,7 @@ function renderOperacional() {
   const restricao = equipamentos.filter((e) => e.statusOperacional === "operacional_restricao").length;
 
   const concluidos = chamados.filter((c) => c.status === "concluido");
-  const temposParada = concluidos.map((c) => (tsToMs(c.concluidoEm) || 0) - (tsToMs(c.registradoEm) || 0)).filter((v) => v > 0);
+  const temposParada = concluidos.map((c) => (tsToMs(c.liberadoEm) || 0) - (tsToMs(c.registradoEm) || 0)).filter((v) => v > 0);
   const mediaParada = temposParada.length ? temposParada.reduce((a, b) => a + b, 0) / temposParada.length : null;
 
   const acionamentos = chamados

@@ -20,17 +20,17 @@
   <div class="page" id="view-fila">
     <div class="stats-grid" id="stats-grid"></div>
     <div class="section-title"><span>Pendências da Gestão de Frota</span></div>
-    <div id="lista-fila"></div>
+    <div id="lista-fila" class="card-list"></div>
   </div>
 
   <div class="page" id="view-equipamentos" style="display:none;">
     <div class="section-title"><span>Equipamentos</span><button class="btn btn--ghost btn--sm" id="btn-novo-equip">+ Equipamento</button></div>
-    <div id="lista-equipamentos"></div>
+    <div id="lista-equipamentos" class="card-list"></div>
   </div>
 
   <div class="page" id="view-chamados" style="display:none;">
     <div class="section-title"><span>Todos os chamados</span></div>
-    <div id="lista-todos-chamados"></div>
+    <div id="lista-todos-chamados" class="card-list"></div>
   </div>
 
   <div class="page" id="view-perfil" style="display:none;">
@@ -97,7 +97,7 @@
       </div>
       <div class="grid-2">
         <div class="field" style="margin-top:0;"><label>Início locação</label><input type="date" id="eq-inicio" /></div>
-        <div class="field" style="margin-top:0;"><label>Contrato / valor mensal</label><input type="number" step="0.01" id="eq-contrato" /></div>
+        <div class="field" style="margin-top:0;"><label>Contrato / valor mensal</label><input type="text" id="eq-contrato" inputmode="numeric" placeholder="R$ 0,00" /></div>
       </div>
       <div class="grid-2">
         <div class="field" style="margin-top:0;"><label>Capacidade</label><input type="text" id="eq-capacidade" placeholder="Ex: 2,5t" /></div>
@@ -109,7 +109,7 @@
       </div>
       <div class="grid-2">
         <div class="field" style="margin-top:0;"><label>Status operacional</label><select id="eq-status"></select></div>
-        <div class="field" style="margin-top:0;"><label>Horímetro atual</label><input type="number" step="0.1" id="eq-horimetro" /></div>
+        <div class="field" style="margin-top:0;"><label>Horímetro atual</label><input type="text" id="eq-horimetro" inputmode="numeric" placeholder="0,00" /></div>
       </div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Salvar equipamento</button>
     </form>

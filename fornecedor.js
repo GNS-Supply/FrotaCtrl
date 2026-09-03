@@ -18,6 +18,8 @@ let historicoCache = [];
   escutarChamados();
   configurarNav();
   configurarOverlays();
+  aplicarMascaraMoeda(document.getElementById("dg-valor"));
+  aplicarMascaraMoeda(document.getElementById("ft-valor"));
 })();
 
 function configurarNav() {
@@ -85,6 +87,7 @@ function renderFila() {
       <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>
       <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 80))}</div>
       <div class="ticket-card__meta"><span>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")}</span><span class="chip chip--${c.criticidade}">${c.criticidade || ""}</span></div>
+      <div style="margin:8px 0;">${responsavelAtualHtml(c.status)}</div>
       <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver detalhes</a>${acao}</div>
     </div>`;
   }).join("");
@@ -106,15 +109,23 @@ async function salvarProgramacao(e) {
   e.preventDefault();
   const id = document.getElementById("pg-id").value;
   const data = document.getElementById("pg-data").value;
-  await transicionarChamado(id, "atendimento_programado", `Atendimento programado para ${new Date(data).toLocaleString("pt-BR")}`, usuarioAtual.nome, "fornecedor", {
-    dataAtendimentoPrevista: data
-  });
-  e.target.reset();
-  abrirFechar("overlay-programar", false);
+  try {
+    await transicionarChamado(id, "atendimento_programado", `Atendimento programado para ${new Date(data).toLocaleString("pt-BR")}`, usuarioAtual.nome, "fornecedor", {
+      dataAtendimentoPrevista: data
+    });
+    e.target.reset();
+    abrirFechar("overlay-programar", false);
+  } catch (err) {
+    alert("Erro ao programar atendimento: " + err.message);
+  }
 }
 
 async function iniciarAvaliacao(id) {
-  await transicionarChamado(id, "em_avaliacao_tecnica", "Avaliação técnica iniciada", usuarioAtual.nome, "fornecedor");
+  try {
+    await transicionarChamado(id, "em_avaliacao_tecnica", "Avaliação técnica iniciada", usuarioAtual.nome, "fornecedor");
+  } catch (err) {
+    alert("Erro ao iniciar avaliação: " + err.message);
+  }
 }
 
 // ---------- Diagnóstico / documentação de mau uso ----------
@@ -133,7 +144,7 @@ async function salvarDiagnostico(e) {
   const complementando = document.getElementById("dg-mauuso").dataset.complementando === "1";
   const texto = document.getElementById("dg-texto").value.trim();
   const mauUso = complementando ? true : document.getElementById("dg-mauuso").value === "sim";
-  const valor = parseFloat(document.getElementById("dg-valor").value) || 0;
+  const valor = valorMoedaParaNumero(document.getElementById("dg-valor"));
   const arquivos = document.getElementById("dg-anexos").files;
   const btn = document.getElementById("btn-diagnostico");
   btn.disabled = true;
@@ -170,7 +181,11 @@ async function salvarDiagnostico(e) {
 }
 
 async function iniciarTeste(id) {
-  await transicionarChamado(id, "em_teste", "Máquina em teste após manutenção", usuarioAtual.nome, "fornecedor");
+  try {
+    await transicionarChamado(id, "em_teste", "Máquina em teste após manutenção", usuarioAtual.nome, "fornecedor");
+  } catch (err) {
+    alert("Erro ao iniciar teste: " + err.message);
+  }
 }
 
 // ---------- Liberação ----------
@@ -198,7 +213,7 @@ async function salvarFaturamento(e) {
   e.preventDefault();
   const id = document.getElementById("ft-id").value;
   const tipo = document.getElementById("ft-tipo").value;
-  const valor = parseFloat(document.getElementById("ft-valor").value) || 0;
+  const valor = valorMoedaParaNumero(document.getElementById("ft-valor"));
   const arquivo = document.getElementById("ft-nf").files[0];
   const btn = document.getElementById("btn-faturar");
   btn.disabled = true;

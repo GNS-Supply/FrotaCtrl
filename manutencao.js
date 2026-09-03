@@ -17,6 +17,7 @@ let pareceresCache = [];
   escutarChamados();
   configurarNav();
   configurarOverlay();
+  aplicarMascaraMoeda(document.getElementById("pc-valor"));
 })();
 
 function configurarNav() {
@@ -92,7 +93,7 @@ async function salvarParecer(e) {
   const resultado = document.getElementById("pc-resultado").value;
   const modalidade = document.getElementById("pc-modalidade").value;
   const justificativa = document.getElementById("pc-justificativa").value.trim();
-  const valorValidado = parseFloat(document.getElementById("pc-valor").value) || 0;
+  const valorValidado = valorMoedaParaNumero(document.getElementById("pc-valor"));
 
   const parecer = { resultado, modalidade, justificativa, autor: usuarioAtual.nome, timestamp: Date.now() };
   let proximoStatus, obs, extra = { parecerMauUso: parecer };
@@ -109,7 +110,11 @@ async function salvarParecer(e) {
     obs = "Parecer inconclusivo — solicitada complementação de documentação";
   }
 
-  await transicionarChamado(id, proximoStatus, obs, usuarioAtual.nome, "manutencao", extra);
-  e.target.reset();
-  abrirFechar("overlay-parecer", false);
+  try {
+    await transicionarChamado(id, proximoStatus, obs, usuarioAtual.nome, "manutencao", extra);
+    e.target.reset();
+    abrirFechar("overlay-parecer", false);
+  } catch (err) {
+    alert("Erro ao emitir parecer: " + err.message);
+  }
 }

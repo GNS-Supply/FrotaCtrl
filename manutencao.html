@@ -20,12 +20,12 @@
   <div class="page" id="view-fila">
     <div class="stats-grid" id="stats-grid"></div>
     <div class="section-title"><span>Aguardando validação de mau uso</span></div>
-    <div id="lista-fila"></div>
+    <div id="lista-fila" class="card-list"></div>
   </div>
 
   <div class="page" id="view-pareceres" style="display:none;">
     <div class="section-title"><span>Pareceres emitidos</span></div>
-    <div id="lista-pareceres"></div>
+    <div id="lista-pareceres" class="card-list"></div>
   </div>
 
   <div class="page" id="view-perfil" style="display:none;">
@@ -67,7 +67,7 @@
           <option value="inconclusivo">Inconclusivo — pedir complementação</option>
         </select>
       </div>
-      <div class="field"><label>Valor validado (R$) — se confirmado</label><input type="number" step="0.01" id="pc-valor" /></div>
+      <div class="field"><label>Valor validado (R$) — se confirmado</label><input type="text" id="pc-valor" inputmode="numeric" placeholder="R$ 0,00" /></div>
       <div class="field"><label>Justificativa técnica (obrigatória)</label><textarea id="pc-justificativa" required placeholder="Evidências analisadas, hipótese técnica, limitações e conclusão"></textarea></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Emitir parecer</button>
     </form>

@@ -26,6 +26,7 @@ let chamadosCache = [];
 function popularSelects() {
   document.getElementById("ch-categoria").innerHTML = CATEGORIAS.map((c) => `<option value="${c}">${c}</option>`).join("");
   document.getElementById("ch-criticidade").innerHTML = optionsHtml(CRITICIDADE_LABELS, "P2");
+  aplicarMascaraFracionado(document.getElementById("ch-horimetro"));
 }
 
 function configurarNav() {
@@ -73,7 +74,7 @@ function atualizarInfoEquipamento() {
     info.textContent = equipamentosCache.length === 0 ? "Nenhum equipamento cadastrado ainda — peça para a Gestão de Frota cadastrar." : "Selecione um equipamento.";
     return;
   }
-  document.getElementById("ch-horimetro").value = eq.horimetroAtual ?? "";
+  definirValorFracionado(document.getElementById("ch-horimetro"), eq.horimetroAtual ?? 0);
   info.innerHTML = `<strong>${escapeHtml(eq.plantaNome || "—")}</strong> / ${escapeHtml(eq.setorNome || "—")} · ${STATUS_OPERACIONAL_LABELS[eq.statusOperacional] || ""} ${eq.criticidade ? `· <span class="chip chip--${eq.criticidade}">${eq.criticidade}</span>` : ""}`;
 }
 
@@ -111,6 +112,7 @@ function renderChamados() {
       </div>
       <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 70))}</div>
       <div class="ticket-card__meta"><span>${escapeHtml(c.categoria || "")}</span><span>Aberto em ${formatarData(c.registradoEm)}</span></div>
+      ${STATUS_ATIVOS.includes(c.status) ? `<div style="margin-top:8px;">${responsavelAtualHtml(c.status)}</div>` : ""}
     </a>`
     )
     .join("");
@@ -126,7 +128,7 @@ async function salvarChamado(e) {
   btn.textContent = "Enviando…";
   try {
     const numero = await proximoNumeroChamado();
-    const horimetro = parseFloat(document.getElementById("ch-horimetro").value) || 0;
+    const horimetro = valorFracionadoParaNumero(document.getElementById("ch-horimetro"));
     const docRef = await db.collection("chamados").add({
       numero,
       equipamentoId,

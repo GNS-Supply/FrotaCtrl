@@ -33,6 +33,8 @@ let parametrosRecorrencia = { atencaoQtd: 2, atencaoDias: 90, altaQtd: 3, altaDi
 function popularSelectsEstaticos() {
   document.getElementById("eq-criticidade").innerHTML = optionsHtml(CRITICIDADE_LABELS, "P2");
   document.getElementById("eq-status").innerHTML = optionsHtml(STATUS_OPERACIONAL_LABELS, "operacional");
+  aplicarMascaraMoeda(document.getElementById("eq-contrato"));
+  aplicarMascaraFracionado(document.getElementById("eq-horimetro"));
 }
 
 async function carregarFornecedores() {
@@ -159,11 +161,16 @@ function renderTodosChamados() {
     <a class="ticket-card" href="chamado.html?id=${c.id}">
       <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>
       <div class="ticket-card__meta"><span>${formatarData(c.registradoEm)}</span><span>${escapeHtml(c.categoria || "")}</span></div>
+      ${STATUS_ATIVOS.includes(c.status) ? `<div style="margin-top:8px;">${responsavelAtualHtml(c.status)}</div>` : ""}
     </a>`).join("");
 }
 
 async function iniciarTriagem(id) {
-  await transicionarChamado(id, "em_triagem", "Triagem iniciada pela Gestão de Frota", usuarioAtual.nome, "gestao_frota");
+  try {
+    await transicionarChamado(id, "em_triagem", "Triagem iniciada pela Gestão de Frota", usuarioAtual.nome, "gestao_frota");
+  } catch (err) {
+    alert("Erro ao iniciar triagem: " + err.message);
+  }
 }
 function abrirAcionar(id) {
   document.getElementById("ac-chamado-id").value = id;
@@ -175,26 +182,42 @@ async function salvarAcionamento(e) {
   const fornecedorId = document.getElementById("ac-fornecedor").value;
   const fornecedor = fornecedoresCache.find((f) => f.id === fornecedorId);
   if (!fornecedor) { alert("Selecione um fornecedor."); return; }
-  await transicionarChamado(id, "fornecedor_acionado", `Fornecedor ${fornecedor.nome} acionado`, usuarioAtual.nome, "gestao_frota", {
-    fornecedorId,
-    fornecedorNome: fornecedor.nome
-  });
-  abrirFechar("overlay-acionar", false);
+  try {
+    await transicionarChamado(id, "fornecedor_acionado", `Fornecedor ${fornecedor.nome} acionado`, usuarioAtual.nome, "gestao_frota", {
+      fornecedorId,
+      fornecedorNome: fornecedor.nome
+    });
+    abrirFechar("overlay-acionar", false);
+  } catch (err) {
+    alert("Erro ao acionar fornecedor: " + err.message);
+  }
 }
 async function tratarComoContratual(id) {
-  const c = chamadosCache.find((x) => x.id === id);
-  await transicionarChamado(id, "aguardando_autorizacao", "Contestação aceita — tratado como manutenção contratual", usuarioAtual.nome, "gestao_frota", {
-    fluxo: "contratual",
-    "financeiro.custoEvitado": c?.financeiro?.valorApresentado || 0
-  });
+  try {
+    const c = chamadosCache.find((x) => x.id === id);
+    await transicionarChamado(id, "aguardando_autorizacao", "Contestação aceita — tratado como manutenção contratual", usuarioAtual.nome, "gestao_frota", {
+      fluxo: "contratual",
+      "financeiro.custoEvitado": c?.financeiro?.valorApresentado || 0
+    });
+  } catch (err) {
+    alert("Erro ao processar contestação: " + err.message);
+  }
 }
 async function reabrirAvaliacao(id) {
-  await transicionarChamado(id, "aguardando_validacao", "Avaliação reaberta para nova análise da Manutenção Magius", usuarioAtual.nome, "gestao_frota");
+  try {
+    await transicionarChamado(id, "aguardando_validacao", "Avaliação reaberta para nova análise da Manutenção Magius", usuarioAtual.nome, "gestao_frota");
+  } catch (err) {
+    alert("Erro ao reabrir avaliação: " + err.message);
+  }
 }
 async function autorizarExecucao(id) {
-  await transicionarChamado(id, "em_manutencao", "Execução autorizada pela Gestão de Frota", usuarioAtual.nome, "gestao_frota", {
-    autorizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-  });
+  try {
+    await transicionarChamado(id, "em_manutencao", "Execução autorizada pela Gestão de Frota", usuarioAtual.nome, "gestao_frota", {
+      autorizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    alert("Erro ao autorizar execução: " + err.message);
+  }
 }
 
 // ---------- Equipamentos ----------
@@ -249,13 +272,13 @@ function abrirFormEquip(id) {
     document.getElementById("eq-fornecedor-nome").value = eq.fornecedorNome || "";
     document.getElementById("eq-ano").value = eq.ano || "";
     document.getElementById("eq-inicio").value = eq.inicioLocacao || "";
-    document.getElementById("eq-contrato").value = eq.contratoValor || "";
+    definirValorMoeda(document.getElementById("eq-contrato"), eq.contratoValor || 0);
     document.getElementById("eq-capacidade").value = eq.capacidade || "";
     document.getElementById("eq-energia").value = eq.energiaCombustivel || "";
     document.getElementById("eq-criticidade").value = eq.criticidade || "P2";
     document.getElementById("eq-backup").value = eq.backupDisponivel ? "sim" : "nao";
     document.getElementById("eq-status").value = eq.statusOperacional || "operacional";
-    document.getElementById("eq-horimetro").value = eq.horimetroAtual || 0;
+    definirValorFracionado(document.getElementById("eq-horimetro"), eq.horimetroAtual || 0);
     if (eq.plantaId) { document.getElementById("eq-planta").value = eq.plantaId; atualizarSetoresSelect(); }
     if (eq.setorId) setTimeout(() => (document.getElementById("eq-setor").value = eq.setorId), 50);
   }
@@ -278,13 +301,13 @@ async function salvarEquipamento(e) {
     setorId, setorNome: setor ? setor.nome : "",
     ano: parseInt(document.getElementById("eq-ano").value) || null,
     inicioLocacao: document.getElementById("eq-inicio").value || null,
-    contratoValor: parseFloat(document.getElementById("eq-contrato").value) || null,
+    contratoValor: valorMoedaParaNumero(document.getElementById("eq-contrato")) || null,
     capacidade: document.getElementById("eq-capacidade").value.trim(),
     energiaCombustivel: document.getElementById("eq-energia").value.trim(),
     criticidade: document.getElementById("eq-criticidade").value,
     backupDisponivel: document.getElementById("eq-backup").value === "sim",
     statusOperacional: document.getElementById("eq-status").value,
-    horimetroAtual: parseFloat(document.getElementById("eq-horimetro").value) || 0
+    horimetroAtual: valorFracionadoParaNumero(document.getElementById("eq-horimetro"))
   };
   try {
     if (id) {

@@ -88,7 +88,11 @@ async function salvarDecisao(e) {
     obs = comentario || "Esclarecimento solicitado pelo aprovador";
   }
 
-  await transicionarChamado(id, proximoStatus, obs, usuarioAtual.nome, "aprovador", extra);
-  e.target.reset();
-  abrirFechar("overlay-decisao", false);
+  try {
+    await transicionarChamado(id, proximoStatus, obs, usuarioAtual.nome, "aprovador", extra);
+    e.target.reset();
+    abrirFechar("overlay-decisao", false);
+  } catch (err) {
+    alert("Erro ao registrar decisão: " + err.message);
+  }
 }
