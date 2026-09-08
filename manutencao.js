@@ -18,12 +18,13 @@ let pareceresCache = [];
   configurarNav();
   configurarOverlay();
   aplicarMascaraMoeda(document.getElementById("pc-valor"));
+  adicionarAtalhoMaster(usuarioAtual);
 })();
 
 function configurarNav() {
-  document.querySelectorAll(".navitem").forEach((btn) => {
+  document.querySelectorAll(".navitem[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".navitem").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".navitem[data-view]").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
       ["fila", "pareceres", "perfil"].forEach((v) => (document.getElementById(`view-${v}`).style.display = v === view ? "block" : "none"));

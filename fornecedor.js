@@ -20,12 +20,13 @@ let historicoCache = [];
   configurarOverlays();
   aplicarMascaraMoeda(document.getElementById("dg-valor"));
   aplicarMascaraMoeda(document.getElementById("ft-valor"));
+  adicionarAtalhoMaster(usuarioAtual);
 })();
 
 function configurarNav() {
-  document.querySelectorAll(".navitem").forEach((btn) => {
+  document.querySelectorAll(".navitem[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".navitem").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".navitem[data-view]").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
       ["fila", "historico", "perfil"].forEach((v) => (document.getElementById(`view-${v}`).style.display = v === view ? "block" : "none"));
@@ -88,6 +89,7 @@ function renderFila() {
       <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 80))}</div>
       <div class="ticket-card__meta"><span>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")}</span><span class="chip chip--${c.criticidade}">${c.criticidade || ""}</span></div>
       <div style="margin:8px 0;">${responsavelAtualHtml(c.status)}</div>
+      ${stepperHtml(c.status)}
       <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver detalhes</a>${acao}</div>
     </div>`;
   }).join("");
@@ -149,15 +151,25 @@ async function salvarDiagnostico(e) {
   const btn = document.getElementById("btn-diagnostico");
   btn.disabled = true;
   btn.textContent = "Enviando…";
-  try {
-    let urls = [];
-    if (arquivos.length > 0) {
+
+  // Upload dos anexos é secundário: se falhar, o diagnóstico ainda assim
+  // deve seguir em frente (senão o chamado fica travado por causa de um
+  // anexo, exatamente o problema relatado).
+  let urls = [];
+  if (arquivos.length > 0) {
+    try {
       for (const file of arquivos) {
         const ref = storage.ref(`chamados/${id}/diagnostico/${Date.now()}-${file.name}`);
         await ref.put(file);
         urls.push(await ref.getDownloadURL());
       }
+    } catch (err) {
+      console.warn("Não foi possível anexar um ou mais arquivos do diagnóstico:", err);
+      alert("O diagnóstico será enviado, mas não foi possível anexar os arquivos. Tente anexá-los novamente depois pelo detalhe do chamado.");
     }
+  }
+
+  try {
     const proximoStatus = mauUso ? "aguardando_validacao" : "aguardando_autorizacao";
     const extra = {
       fluxo: mauUso ? "mau_uso" : "contratual",
@@ -195,16 +207,28 @@ async function salvarLiberacao(e) {
   const id = document.getElementById("lb-id").value;
   const servico = document.getElementById("lb-servico").value.trim();
   const statusFinal = document.getElementById("lb-status-final").value;
-  const chamado = (await db.collection("chamados").doc(id).get()).data();
-  await transicionarChamado(id, "liberado", "Máquina liberada e testada", usuarioAtual.nome, "fornecedor", {
-    servicoExecutado: servico,
-    liberadoEm: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  if (chamado?.equipamentoId) {
-    await db.collection("equipamentos").doc(chamado.equipamentoId).update({ statusOperacional: statusFinal });
+  const btn = e.target.querySelector("button[type=submit]");
+  if (btn) btn.disabled = true;
+  try {
+    const chamado = (await db.collection("chamados").doc(id).get()).data();
+    await transicionarChamado(id, "liberado", "Máquina liberada e testada", usuarioAtual.nome, "fornecedor", {
+      servicoExecutado: servico,
+      liberadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if (chamado?.equipamentoId) {
+      try {
+        await db.collection("equipamentos").doc(chamado.equipamentoId).update({ statusOperacional: statusFinal });
+      } catch (err) {
+        console.warn("Não foi possível atualizar o status do equipamento:", err);
+      }
+    }
+    e.target.reset();
+    abrirFechar("overlay-liberar", false);
+  } catch (err) {
+    alert("Erro ao liberar a máquina: " + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
   }
-  e.target.reset();
-  abrirFechar("overlay-liberar", false);
 }
 
 // ---------- Faturamento ----------
@@ -218,13 +242,23 @@ async function salvarFaturamento(e) {
   const btn = document.getElementById("btn-faturar");
   btn.disabled = true;
   btn.textContent = "Concluindo…";
-  try {
-    let notaFiscalUrl = null;
-    if (arquivo) {
+
+  // Upload da NF é secundário: se falhar, o chamado é concluído do mesmo
+  // jeito — só sem a nota fiscal anexada (dava pra travar o encerramento
+  // inteiro por causa só do anexo, que era o problema relatado).
+  let notaFiscalUrl = null;
+  if (arquivo) {
+    try {
       const ref = storage.ref(`chamados/${id}/nota-fiscal/${Date.now()}-${arquivo.name}`);
       await ref.put(arquivo);
       notaFiscalUrl = await ref.getDownloadURL();
+    } catch (err) {
+      console.warn("Não foi possível anexar a nota fiscal:", err);
+      alert("O chamado será concluído, mas não foi possível anexar a nota fiscal. Tente anexá-la novamente depois pelo detalhe do chamado.");
     }
+  }
+
+  try {
     await transicionarChamado(id, "concluido", "Chamado faturado e concluído", usuarioAtual.nome, "fornecedor", {
       tipoManutencao: tipo,
       "financeiro.valorFaturado": valor,

@@ -19,6 +19,12 @@
 
   <div class="page">
     <div class="machine-plate" id="cabecalho"></div>
+    <div id="stepper-detalhe"></div>
+
+    <div id="bloco-acoes" style="display:none;">
+      <div class="section-title"><span>Ações</span></div>
+      <div class="small-btn-row" id="acoes-botoes"></div>
+    </div>
 
     <div class="stats-grid" id="tempos-grid" style="margin-top:4px;"></div>
 
@@ -59,6 +65,121 @@
 
     <div class="section-title"><span>Linha do tempo</span></div>
     <div class="timeline" id="timeline"></div>
+  </div>
+</div>
+
+<!-- SHEET: TRIAGEM -->
+<div class="overlay hidden" id="overlay-triagem">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Revisar e iniciar triagem</h3><button class="close-x" data-close="overlay-triagem">✕</button></div>
+    <form id="form-triagem">
+      <div class="field"><label>Criticidade</label><select id="tr-criticidade"></select></div>
+      <div class="field"><label>Descrição da ocorrência</label><textarea id="tr-descricao"></textarea></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar triagem</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: ACIONAR FORNECEDOR -->
+<div class="overlay hidden" id="overlay-acionar">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Acionar fornecedor</h3><button class="close-x" data-close="overlay-acionar">✕</button></div>
+    <form id="form-acionar">
+      <div class="field"><label>Fornecedor</label><select id="ac-fornecedor" required></select></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Acionar</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: PROGRAMAR ATENDIMENTO -->
+<div class="overlay hidden" id="overlay-programar">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Programar atendimento</h3><button class="close-x" data-close="overlay-programar">✕</button></div>
+    <form id="form-programar">
+      <div class="field"><label>Data/hora prevista</label><input type="datetime-local" id="pg-data" required /></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar atendimento</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: DIAGNÓSTICO -->
+<div class="overlay hidden" id="overlay-diagnostico">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Registrar diagnóstico</h3><button class="close-x" data-close="overlay-diagnostico">✕</button></div>
+    <form id="form-diagnostico">
+      <div class="field"><label>Diagnóstico técnico</label><textarea id="dg-texto-input" required placeholder="O que foi encontrado"></textarea></div>
+      <div class="field" id="dg-mauuso-wrap"><label>É um caso de mau uso?</label>
+        <select id="dg-mauuso"><option value="nao">Não — manutenção contratual normal</option><option value="sim">Sim — abrir fluxo de validação de mau uso</option></select>
+      </div>
+      <div class="field"><label>Valor apresentado / orçamento (R$)</label><input type="text" id="dg-valor" required inputmode="numeric" placeholder="R$ 0,00" /></div>
+      <div class="field"><label>OS, relatório técnico, fotos (evidências)</label><input type="file" id="dg-anexos" accept="image/*,.pdf" multiple /></div>
+      <button type="submit" class="btn btn--primary" id="btn-diagnostico" style="margin-top:20px;">Enviar diagnóstico</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: PARECER -->
+<div class="overlay hidden" id="overlay-parecer">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Emitir parecer</h3><button class="close-x" data-close="overlay-parecer">✕</button></div>
+    <form id="form-parecer">
+      <div class="field"><label>Modalidade de validação</label>
+        <select id="pc-modalidade"><option value="documental">Documental</option><option value="presencial">Presencial</option></select>
+      </div>
+      <div class="field"><label>Resultado</label>
+        <select id="pc-resultado">
+          <option value="confirmado">Mau uso confirmado</option>
+          <option value="nao_confirmado">Mau uso não confirmado</option>
+          <option value="inconclusivo">Inconclusivo — pedir complementação</option>
+        </select>
+      </div>
+      <div class="field"><label>Valor validado (R$) — se confirmado</label><input type="text" id="pc-valor" inputmode="numeric" placeholder="R$ 0,00" /></div>
+      <div class="field"><label>Justificativa técnica (obrigatória)</label><textarea id="pc-justificativa" required placeholder="Evidências analisadas, hipótese técnica, limitações e conclusão"></textarea></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Emitir parecer</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: DECISÃO DO APROVADOR -->
+<div class="overlay hidden" id="overlay-decisao">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Decisão de aprovação</h3><button class="close-x" data-close="overlay-decisao">✕</button></div>
+    <form id="form-decisao">
+      <div class="field"><label>Decisão</label>
+        <select id="dc-decisao"><option value="aprovado">Aprovar</option><option value="reprovado">Reprovar</option><option value="esclarecimento">Solicitar esclarecimento</option></select>
+      </div>
+      <div class="field"><label>Comentário</label><textarea id="dc-comentario" placeholder="Opcional"></textarea></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar decisão</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: LIBERAÇÃO -->
+<div class="overlay hidden" id="overlay-liberar">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Liberar máquina</h3><button class="close-x" data-close="overlay-liberar">✕</button></div>
+    <form id="form-liberar">
+      <div class="field"><label>Serviço executado / peças substituídas</label><textarea id="lb-servico" required></textarea></div>
+      <div class="field"><label>Operacional ou com restrição após liberação?</label>
+        <select id="lb-status-final"><option value="operacional">Operacional</option><option value="operacional_restricao">Operacional com restrição</option></select>
+      </div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar liberação</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: FATURAMENTO -->
+<div class="overlay hidden" id="overlay-faturar">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Faturamento</h3><button class="close-x" data-close="overlay-faturar">✕</button></div>
+    <form id="form-faturar">
+      <div class="field"><label>Tipo de manutenção</label>
+        <select id="ft-tipo"><option value="preventiva">Preventiva</option><option value="corretiva">Corretiva</option><option value="mau_uso">Mau uso</option><option value="desgaste">Desgaste padrão</option></select>
+      </div>
+      <div class="field"><label>Valor faturado (R$)</label><input type="text" id="ft-valor" required inputmode="numeric" placeholder="R$ 0,00" /></div>
+      <div class="field"><label>Nota fiscal</label><input type="file" id="ft-nf" accept=".pdf,image/*" /></div>
+      <button type="submit" class="btn btn--primary" id="btn-faturar" style="margin-top:20px;">Concluir chamado</button>
+    </form>
   </div>
 </div>
 

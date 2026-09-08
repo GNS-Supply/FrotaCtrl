@@ -335,3 +335,64 @@ function definirValorFracionado(el, numero) {
   const [intPart, decPart] = numero.toFixed(2).split(".");
   el.value = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + decPart;
 }
+
+// ---------- Indicador de progresso (bolinhas) ----------
+// Simplifica o fluxo completo (que tem ~17 status) em 6 macro-etapas
+// visuais, do jeito que foi pedido: concluídas em verde, a atual em
+// amarelo, as futuras em cinza — e se o chamado foi encerrado no meio
+// do caminho (reprovado/cancelado), as etapas não completadas ficam
+// vermelhas em vez de cinza.
+const MACRO_ETAPAS = ["Registrado", "Atendimento", "Diagnóstico", "Aprovação", "Execução", "Concluído"];
+const STATUS_PARA_ETAPA = {
+  registrado: 0,
+  em_triagem: 1, fornecedor_acionado: 1, atendimento_programado: 1, em_avaliacao_tecnica: 1,
+  diagnostico: 2, aguardando_documentacao_mau_uso: 2, aguardando_validacao: 2, mau_uso_contestado: 2,
+  aguardando_aprovacao: 3, aguardando_autorizacao: 3,
+  em_manutencao: 4, em_teste: 4,
+  liberado: 5, concluido: 5,
+  reprovado: 3,
+  cancelado: 0
+};
+const STATUS_ENCERRADO_SEM_SUCESSO = ["reprovado", "cancelado"];
+
+function stepperHtml(status, comLabels) {
+  const atual = STATUS_PARA_ETAPA[status] ?? 0;
+  const concluido = status === "concluido";
+  const encerradoSemSucesso = STATUS_ENCERRADO_SEM_SUCESSO.includes(status);
+  return `<div class="stepper">${MACRO_ETAPAS.map((label, i) => {
+    let cor;
+    if (concluido) cor = "verde";
+    else if (encerradoSemSucesso) cor = i < atual ? "verde" : "vermelho";
+    else if (i < atual) cor = "verde";
+    else if (i === atual) cor = "amarelo";
+    else cor = "cinza";
+    return `<div class="stepper__item">
+      <div class="stepper__dot stepper__dot--${cor}"></div>
+      ${comLabels ? `<div class="stepper__label">${label}</div>` : ""}
+    </div>`;
+  }).join("")}</div>`;
+}
+
+// ---------- Atalho para o Painel Master ----------
+// Quem está logado como "administrador" (a conta master oculta) navega
+// livremente para qualquer painel, mas fica sem volta pro hub. Isso
+// injeta um item extra no menu lateral, visível só para essa conta.
+function adicionarAtalhoMaster(usuario) {
+  if (!usuario || usuario.tipo !== "administrador") return;
+  const nav = document.querySelector(".bottomnav");
+  if (!nav || nav.querySelector(".navitem--master")) return;
+  const a = document.createElement("a");
+  a.href = "administrador.html";
+  a.className = "navitem navitem--master";
+  a.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 5.5L20 8l-4.4 3.8L17 18l-5-3.2L7 18l1.4-6.2L4 8l5.6-.5L12 2z"/></svg> Painel Master`;
+  nav.appendChild(a);
+}
+
+// ---------- Chamado ativo por equipamento ----------
+// Impede abrir um novo chamado para uma máquina que já tem um em
+// andamento (não concluído/cancelado).
+async function equipamentoTemChamadoAtivo(equipamentoId) {
+  const snap = await db.collection("chamados").where("equipamentoId", "==", equipamentoId).get();
+  const ativos = snap.docs.map((d) => d.data()).filter((c) => STATUS_ATIVOS.includes(c.status));
+  return ativos.length > 0 ? ativos[0] : null;
+}

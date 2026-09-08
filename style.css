@@ -144,11 +144,13 @@ label {
   font-weight: 600;
 }
 .field:first-child label { margin-top: 0; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; align-items: start; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; align-items: start; margin-top: 14px; }
+.grid-2:first-child { margin-top: 0; }
 .grid-2 > .field { display: flex; flex-direction: column; }
 .grid-2 > .field label {
   min-height: 2.6em;
-  display: flex;
+  margin-top: 0; /* as DUAS colunas partem da mesma altura — o espaço entre */
+  display: flex;  /* linhas vem do margin-top do .grid-2 acima, não do label */
   align-items: flex-end;
 }
 
@@ -162,7 +164,7 @@ label {
   justify-content: space-between;
   padding: 16px 18px;
   background: var(--dark);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 3px solid var(--accent);
 }
 .topbar__brand {
   display: flex;
@@ -644,6 +646,7 @@ textarea { min-height: 90px; resize: vertical; }
   border-bottom: 2px solid var(--border);
   margin-bottom: 16px;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 .tabs button {
   flex-shrink: 0;
@@ -803,13 +806,27 @@ button:focus-visible,
     letter-spacing: 0;
     color: rgba(255,255,255,0.62);
   }
+  .navitem {
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 14px 10px 11px;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    color: rgba(255,255,255,0.62);
+  }
   .navitem svg { width: 18px; height: 18px; flex-shrink: 0; }
   .navitem:hover { background: rgba(255,255,255,0.06); color: #fff; }
   .navitem.active {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: rgba(255,255,255,0.09);
+    border-left-color: var(--accent);
+    color: #fff;
     font-weight: 700;
-    box-shadow: var(--sombra-sm);
   }
   /* Item "Perfil" fica sempre visualmente separado dos itens de trabalho */
   .navitem[data-view="perfil"] { margin-top: 10px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.08); }
@@ -902,3 +919,51 @@ button:focus-visible,
   .auth-brand { display: flex; }
   .auth-form-side .auth-wrap { min-height: auto; }
 }
+
+/* ---------- Indicador de progresso (bolinhas por etapa) ---------- */
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 8px 0;
+}
+.stepper__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+}
+.stepper__item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 55%;
+  width: 90%;
+  height: 2px;
+  background: var(--border);
+  z-index: 0;
+}
+.stepper__dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+  z-index: 1;
+}
+.stepper__dot--verde { background: var(--green); box-shadow: 0 0 0 1px var(--green); }
+.stepper__dot--amarelo { background: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.stepper__dot--cinza { background: var(--surface-2); box-shadow: 0 0 0 1px var(--border); }
+.stepper__dot--vermelho { background: var(--red); box-shadow: 0 0 0 1px var(--red); }
+.stepper__label {
+  font-size: 9.5px;
+  color: var(--text-dim);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+.stepper--compact { margin: 6px 0 2px; }
+.stepper--compact .stepper__item { gap: 0; }

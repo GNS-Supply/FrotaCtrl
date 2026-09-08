@@ -32,7 +32,9 @@ let parametrosRecorrencia = { atencaoQtd: 2, atencaoDias: 90, altaQtd: 3, altaDi
   configurarSubTabsCadastros();
   configurarOverlays();
   configurarFormsCadastros();
+  configurarFiltroChamados();
   aplicarMascaraTelefone(document.getElementById("nu-telefone"));
+  adicionarAtalhoMaster(usuarioAtual);
 })();
 
 function popularSelectsEstaticos() {
@@ -52,9 +54,9 @@ async function carregarFornecedores() {
 }
 
 function configurarNav() {
-  document.querySelectorAll(".navitem").forEach((btn) => {
+  document.querySelectorAll(".navitem[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".navitem").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".navitem[data-view]").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
       ["fila", "equipamentos", "chamados", "cadastros", "perfil"].forEach((v) => (document.getElementById(`view-${v}`).style.display = v === view ? "block" : "none"));
@@ -67,6 +69,7 @@ function configurarOverlays() {
   document.querySelectorAll(".overlay").forEach((ov) => ov.addEventListener("click", (e) => { if (e.target === ov) abrirFechar(ov.id, false); }));
   document.getElementById("btn-novo-equip").addEventListener("click", () => abrirFormEquip(null));
   document.getElementById("form-acionar").addEventListener("submit", salvarAcionamento);
+  document.getElementById("form-triagem").addEventListener("submit", salvarTriagem);
   document.getElementById("form-equip").addEventListener("submit", salvarEquipamento);
 }
 function abrirFechar(id, abrir) { document.getElementById(id).classList.toggle("hidden", !abrir); }
@@ -345,7 +348,7 @@ async function excluirUsuario(uid, nome) {
 function escutarChamados() {
   db.collection("chamados").onSnapshot((snap) => {
     chamadosCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    chamadosCache.sort((a, b) => (tsToMs(b.registradoEm) || 0) - (tsToMs(a.registradoEm) || 0));
+    chamadosCache.sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
     renderFila();
     renderTodosChamados();
     renderStats();
@@ -383,7 +386,7 @@ function renderFila() {
   el.innerHTML = fila.map((c) => {
     let acoes = "";
     if (c.status === "registrado") {
-      acoes = `<button class="btn btn--primary btn--sm" onclick="iniciarTriagem('${c.id}')">Iniciar triagem</button>`;
+      acoes = `<button class="btn btn--primary btn--sm" onclick="abrirTriagem('${c.id}')">Iniciar triagem</button>`;
     } else if (c.status === "em_triagem") {
       acoes = `<button class="btn btn--primary btn--sm" onclick="abrirAcionar('${c.id}')">Acionar fornecedor</button>`;
     } else if (c.status === "mau_uso_contestado") {
@@ -400,27 +403,86 @@ function renderFila() {
       </div>
       <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 80))}</div>
       <div class="ticket-card__meta"><span>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")}</span><span class="chip chip--${c.criticidade}">${c.criticidade || ""}</span></div>
+      ${stepperHtml(c.status)}
       <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver detalhes</a>${acoes}</div>
     </div>`;
   }).join("");
 }
 
+const GRUPOS_FILTRO_CHAMADO = {
+  todos: null,
+  registrado: ["registrado"],
+  atendimento: ["em_triagem", "fornecedor_acionado", "atendimento_programado", "em_avaliacao_tecnica"],
+  diagnostico: ["diagnostico", "aguardando_documentacao_mau_uso", "aguardando_validacao", "mau_uso_contestado"],
+  aprovacao: ["aguardando_aprovacao", "aguardando_autorizacao"],
+  execucao: ["em_manutencao", "em_teste", "liberado"],
+  concluido: ["concluido"],
+  encerrado: ["reprovado", "cancelado"]
+};
+let filtroChamadoAtual = "todos";
+
+function configurarFiltroChamados() {
+  document.querySelectorAll("#filtro-status-chamados .pill").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#filtro-status-chamados .pill").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      filtroChamadoAtual = btn.dataset.filtro;
+      renderTodosChamados();
+    });
+  });
+}
+
 function renderTodosChamados() {
   const el = document.getElementById("lista-todos-chamados");
-  if (chamadosCache.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__text">Nenhum chamado ainda.</div></div>`; return; }
-  el.innerHTML = chamadosCache.map((c) => `
+  const statusPermitidos = GRUPOS_FILTRO_CHAMADO[filtroChamadoAtual];
+  // Fila de verdade: ordem cronológica, do mais antigo (quem está esperando
+  // há mais tempo) para o mais novo — não o contrário.
+  const lista = chamadosCache
+    .filter((c) => !statusPermitidos || statusPermitidos.includes(c.status))
+    .slice()
+    .sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
+
+  if (lista.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__text">Nenhum chamado nesse filtro.</div></div>`; return; }
+  el.innerHTML = lista.map((c, i) => `
     <a class="ticket-card" href="chamado.html?id=${c.id}">
-      <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>
+      <div class="ticket-card__top">
+        <div class="ticket-card__title"><span style="color:var(--text-dim); font-weight:400;">#${i + 1}</span> ${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>
+        ${badgeHtml(c.status)}
+      </div>
       <div class="ticket-card__meta"><span>${formatarData(c.registradoEm)}</span><span>${escapeHtml(c.categoria || "")}</span></div>
-      ${STATUS_ATIVOS.includes(c.status) ? `<div style="margin-top:8px;">${responsavelAtualHtml(c.status)}</div>` : ""}
+      ${stepperHtml(c.status)}
+      ${STATUS_ATIVOS.includes(c.status) ? `<div style="margin-top:4px;">${responsavelAtualHtml(c.status)}</div>` : ""}
     </a>`).join("");
 }
 
-async function iniciarTriagem(id) {
+function abrirTriagem(id) {
+  const c = chamadosCache.find((x) => x.id === id);
+  if (!c) return;
+  document.getElementById("tr-chamado-id").value = id;
+  document.getElementById("tr-info").innerHTML = `<strong>${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</strong><br/>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")} · Categoria: ${escapeHtml(c.categoria || "—")}`;
+  document.getElementById("tr-criticidade").innerHTML = optionsHtml(CRITICIDADE_LABELS, c.criticidade || "P2");
+  document.getElementById("tr-descricao").value = c.descricao || "";
+  abrirFechar("overlay-triagem", true);
+}
+async function salvarTriagem(e) {
+  e.preventDefault();
+  const id = document.getElementById("tr-chamado-id").value;
+  const c = chamadosCache.find((x) => x.id === id);
+  const novaCriticidade = document.getElementById("tr-criticidade").value;
+  const novaDescricao = document.getElementById("tr-descricao").value.trim();
+  const mudouCriticidade = c && c.criticidade !== novaCriticidade;
+  const mudouDescricao = c && (c.descricao || "") !== novaDescricao;
+  let obs = "Triagem concluída pela Gestão de Frota";
+  if (mudouCriticidade) obs += ` — criticidade ajustada de ${c.criticidade} para ${novaCriticidade}`;
+  if (mudouDescricao) obs += " — descrição revisada";
   try {
-    await transicionarChamado(id, "em_triagem", "Triagem iniciada pela Gestão de Frota", usuarioAtual.nome, "gestao_frota");
+    await transicionarChamado(id, "em_triagem", obs, usuarioAtual.nome, "gestao_frota", {
+      criticidade: novaCriticidade,
+      descricao: novaDescricao
+    });
+    abrirFechar("overlay-triagem", false);
   } catch (err) {
-    alert("Erro ao iniciar triagem: " + err.message);
+    alert("Erro ao concluir triagem: " + err.message);
   }
 }
 function abrirAcionar(id) {

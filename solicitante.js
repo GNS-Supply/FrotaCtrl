@@ -21,6 +21,7 @@ let chamadosCache = [];
   escutarChamados();
   configurarNav();
   configurarOverlay();
+  adicionarAtalhoMaster(usuarioAtual);
 })();
 
 function popularSelects() {
@@ -30,9 +31,9 @@ function popularSelects() {
 }
 
 function configurarNav() {
-  document.querySelectorAll(".navitem").forEach((btn) => {
+  document.querySelectorAll(".navitem[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".navitem").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".navitem[data-view]").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
       ["meus", "perfil"].forEach((v) => (document.getElementById(`view-${v}`).style.display = v === view ? "block" : "none"));
@@ -112,7 +113,8 @@ function renderChamados() {
       </div>
       <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 70))}</div>
       <div class="ticket-card__meta"><span>${escapeHtml(c.categoria || "")}</span><span>Aberto em ${formatarData(c.registradoEm)}</span></div>
-      ${STATUS_ATIVOS.includes(c.status) ? `<div style="margin-top:8px;">${responsavelAtualHtml(c.status)}</div>` : ""}
+      ${stepperHtml(c.status)}
+      ${STATUS_ATIVOS.includes(c.status) ? `<div style="margin-top:4px;">${responsavelAtualHtml(c.status)}</div>` : ""}
     </a>`
     )
     .join("");
@@ -125,11 +127,23 @@ async function salvarChamado(e) {
   if (!eq) { alert("Selecione um equipamento."); return; }
   const btn = document.getElementById("btn-enviar-chamado");
   btn.disabled = true;
+  btn.textContent = "Verificando…";
+
+  // Não permite abrir um segundo chamado pra mesma máquina se já existe um em andamento
+  const chamadoAtivo = await equipamentoTemChamadoAtivo(equipamentoId);
+  if (chamadoAtivo) {
+    alert(`Esta máquina já tem o chamado ${chamadoAtivo.numero || ""} em andamento (status: ${STATUS_LABELS[chamadoAtivo.status] || chamadoAtivo.status}). Aguarde ele ser concluído antes de abrir um novo.`);
+    btn.disabled = false;
+    btn.textContent = "Enviar chamado";
+    return;
+  }
+
   btn.textContent = "Enviando…";
+  const horimetro = valorFracionadoParaNumero(document.getElementById("ch-horimetro"));
+  let docRef;
   try {
     const numero = await proximoNumeroChamado();
-    const horimetro = valorFracionadoParaNumero(document.getElementById("ch-horimetro"));
-    const docRef = await db.collection("chamados").add({
+    docRef = await db.collection("chamados").add({
       numero,
       equipamentoId,
       numeroFrota: eq.numeroFrota,
@@ -152,9 +166,24 @@ async function salvarChamado(e) {
         { status: "registrado", timestamp: Date.now(), obs: "Chamado registrado pelo solicitante", autor: usuarioAtual.nome, perfil: "Solicitante" }
       ]
     });
+  } catch (err) {
+    // Isso aqui é a parte crítica — se falhar, o chamado de fato não existe.
+    alert("Erro ao abrir chamado: " + err.message);
+    btn.disabled = false;
+    btn.textContent = "Enviar chamado";
+    return;
+  }
 
+  // Daqui pra baixo o chamado JÁ FOI CRIADO. Qualquer falha nessas etapas
+  // secundárias não deve assustar o usuário nem fazer parecer que precisa
+  // tentar de novo (isso é o que causava chamados duplicados).
+  try {
     await db.collection("equipamentos").doc(equipamentoId).update({ horimetroAtual: horimetro });
+  } catch (err) {
+    console.warn("Não foi possível atualizar o horímetro do equipamento:", err);
+  }
 
+  try {
     const arquivos = document.getElementById("ch-fotos").files;
     if (arquivos.length > 0) {
       const urls = [];
@@ -165,14 +194,12 @@ async function salvarChamado(e) {
       }
       await docRef.update({ fotos: urls });
     }
-
-    e.target.reset();
-    abrirFechar("overlay-chamado", false);
-    window.location.href = `chamado.html?id=${docRef.id}`;
   } catch (err) {
-    alert("Erro ao abrir chamado: " + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Enviar chamado";
+    console.warn("Não foi possível anexar as fotos:", err);
+    alert("O chamado foi aberto, mas houve um problema ao anexar as fotos. Você pode tentar anexá-las novamente pelo detalhe do chamado.");
   }
+
+  e.target.reset();
+  abrirFechar("overlay-chamado", false);
+  window.location.href = `chamado.html?id=${docRef.id}`;
 }

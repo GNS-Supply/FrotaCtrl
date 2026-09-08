@@ -18,40 +18,49 @@
   </div>
 
   <div class="page">
-    <div class="callout">Esta é a conta master da plataforma (oculta da lista de usuários). Ela tem acesso irrestrito a qualquer tela — use os atalhos abaixo ou digite a URL diretamente.</div>
+    <h2 style="margin-bottom:14px; color:var(--text);">Painel Master</h2>
+    <div class="callout">Esta é a conta master da plataforma (oculta da lista de usuários). Ela tem acesso irrestrito a qualquer tela — use os atalhos abaixo ou digite a URL diretamente. Em qualquer painel, o item <strong>"Painel Master"</strong> no menu lateral traz você de volta aqui.</div>
 
     <div class="section-title"><span>Acesso a todos os painéis</span></div>
     <div class="card-list">
       <a class="ticket-card" href="gestao-frota.html">
+        <div class="ticket-card__top"><span class="badge badge--amber">🚜</span></div>
         <div class="ticket-card__title">Gestão de Frota</div>
         <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Fila, equipamentos, chamados, plantas/setores, parâmetros e usuários</div>
       </a>
       <a class="ticket-card" href="solicitante.html">
+        <div class="ticket-card__top"><span class="badge badge--blue">📋</span></div>
         <div class="ticket-card__title">Solicitante</div>
         <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Abertura e acompanhamento de chamados</div>
       </a>
       <a class="ticket-card" href="fornecedor.html">
+        <div class="ticket-card__top"><span class="badge badge--green">🔧</span></div>
         <div class="ticket-card__title">Fornecedor</div>
         <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Atendimento, diagnóstico, execução e faturamento</div>
       </a>
       <a class="ticket-card" href="manutencao.html">
+        <div class="ticket-card__top"><span class="badge badge--muted">🔍</span></div>
         <div class="ticket-card__title">Manutenção Magius</div>
         <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Validação de mau uso</div>
       </a>
       <a class="ticket-card" href="aprovador.html">
+        <div class="ticket-card__top"><span class="badge badge--red">✔️</span></div>
         <div class="ticket-card__title">Aprovador</div>
         <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Aprovação financeira dos casos de mau uso</div>
       </a>
       <a class="ticket-card" href="dashboard.html">
+        <div class="ticket-card__top"><span class="badge badge--amber">📊</span></div>
         <div class="ticket-card__title">Indicadores</div>
         <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Dashboards operacional, mau uso, financeiro e recorrência</div>
       </a>
     </div>
 
     <div class="section-title"><span>Minha conta</span></div>
-    <div class="kv-row"><span class="kv-row__k">Nome</span><span id="perfil-nome"></span></div>
-    <div class="kv-row"><span class="kv-row__k">E-mail</span><span id="perfil-email"></span></div>
-    <button class="btn btn--danger" style="margin-top:16px;" onclick="logout()">Sair</button>
+    <div class="stat-card" style="margin-bottom:16px;">
+      <div class="kv-row"><span class="kv-row__k">Nome</span><span id="perfil-nome"></span></div>
+      <div class="kv-row"><span class="kv-row__k">E-mail</span><span id="perfil-email"></span></div>
+    </div>
+    <button class="btn btn--danger" onclick="logout()">Sair</button>
   </div>
 </div>
 

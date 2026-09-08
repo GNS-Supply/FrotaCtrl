@@ -60,14 +60,22 @@ service cloud.firestore {
     match /equipamentos/{id} {
       allow read: if logado();
       allow create: if souGestaoOuAdmin();
-      allow update: if souGestaoOuAdmin() || souFornecedor();
+      allow update: if souGestaoOuAdmin() || souFornecedor() || souSolicitante();
       allow delete: if souGestaoOuAdmin();
     }
 
     match /chamados/{id} {
       allow read: if logado();
       allow create: if souSolicitante() && request.resource.data.solicitanteId == request.auth.uid;
-      allow update: if souAtorInterno();
+      // atores internos sempre podem atuar; o próprio solicitante também
+      // pode editar o chamado que abriu enquanto ele ainda estiver
+      // "registrado" (ninguém começou a tratar ainda) — cobre casos como
+      // anexar mais fotos logo após criar o chamado.
+      allow update: if souAtorInterno() || (
+        souSolicitante() &&
+        resource.data.solicitanteId == request.auth.uid &&
+        resource.data.status == 'registrado'
+      );
       allow delete: if false;
     }
   }
