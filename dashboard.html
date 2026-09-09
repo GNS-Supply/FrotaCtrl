@@ -11,7 +11,7 @@
 <body>
 <div id="loading" class="loading-screen">Carregando…</div>
 
-<div class="shell" id="shell" style="display:none; padding-bottom: 24px;">
+<div class="shell" id="shell" style="display:none; padding-bottom: 40px;">
   <div class="topbar">
     <button class="btn btn--ghost btn--sm" onclick="voltar()" style="width:auto;">← Voltar</button>
     <div class="topbar__title">Indicadores</div>
@@ -19,20 +19,94 @@
   </div>
 
   <div class="page">
-    <div class="tabs">
-      <button class="active" data-tab="operacional">Operacional</button>
-      <button data-tab="mauuso">Mau uso</button>
-      <button data-tab="financeiro">Financeiro</button>
-      <button data-tab="recorrencia">Recorrência</button>
+    <div class="dash-head">
+      <h2>Painel de indicadores</h2>
+      <p>Calculado em tempo real a partir da base de chamados e equipamentos. Os 4 blocos abaixo cobrem visão operacional, mau uso, financeiro e recorrência.</p>
     </div>
 
-    <div id="tab-operacional"></div>
-    <div id="tab-mauuso" style="display:none;"></div>
-    <div id="tab-financeiro" style="display:none;"></div>
-    <div id="tab-recorrencia" style="display:none;"></div>
+    <!-- ==================== BLOCO 1: OPERACIONAL ==================== -->
+    <section class="dash-block">
+      <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--accent)"></span><h3>Operacional</h3></div>
+      <div class="stats-grid" id="kpi-operacional"></div>
+      <div class="chart-grid">
+        <div class="chart-card chart-card--wide">
+          <div class="chart-card__title">Chamados registrados × concluídos (últimos 6 meses)</div>
+          <div class="chart-card__canvas"><canvas id="chart-op-tendencia"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card__title">Distribuição por etapa</div>
+          <div class="chart-card__canvas"><canvas id="chart-op-etapa"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card__title">Chamados por planta</div>
+          <div class="chart-card__canvas"><canvas id="chart-op-planta"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== BLOCO 2: MAU USO ==================== -->
+    <section class="dash-block">
+      <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--red)"></span><h3>Mau uso</h3></div>
+      <div class="stats-grid" id="kpi-mauuso"></div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-card__title">Resultado dos pareceres</div>
+          <div class="chart-card__canvas"><canvas id="chart-mu-resultado"></canvas></div>
+        </div>
+        <div class="chart-card chart-card--wide">
+          <div class="chart-card__title">Apontados × confirmados por mês</div>
+          <div class="chart-card__canvas"><canvas id="chart-mu-evolucao"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card__title">Equipamentos com mais mau uso confirmado</div>
+          <div class="chart-card__canvas"><canvas id="chart-mu-ranking"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== BLOCO 3: FINANCEIRO ==================== -->
+    <section class="dash-block">
+      <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--blue)"></span><h3>Financeiro</h3></div>
+      <div class="stats-grid" id="kpi-financeiro"></div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-card__title">Funil: apresentado → validado → aprovado → faturado</div>
+          <div class="chart-card__canvas"><canvas id="chart-fin-funil"></canvas></div>
+        </div>
+        <div class="chart-card chart-card--wide">
+          <div class="chart-card__title">Faturamento por mês (últimos 6 meses)</div>
+          <div class="chart-card__canvas"><canvas id="chart-fin-mensal"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card__title">Faturado por planta</div>
+          <div class="chart-card__canvas"><canvas id="chart-fin-planta"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== BLOCO 4: RECORRÊNCIA ==================== -->
+    <section class="dash-block">
+      <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--green)"></span><h3>Recorrência</h3></div>
+      <div class="stats-grid" id="kpi-recorrencia"></div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-card__title">Nível de recorrência da frota</div>
+          <div class="chart-card__canvas"><canvas id="chart-rec-nivel"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card__title">Ranking de equipamentos por chamados</div>
+          <div class="chart-card__canvas"><canvas id="chart-rec-ranking"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card__title">Pareto por categoria de avaria</div>
+          <div class="chart-card__canvas"><canvas id="chart-rec-categoria"></canvas></div>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
