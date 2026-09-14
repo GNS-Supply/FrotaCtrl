@@ -22,6 +22,7 @@ let chamadosCache = [];
   configurarNav();
   configurarOverlay();
   adicionarAtalhoMaster(usuarioAtual);
+  montarFiltroStatus("filtro-status-solicitante", (chave) => { filtroAtualSolicitante = chave; renderChamados(); });
 })();
 
 function popularSelects() {
@@ -88,6 +89,8 @@ function escutarChamados() {
   });
 }
 
+let filtroAtualSolicitante = "todos";
+
 function renderStats() {
   const abertos = chamadosCache.filter((c) => STATUS_ATIVOS.includes(c.status)).length;
   const concluidos = chamadosCache.filter((c) => c.status === "concluido").length;
@@ -99,11 +102,14 @@ function renderStats() {
 
 function renderChamados() {
   const el = document.getElementById("lista-chamados");
-  if (chamadosCache.length === 0) {
-    el.innerHTML = `<div class="empty"><div class="empty__icon">📋</div><div class="empty__title">Nenhum chamado ainda</div><div class="empty__text">Toque no + para abrir seu primeiro chamado.</div></div>`;
+  const lista = aplicarFiltroStatus(chamadosCache, filtroAtualSolicitante);
+  if (lista.length === 0) {
+    el.innerHTML = chamadosCache.length === 0
+      ? `<div class="empty"><div class="empty__icon">📋</div><div class="empty__title">Nenhum chamado ainda</div><div class="empty__text">Toque no + para abrir seu primeiro chamado.</div></div>`
+      : `<div class="empty"><div class="empty__text">Nenhum chamado nesse filtro.</div></div>`;
     return;
   }
-  el.innerHTML = chamadosCache
+  el.innerHTML = lista
     .map(
       (c) => `
     <a class="ticket-card" href="chamado.html?id=${c.id}">
@@ -140,9 +146,10 @@ async function salvarChamado(e) {
 
   btn.textContent = "Enviando…";
   const horimetro = valorFracionadoParaNumero(document.getElementById("ch-horimetro"));
-  let docRef;
+  let docRef, numeroCriado;
   try {
     const numero = await proximoNumeroChamado();
+    numeroCriado = numero;
     docRef = await db.collection("chamados").add({
       numero,
       equipamentoId,
@@ -201,5 +208,6 @@ async function salvarChamado(e) {
 
   e.target.reset();
   abrirFechar("overlay-chamado", false);
+  sessionStorage.setItem("toastPendente", `Chamado ${numeroCriado} criado com sucesso!`);
   window.location.href = `chamado.html?id=${docRef.id}`;
 }

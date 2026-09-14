@@ -20,6 +20,7 @@
   <div class="page" id="view-fila">
     <div class="stats-grid" id="stats-grid"></div>
     <div class="section-title"><span>Meus chamados ativos</span></div>
+    <div class="pill-group" id="filtro-status-fornecedor"></div>
     <div id="lista-fila" class="card-list"></div>
   </div>
 
@@ -57,6 +58,7 @@
 <div class="overlay hidden" id="overlay-programar">
   <div class="sheet"><div class="sheet__handle"></div>
     <div class="sheet__header"><h3>Programar atendimento</h3><button class="close-x" data-close="overlay-programar">✕</button></div>
+    <div class="callout">A data/horário informados aqui ficam visíveis para todos que consultarem este chamado.</div>
     <form id="form-programar">
       <input type="hidden" id="pg-id" />
       <div class="field"><label>Data/hora prevista</label><input type="datetime-local" id="pg-data" required /></div>
@@ -68,15 +70,17 @@
 <!-- SHEET: DIAGNÓSTICO -->
 <div class="overlay hidden" id="overlay-diagnostico">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Registrar diagnóstico</h3><button class="close-x" data-close="overlay-diagnostico">✕</button></div>
+    <div class="sheet__header"><h3 id="dg-titulo">Registrar diagnóstico</h3><button class="close-x" data-close="overlay-diagnostico">✕</button></div>
+    <div class="callout callout--red" id="dg-callout-contestado" style="display:none;">A Manutenção Magius não confirmou mau uso (ou considerou inconclusivo). Reavalie e registre um novo diagnóstico.</div>
     <form id="form-diagnostico">
       <input type="hidden" id="dg-id" />
       <div class="field"><label>Diagnóstico técnico</label><textarea id="dg-texto" required placeholder="O que foi encontrado"></textarea></div>
       <div class="field"><label>É um caso de mau uso?</label>
         <select id="dg-mauuso"><option value="nao">Não — manutenção contratual normal</option><option value="sim">Sim — abrir fluxo de validação de mau uso</option></select>
       </div>
-      <div class="field"><label>Valor apresentado / orçamento (R$)</label><input type="text" id="dg-valor" required inputmode="numeric" placeholder="R$ 0,00" /></div>
-      <div class="field"><label>OS, relatório técnico, fotos (evidências)</label><input type="file" id="dg-anexos" accept="image/*,.pdf" multiple /></div>
+      <div class="field"><label>Valor apresentado / orçamento (R$)</label><input type="text" id="dg-valor" inputmode="numeric" placeholder="R$ 0,00" disabled /></div>
+      <div class="field"><label>Evidências (OS, relatório técnico, fotos, vídeos) — pode anexar vários</label><input type="file" id="dg-anexos" accept="image/*,video/*,.pdf" multiple /></div>
+      <div class="callout" id="dg-aviso-obrigatorio" style="display:none;">Como é um caso de mau uso, valor e ao menos uma evidência são obrigatórios.</div>
       <button type="submit" class="btn btn--primary" id="btn-diagnostico" style="margin-top:20px;">Enviar diagnóstico</button>
     </form>
   </div>
@@ -92,23 +96,24 @@
       <div class="field"><label>Operacional ou com restrição após liberação?</label>
         <select id="lb-status-final"><option value="operacional">Operacional</option><option value="operacional_restricao">Operacional com restrição</option></select>
       </div>
+      <div id="lb-bloco-mauuso" style="display:none;">
+        <div class="callout">Mau uso confirmado — anexe o orçamento com o valor final antes de liberar.</div>
+        <div class="field"><label>Valor final (R$)</label><input type="text" id="lb-valor-final" inputmode="numeric" placeholder="R$ 0,00" /></div>
+        <div class="field"><label>Orçamento final (anexo)</label><input type="file" id="lb-orcamento" accept="image/*,.pdf" /></div>
+      </div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar liberação</button>
     </form>
   </div>
 </div>
 
-<!-- SHEET: FATURAMENTO -->
-<div class="overlay hidden" id="overlay-faturar">
+<!-- SHEET: NF DE COBRANÇA -->
+<div class="overlay hidden" id="overlay-nf">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Faturamento</h3><button class="close-x" data-close="overlay-faturar">✕</button></div>
-    <form id="form-faturar">
-      <input type="hidden" id="ft-id" />
-      <div class="field"><label>Tipo de manutenção</label>
-        <select id="ft-tipo"><option value="preventiva">Preventiva</option><option value="corretiva">Corretiva</option><option value="mau_uso">Mau uso</option><option value="desgaste">Desgaste padrão</option></select>
-      </div>
-      <div class="field"><label>Valor faturado (R$)</label><input type="text" id="ft-valor" required inputmode="numeric" placeholder="R$ 0,00" /></div>
-      <div class="field"><label>Nota fiscal</label><input type="file" id="ft-nf" accept=".pdf,image/*" /></div>
-      <button type="submit" class="btn btn--primary" id="btn-faturar" style="margin-top:20px;">Concluir chamado</button>
+    <div class="sheet__header"><h3>Anexar NF de cobrança</h3><button class="close-x" data-close="overlay-nf">✕</button></div>
+    <form id="form-nf">
+      <input type="hidden" id="nf-id" />
+      <div class="field"><label>Nota fiscal</label><input type="file" id="nf-arquivo" accept=".pdf,image/*" required /></div>
+      <button type="submit" class="btn btn--primary" id="btn-nf" style="margin-top:20px;">Enviar NF e concluir chamado</button>
     </form>
   </div>
 </div>

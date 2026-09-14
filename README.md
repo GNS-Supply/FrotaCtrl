@@ -97,24 +97,46 @@ remover de vez do quadro de usuários.
 
 ## Fluxo implementado
 
+Segue o fluxograma definido pelo usuário:
+
 ```
-Registrado → Em triagem → Fornecedor acionado → Atendimento programado
-→ Em avaliação técnica → Diagnóstico
-   ├─ Contratual (sem mau uso) → Aguardando autorização → Em manutenção
-   │                              → Em teste → Liberado → Faturamento → Concluído
-   └─ Mau uso indicado → Aguardando validação (Manutenção Magius)
-        ├─ Confirmado → Aguardando aprovação (Aprovador)
-        │     ├─ Aprovado → Aguardando autorização → (segue fluxo acima)
-        │     ├─ Reprovado → (encerra)
-        │     └─ Esclarecimento → volta para Aguardando documentação
-        ├─ Não confirmado → Mau uso contestado → Gestão de Frota decide:
-        │     "aceitar contestação" (vira contratual, registra custo evitado)
-        │     ou "reabrir avaliação"
-        └─ Inconclusivo → Aguardando documentação → fornecedor complementa → Aguardando validação novamente
+Registrado → Em triagem (Gestão revisa criticidade/descrição) → Fornecedor
+acionado → Atendimento programado (data/hora fica visível pra todos) →
+Em avaliação técnica (começa a contar o tempo de manutenção) → Diagnóstico
+   ├─ Contratual (sem mau uso) → Aguardando autorização → Em execução/teste
+   │                              → Liberado = Concluído (sem papelada extra)
+   └─ Mau uso indicado (valor + evidências obrigatórios)
+        → Aguardando validação (Manutenção Magius — sem acesso a valores)
+             ├─ Confirmado → Aguardando ciência (Aprovador só dá OK,
+             │     não recusa) → Aguardando autorização → Em execução/teste
+             │     → Liberado (fornecedor anexa orçamento final) →
+             │     Aguardando ordem de compra (Gestão anexa) →
+             │     Aguardando NF (Fornecedor anexa) → Concluído
+             └─ Não confirmado OU inconclusivo → Diagnóstico contestado
+                   → volta pro Fornecedor dar um NOVO diagnóstico → volta
+                   pra Manutenção validar de novo — repete até as duas
+                   partes chegarem a um acordo (confirmado ou não).
+                   Se o fornecedor desistir do mau uso, o valor original
+                   inteiro vira "custo evitado" nos indicadores.
 ```
 
 Cada transição grava, no array `historico` do chamado: status, timestamp,
-autor, **perfil** e observação — servindo como log de auditoria.
+autor, **perfil**, observação, **e os dados específicos preenchidos
+naquela etapa** (`historico[].dados`) — isso alimenta tanto o log de
+auditoria quanto os blocos "Etapas do chamado" na tela de detalhe, que
+mostram exatamente o que cada pessoa preencheu, separado por seção.
+
+**Regras de negócio específicas desse fluxo:**
+- Diagnóstico de mau uso: valor **obrigatório** e ao menos 1 anexo
+  **obrigatório**. Sem mau uso: campo de valor fica desabilitado e anexos
+  são opcionais.
+- Manutenção Magius **nunca vê valores** — nem no card da fila, nem no
+  parecer, nem no detalhe do chamado (o bloco Financeiro é escondido pra
+  esse perfil).
+- Só o **fornecedor** redefine o valor em caso de nova rodada de
+  diagnóstico — a Gestão de Frota não decide mais contestação.
+- Fluxo contratual não passa por aprovador/ordem de compra/NF — liberar a
+  máquina já encerra o chamado.
 
 ## Recorrência
 

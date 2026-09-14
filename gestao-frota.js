@@ -69,6 +69,7 @@ function configurarOverlays() {
   document.querySelectorAll(".overlay").forEach((ov) => ov.addEventListener("click", (e) => { if (e.target === ov) abrirFechar(ov.id, false); }));
   document.getElementById("btn-novo-equip").addEventListener("click", () => abrirFormEquip(null));
   document.getElementById("form-acionar").addEventListener("submit", salvarAcionamento);
+  document.getElementById("form-ordem-compra").addEventListener("submit", salvarOrdemCompra);
   document.getElementById("form-triagem").addEventListener("submit", salvarTriagem);
   document.getElementById("form-equip").addEventListener("submit", salvarEquipamento);
 }
@@ -356,7 +357,7 @@ function escutarChamados() {
   });
 }
 
-const STATUS_FILA_GESTAO = ["registrado", "em_triagem", "mau_uso_contestado", "aguardando_autorizacao"];
+const STATUS_FILA_GESTAO = ["registrado", "em_triagem", "aguardando_autorizacao", "aguardando_ordem_compra"];
 
 function renderStats() {
   const fila = chamadosCache.filter((c) => STATUS_FILA_GESTAO.includes(c.status)).length;
@@ -389,11 +390,10 @@ function renderFila() {
       acoes = `<button class="btn btn--primary btn--sm" onclick="abrirTriagem('${c.id}')">Iniciar triagem</button>`;
     } else if (c.status === "em_triagem") {
       acoes = `<button class="btn btn--primary btn--sm" onclick="abrirAcionar('${c.id}')">Acionar fornecedor</button>`;
-    } else if (c.status === "mau_uso_contestado") {
-      acoes = `<button class="btn btn--secondary btn--sm" onclick="reabrirAvaliacao('${c.id}')">Reabrir avaliação</button>
-               <button class="btn btn--primary btn--sm" onclick="tratarComoContratual('${c.id}')">Aceitar contestação</button>`;
     } else if (c.status === "aguardando_autorizacao") {
       acoes = `<button class="btn btn--primary btn--sm" onclick="autorizarExecucao('${c.id}')">Autorizar execução</button>`;
+    } else if (c.status === "aguardando_ordem_compra") {
+      acoes = `<button class="btn btn--primary btn--sm" onclick="abrirOrdemCompra('${c.id}')">Anexar ordem de compra</button>`;
     }
     return `
     <div class="ticket-card">
@@ -409,38 +409,17 @@ function renderFila() {
   }).join("");
 }
 
-const GRUPOS_FILTRO_CHAMADO = {
-  todos: null,
-  registrado: ["registrado"],
-  atendimento: ["em_triagem", "fornecedor_acionado", "atendimento_programado", "em_avaliacao_tecnica"],
-  diagnostico: ["diagnostico", "aguardando_documentacao_mau_uso", "aguardando_validacao", "mau_uso_contestado"],
-  aprovacao: ["aguardando_aprovacao", "aguardando_autorizacao"],
-  execucao: ["em_manutencao", "em_teste", "liberado"],
-  concluido: ["concluido"],
-  encerrado: ["reprovado", "cancelado"]
-};
 let filtroChamadoAtual = "todos";
 
 function configurarFiltroChamados() {
-  document.querySelectorAll("#filtro-status-chamados .pill").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("#filtro-status-chamados .pill").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      filtroChamadoAtual = btn.dataset.filtro;
-      renderTodosChamados();
-    });
-  });
+  montarFiltroStatus("filtro-status-chamados", (chave) => { filtroChamadoAtual = chave; renderTodosChamados(); });
 }
 
 function renderTodosChamados() {
   const el = document.getElementById("lista-todos-chamados");
-  const statusPermitidos = GRUPOS_FILTRO_CHAMADO[filtroChamadoAtual];
   // Fila de verdade: ordem cronológica, do mais antigo (quem está esperando
   // há mais tempo) para o mais novo — não o contrário.
-  const lista = chamadosCache
-    .filter((c) => !statusPermitidos || statusPermitidos.includes(c.status))
-    .slice()
-    .sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
+  const lista = aplicarFiltroStatus(chamadosCache, filtroChamadoAtual).slice().sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
 
   if (lista.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__text">Nenhum chamado nesse filtro.</div></div>`; return; }
   el.innerHTML = lista.map((c, i) => `
@@ -479,8 +458,9 @@ async function salvarTriagem(e) {
     await transicionarChamado(id, "em_triagem", obs, usuarioAtual.nome, "gestao_frota", {
       criticidade: novaCriticidade,
       descricao: novaDescricao
-    });
+    }, { tipo: "triagem", criticidadeAnterior: c?.criticidade, criticidadeNova: novaCriticidade, descricaoRevisada: novaDescricao });
     abrirFechar("overlay-triagem", false);
+    mostrarToast("Triagem concluída.");
   } catch (err) {
     alert("Erro ao concluir triagem: " + err.message);
   }
@@ -499,37 +479,60 @@ async function salvarAcionamento(e) {
     await transicionarChamado(id, "fornecedor_acionado", `Fornecedor ${fornecedor.nome} acionado`, usuarioAtual.nome, "gestao_frota", {
       fornecedorId,
       fornecedorNome: fornecedor.nome
-    });
+    }, { tipo: "acionamento", fornecedorNome: fornecedor.nome });
     abrirFechar("overlay-acionar", false);
+    mostrarToast("Fornecedor acionado.");
   } catch (err) {
     alert("Erro ao acionar fornecedor: " + err.message);
   }
 }
-async function tratarComoContratual(id) {
-  try {
-    const c = chamadosCache.find((x) => x.id === id);
-    await transicionarChamado(id, "aguardando_autorizacao", "Contestação aceita — tratado como manutenção contratual", usuarioAtual.nome, "gestao_frota", {
-      fluxo: "contratual",
-      "financeiro.custoEvitado": c?.financeiro?.valorApresentado || 0
-    });
-  } catch (err) {
-    alert("Erro ao processar contestação: " + err.message);
-  }
-}
-async function reabrirAvaliacao(id) {
-  try {
-    await transicionarChamado(id, "aguardando_validacao", "Avaliação reaberta para nova análise da Manutenção Magius", usuarioAtual.nome, "gestao_frota");
-  } catch (err) {
-    alert("Erro ao reabrir avaliação: " + err.message);
-  }
-}
 async function autorizarExecucao(id) {
   try {
-    await transicionarChamado(id, "em_manutencao", "Execução autorizada pela Gestão de Frota", usuarioAtual.nome, "gestao_frota", {
+    await transicionarChamado(id, "em_teste", "Execução autorizada pela Gestão de Frota — fornecedor pode iniciar", usuarioAtual.nome, "gestao_frota", {
       autorizadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });
+    mostrarToast("Execução autorizada.");
   } catch (err) {
     alert("Erro ao autorizar execução: " + err.message);
+  }
+}
+
+// ---------- Ordem de compra (só no fluxo de mau uso confirmado) ----------
+function abrirOrdemCompra(id) {
+  document.getElementById("form-ordem-compra").reset();
+  document.getElementById("oc-chamado-id").value = id;
+  abrirFechar("overlay-ordem-compra", true);
+}
+async function salvarOrdemCompra(e) {
+  e.preventDefault();
+  const id = document.getElementById("oc-chamado-id").value;
+  const numeroOc = document.getElementById("oc-numero").value.trim();
+  const arquivo = document.getElementById("oc-arquivo").files[0];
+  const btn = e.target.querySelector("button[type=submit]");
+  btn.disabled = true;
+  let ordemCompraUrl = null;
+  if (arquivo) {
+    try {
+      const ref = storage.ref(`chamados/${id}/ordem-compra/${Date.now()}-${arquivo.name}`);
+      await ref.put(arquivo);
+      ordemCompraUrl = await ref.getDownloadURL();
+    } catch (err) {
+      console.warn("Não foi possível anexar a ordem de compra:", err);
+      alert("O status será atualizado, mas não foi possível anexar o arquivo.");
+    }
+  }
+  try {
+    await transicionarChamado(id, "aguardando_nf", "Ordem de compra anexada pela Gestão de Frota", usuarioAtual.nome, "gestao_frota", {
+      "financeiro.ordemCompraNumero": numeroOc,
+      "financeiro.ordemCompraUrl": ordemCompraUrl
+    }, { tipo: "ordem_compra", numeroOc, ordemCompraUrl });
+    e.target.reset();
+    abrirFechar("overlay-ordem-compra", false);
+    mostrarToast("Ordem de compra anexada.");
+  } catch (err) {
+    alert("Erro ao anexar ordem de compra: " + err.message);
+  } finally {
+    btn.disabled = false;
   }
 }
 

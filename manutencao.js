@@ -1,5 +1,5 @@
 // ============================================================
-// manutencao.js
+// manutencao.js — validação de mau uso (sem acesso a valores)
 // ============================================================
 
 let usuarioAtual = null;
@@ -17,7 +17,6 @@ let pareceresCache = [];
   escutarChamados();
   configurarNav();
   configurarOverlay();
-  aplicarMascaraMoeda(document.getElementById("pc-valor"));
   adicionarAtalhoMaster(usuarioAtual);
 })();
 
@@ -62,11 +61,12 @@ function renderStats() {
 function renderFila() {
   const el = document.getElementById("lista-fila");
   if (filaCache.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__icon">✅</div><div class="empty__title">Nada para validar</div></div>`; return; }
+  // Nota: nenhum valor financeiro é exibido aqui de propósito — a
+  // Manutenção Magius avalia só a evidência técnica, não o custo.
   el.innerHTML = filaCache.map((c) => `
     <div class="ticket-card">
       <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>
       <div style="font-size:13px; color:var(--text-dim);"><strong>Diagnóstico do fornecedor:</strong> ${escapeHtml(c.diagnostico?.texto || "—")}</div>
-      <div class="ticket-card__meta"><span>Valor apresentado: ${formatarMoeda(c.financeiro?.valorApresentado)}</span></div>
       ${(c.fotosDiagnostico || []).length ? `<div class="photo-grid">${c.fotosDiagnostico.map((u) => `<a href="${u}" target="_blank"><img src="${u}" /></a>`).join("")}</div>` : ""}
       <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver chamado completo</a><button class="btn btn--primary btn--sm" onclick="abrirParecer('${c.id}')">Emitir parecer</button></div>
     </div>`).join("");
@@ -88,33 +88,36 @@ function abrirParecer(id) {
   abrirFechar("overlay-parecer", true);
 }
 
+// Regra do fluxo: "confirmado" segue pro aprovador (só ciência). "Não
+// confirmado" ou "inconclusivo" voltam pro FORNECEDOR dar um novo
+// diagnóstico — não existe mais uma etapa onde a Gestão de Frota decide
+// a contestação; o vaivém é só entre fornecedor e manutenção, até
+// chegarem a um acordo.
 async function salvarParecer(e) {
   e.preventDefault();
   const id = document.getElementById("pc-id").value;
   const resultado = document.getElementById("pc-resultado").value;
   const modalidade = document.getElementById("pc-modalidade").value;
   const justificativa = document.getElementById("pc-justificativa").value.trim();
-  const valorValidado = valorMoedaParaNumero(document.getElementById("pc-valor"));
 
   const parecer = { resultado, modalidade, justificativa, autor: usuarioAtual.nome, timestamp: Date.now() };
-  let proximoStatus, obs, extra = { parecerMauUso: parecer };
-
+  let proximoStatus, obs;
   if (resultado === "confirmado") {
     proximoStatus = "aguardando_aprovacao";
-    obs = "Mau uso confirmado — encaminhado para aprovação";
-    extra["financeiro.valorValidado"] = valorValidado;
+    obs = "Mau uso confirmado — encaminhado para ciência do aprovador";
   } else if (resultado === "nao_confirmado") {
-    proximoStatus = "mau_uso_contestado";
-    obs = "Mau uso não confirmado — contestado";
+    proximoStatus = "diagnostico_contestado";
+    obs = "Mau uso não confirmado — devolvido ao fornecedor para novo diagnóstico";
   } else {
-    proximoStatus = "aguardando_documentacao_mau_uso";
-    obs = "Parecer inconclusivo — solicitada complementação de documentação";
+    proximoStatus = "diagnostico_contestado";
+    obs = "Parecer inconclusivo — devolvido ao fornecedor para novo diagnóstico";
   }
 
   try {
-    await transicionarChamado(id, proximoStatus, obs, usuarioAtual.nome, "manutencao", extra);
+    await transicionarChamado(id, proximoStatus, obs, usuarioAtual.nome, "manutencao", { parecerMauUso: parecer }, { tipo: "parecer", resultado, modalidade, justificativa });
     e.target.reset();
     abrirFechar("overlay-parecer", false);
+    mostrarToast("Parecer registrado.");
   } catch (err) {
     alert("Erro ao emitir parecer: " + err.message);
   }

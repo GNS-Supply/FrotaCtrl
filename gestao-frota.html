@@ -177,6 +177,21 @@
   </div>
 </div>
 
+<!-- SHEET: ORDEM DE COMPRA -->
+<div class="overlay hidden" id="overlay-ordem-compra">
+  <div class="sheet">
+    <div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Anexar ordem de compra</h3><button class="close-x" data-close="overlay-ordem-compra">✕</button></div>
+    <div class="callout">Mau uso confirmado — anexe a ordem de compra referente a este chamado antes do fornecedor emitir a NF.</div>
+    <form id="form-ordem-compra">
+      <input type="hidden" id="oc-chamado-id" />
+      <div class="field"><label>Número da ordem de compra</label><input type="text" id="oc-numero" placeholder="Ex: OC-2026-0042" /></div>
+      <div class="field"><label>Anexo (opcional)</label><input type="file" id="oc-arquivo" accept=".pdf,image/*" /></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar</button>
+    </form>
+  </div>
+</div>
+
 <!-- SHEET: EQUIPAMENTO -->
 <div class="overlay hidden" id="overlay-equip">
   <div class="sheet">

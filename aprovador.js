@@ -1,5 +1,5 @@
 // ============================================================
-// aprovador.js
+// aprovador.js — só dá ciência do mau uso confirmado, sem poder recusar
 // ============================================================
 
 let usuarioAtual = null;
@@ -41,7 +41,7 @@ function escutarChamados() {
     filaCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     filaCache.sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
     renderFila();
-    document.getElementById("stats-grid").innerHTML = `<div class="stat-card" style="grid-column:1/-1;"><div class="stat-card__value">${filaCache.length}</div><div class="stat-card__label">Aguardando sua decisão</div></div>`;
+    document.getElementById("stats-grid").innerHTML = `<div class="stat-card" style="grid-column:1/-1;"><div class="stat-card__value">${filaCache.length}</div><div class="stat-card__label">Aguardando ciência</div></div>`;
   });
 }
 
@@ -52,12 +52,11 @@ function renderFila() {
     <div class="ticket-card">
       <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>
       <div class="callout">
-        <strong>Parecer:</strong> ${PARECER_LABELS[c.parecerMauUso?.resultado] || "—"}<br/>
+        <strong>Parecer da Manutenção Magius:</strong> Mau uso confirmado<br/>
         ${escapeHtml(c.parecerMauUso?.justificativa || "")}
       </div>
-      <div class="kv-row"><span class="kv-row__k">Valor apresentado</span><span>${formatarMoeda(c.financeiro?.valorApresentado)}</span></div>
-      <div class="kv-row"><span class="kv-row__k">Valor validado</span><span>${formatarMoeda(c.financeiro?.valorValidado)}</span></div>
-      <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver chamado completo</a><button class="btn btn--primary btn--sm" onclick="abrirDecisao('${c.id}')">Decidir</button></div>
+      <div class="kv-row"><span class="kv-row__k">Valor apresentado pelo fornecedor</span><span>${formatarMoeda(c.financeiro?.valorApresentado)}</span></div>
+      <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver chamado completo</a><button class="btn btn--primary btn--sm" onclick="abrirDecisao('${c.id}')">Dar ciência</button></div>
     </div>`).join("");
 }
 
@@ -67,33 +66,24 @@ function abrirDecisao(id) {
   abrirFechar("overlay-decisao", true);
 }
 
+// O aprovador só registra ciência do mau uso já confirmado pela
+// Manutenção Magius — não existe opção de recusar aqui (isso já foi
+// decidido na validação técnica).
 async function salvarDecisao(e) {
   e.preventDefault();
   const id = document.getElementById("dc-id").value;
-  const decisao = document.getElementById("dc-decisao").value;
   const comentario = document.getElementById("dc-comentario").value.trim();
   const chamado = filaCache.find((c) => c.id === id);
-
-  const registro = { decisao, comentario, autor: usuarioAtual.nome, timestamp: Date.now() };
-  let proximoStatus, obs, extra = { aprovacao: registro };
-
-  if (decisao === "aprovado") {
-    proximoStatus = "aguardando_autorizacao";
-    obs = comentario || "Valor aprovado";
-    extra["financeiro.valorAprovado"] = chamado?.financeiro?.valorValidado || 0;
-  } else if (decisao === "reprovado") {
-    proximoStatus = "reprovado";
-    obs = comentario || "Reprovado pelo aprovador";
-  } else {
-    proximoStatus = "aguardando_documentacao_mau_uso";
-    obs = comentario || "Esclarecimento solicitado pelo aprovador";
-  }
-
+  const registro = { decisao: "ciente", comentario, autor: usuarioAtual.nome, timestamp: Date.now() };
   try {
-    await transicionarChamado(id, proximoStatus, obs, usuarioAtual.nome, "aprovador", extra);
+    await transicionarChamado(id, "aguardando_autorizacao", comentario || "Ciência registrada pelo aprovador", usuarioAtual.nome, "aprovador", {
+      aprovacao: registro,
+      "financeiro.valorAprovado": chamado?.financeiro?.valorApresentado || 0
+    }, { tipo: "ciencia", comentario });
     e.target.reset();
     abrirFechar("overlay-decisao", false);
+    mostrarToast("Ciência registrada.");
   } catch (err) {
-    alert("Erro ao registrar decisão: " + err.message);
+    alert("Erro ao registrar ciência: " + err.message);
   }
 }

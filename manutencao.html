@@ -65,10 +65,10 @@
         <select id="pc-resultado">
           <option value="confirmado">Mau uso confirmado</option>
           <option value="nao_confirmado">Mau uso não confirmado</option>
-          <option value="inconclusivo">Inconclusivo — pedir complementação</option>
+          <option value="inconclusivo">Inconclusivo — pedir novo diagnóstico</option>
         </select>
       </div>
-      <div class="field"><label>Valor validado (R$) — se confirmado</label><input type="text" id="pc-valor" inputmode="numeric" placeholder="R$ 0,00" /></div>
+      <div class="callout">Se não confirmado ou inconclusivo, o chamado volta para o fornecedor registrar um novo diagnóstico. O ciclo se repete até as duas partes chegarem a um acordo.</div>
       <div class="field"><label>Justificativa técnica (obrigatória)</label><textarea id="pc-justificativa" required placeholder="Evidências analisadas, hipótese técnica, limitações e conclusão"></textarea></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Emitir parecer</button>
     </form>

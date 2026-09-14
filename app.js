@@ -20,23 +20,21 @@ const PERFIL_HOME = {
   administrador: "administrador.html"
 };
 
-// ---------- Status do chamado ----------
+// ---------- Status do chamado (segue o fluxograma definido pelo usuário) ----------
 const STATUS_LABELS = {
   registrado: "Registrado",
   em_triagem: "Em triagem",
   fornecedor_acionado: "Fornecedor acionado",
   atendimento_programado: "Atendimento programado",
   em_avaliacao_tecnica: "Em avaliação técnica",
-  diagnostico: "Diagnóstico emitido",
-  aguardando_documentacao_mau_uso: "Aguardando documentação (mau uso)",
+  diagnostico_contestado: "Diagnóstico contestado — aguardando fornecedor",
   aguardando_validacao: "Aguardando validação (Manutenção Magius)",
-  mau_uso_contestado: "Mau uso contestado",
-  aguardando_aprovacao: "Aguardando aprovação",
-  reprovado: "Reprovado",
-  aguardando_autorizacao: "Aguardando autorização",
-  em_manutencao: "Em manutenção",
-  em_teste: "Em teste",
-  liberado: "Liberado / aguardando faturamento",
+  aguardando_aprovacao: "Aguardando ciência do aprovador",
+  aguardando_autorizacao: "Aguardando autorização (Gestão de Frota)",
+  em_teste: "Em execução / teste",
+  liberado: "Liberado — aguardando documentação",
+  aguardando_ordem_compra: "Aguardando ordem de compra",
+  aguardando_nf: "Aguardando nota fiscal",
   concluido: "Concluído",
   cancelado: "Cancelado"
 };
@@ -46,16 +44,14 @@ const STATUS_COLORS = {
   fornecedor_acionado: "blue",
   atendimento_programado: "blue",
   em_avaliacao_tecnica: "blue",
-  diagnostico: "amber",
-  aguardando_documentacao_mau_uso: "amber",
+  diagnostico_contestado: "red",
   aguardando_validacao: "amber",
-  mau_uso_contestado: "red",
   aguardando_aprovacao: "amber",
-  reprovado: "red",
   aguardando_autorizacao: "amber",
-  em_manutencao: "blue",
   em_teste: "blue",
-  liberado: "green",
+  liberado: "blue",
+  aguardando_ordem_compra: "amber",
+  aguardando_nf: "amber",
   concluido: "green",
   cancelado: "red"
 };
@@ -211,7 +207,7 @@ async function proximoNumeroChamado() {
 }
 
 // ---------- Transição de status (padroniza histórico/auditoria) ----------
-async function transicionarChamado(chamadoId, novoStatus, obs, autor, perfil, extraFields = {}) {
+async function transicionarChamado(chamadoId, novoStatus, obs, autor, perfil, extraFields = {}, dadosEtapa = null) {
   const entry = {
     status: novoStatus,
     timestamp: Date.now(),
@@ -219,6 +215,7 @@ async function transicionarChamado(chamadoId, novoStatus, obs, autor, perfil, ex
     autor: autor || "—",
     perfil: PERFIL_LABELS[perfil] || perfil || "—"
   };
+  if (dadosEtapa) entry.dados = dadosEtapa;
   await db.collection("chamados").doc(chamadoId).update({
     status: novoStatus,
     ...extraFields,
@@ -254,15 +251,14 @@ const PROXIMO_RESPONSAVEL = {
   fornecedor_acionado: "fornecedor",
   atendimento_programado: "fornecedor",
   em_avaliacao_tecnica: "fornecedor",
-  aguardando_documentacao_mau_uso: "fornecedor",
+  diagnostico_contestado: "fornecedor",
   aguardando_validacao: "manutencao",
-  mau_uso_contestado: "gestao_frota",
   aguardando_aprovacao: "aprovador",
   aguardando_autorizacao: "gestao_frota",
-  em_manutencao: "fornecedor",
   em_teste: "fornecedor",
-  liberado: "fornecedor",
-  reprovado: null,
+  liberado: "gestao_frota",
+  aguardando_ordem_compra: "gestao_frota",
+  aguardando_nf: "fornecedor",
   concluido: null,
   cancelado: null
 };
@@ -342,18 +338,17 @@ function definirValorFracionado(el, numero) {
 // amarelo, as futuras em cinza — e se o chamado foi encerrado no meio
 // do caminho (reprovado/cancelado), as etapas não completadas ficam
 // vermelhas em vez de cinza.
-const MACRO_ETAPAS = ["Registrado", "Atendimento", "Diagnóstico", "Aprovação", "Execução", "Concluído"];
+const MACRO_ETAPAS = ["Registrado", "Atendimento", "Validação", "Autorização", "Execução", "Encerramento"];
 const STATUS_PARA_ETAPA = {
   registrado: 0,
-  em_triagem: 1, fornecedor_acionado: 1, atendimento_programado: 1, em_avaliacao_tecnica: 1,
-  diagnostico: 2, aguardando_documentacao_mau_uso: 2, aguardando_validacao: 2, mau_uso_contestado: 2,
-  aguardando_aprovacao: 3, aguardando_autorizacao: 3,
-  em_manutencao: 4, em_teste: 4,
-  liberado: 5, concluido: 5,
-  reprovado: 3,
+  em_triagem: 1, fornecedor_acionado: 1, atendimento_programado: 1, em_avaliacao_tecnica: 1, diagnostico_contestado: 1,
+  aguardando_validacao: 2, aguardando_aprovacao: 2,
+  aguardando_autorizacao: 3,
+  em_teste: 4, liberado: 4,
+  aguardando_ordem_compra: 5, aguardando_nf: 5, concluido: 5,
   cancelado: 0
 };
-const STATUS_ENCERRADO_SEM_SUCESSO = ["reprovado", "cancelado"];
+const STATUS_ENCERRADO_SEM_SUCESSO = ["cancelado"];
 
 function stepperHtml(status, comLabels) {
   const atual = STATUS_PARA_ETAPA[status] ?? 0;
@@ -395,4 +390,66 @@ async function equipamentoTemChamadoAtivo(equipamentoId) {
   const snap = await db.collection("chamados").where("equipamentoId", "==", equipamentoId).get();
   const ativos = snap.docs.map((d) => d.data()).filter((c) => STATUS_ATIVOS.includes(c.status));
   return ativos.length > 0 ? ativos[0] : null;
+}
+
+// ---------- Toast de confirmação ----------
+// Substitui alert() bloqueante por um aviso discreto que some sozinho —
+// usado pra confirmar ações como "chamado criado com sucesso".
+function mostrarToast(mensagem, tipo) {
+  let container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement("div");
+  toast.className = `toast toast--${tipo || "sucesso"}`;
+  toast.textContent = mensagem;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("toast--show"));
+  setTimeout(() => {
+    toast.classList.remove("toast--show");
+    setTimeout(() => toast.remove(), 250);
+  }, 3200);
+}
+
+// ---------- Filtro de status reutilizável (todas as telas de lista) ----------
+// Agrupamento por macro-etapa, igual ao indicador de progresso — mantém
+// a mesma linguagem visual em toda a plataforma.
+const GRUPOS_FILTRO_STATUS = {
+  todos: null,
+  ativos: STATUS_ATIVOS,
+  registrado: ["registrado"],
+  atendimento: ["em_triagem", "fornecedor_acionado", "atendimento_programado", "em_avaliacao_tecnica", "diagnostico_contestado"],
+  validacao: ["aguardando_validacao", "aguardando_aprovacao"],
+  autorizacao: ["aguardando_autorizacao"],
+  execucao: ["em_teste", "liberado"],
+  encerramento: ["aguardando_ordem_compra", "aguardando_nf"],
+  concluido: ["concluido"],
+  cancelado: ["cancelado"]
+};
+const LABELS_FILTRO_STATUS = {
+  todos: "Todos", ativos: "Em andamento", registrado: "Registrado", atendimento: "Atendimento",
+  validacao: "Validação", autorizacao: "Autorização", execucao: "Execução",
+  encerramento: "Encerramento", concluido: "Concluído", cancelado: "Cancelado"
+};
+// Monta a barra de filtro (pills) dentro do elemento de id `containerId`.
+// `onMudar(chave)` é chamado toda vez que o usuário troca o filtro.
+function montarFiltroStatus(containerId, onMudar, chaves) {
+  const chavesUsadas = chaves || ["todos", "ativos", "registrado", "atendimento", "validacao", "autorizacao", "execucao", "encerramento", "concluido", "cancelado"];
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = chavesUsadas.map((k, i) => `<button class="pill ${i === 0 ? "active" : ""}" data-filtro="${k}">${LABELS_FILTRO_STATUS[k]}</button>`).join("");
+  el.querySelectorAll(".pill").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      el.querySelectorAll(".pill").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      onMudar(btn.dataset.filtro);
+    });
+  });
+}
+function aplicarFiltroStatus(lista, chaveFiltro) {
+  const statusPermitidos = GRUPOS_FILTRO_STATUS[chaveFiltro];
+  return statusPermitidos ? lista.filter((c) => statusPermitidos.includes(c.status)) : lista;
 }

@@ -47,17 +47,15 @@
   </div>
 </div>
 
-<!-- SHEET: DECISÃO -->
+<!-- SHEET: CIÊNCIA -->
 <div class="overlay hidden" id="overlay-decisao">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Decisão de aprovação</h3><button class="close-x" data-close="overlay-decisao">✕</button></div>
+    <div class="sheet__header"><h3>Dar ciência</h3><button class="close-x" data-close="overlay-decisao">✕</button></div>
+    <div class="callout">O aprovador só registra ciência do mau uso já confirmado pela Manutenção Magius — não há opção de recusar aqui.</div>
     <form id="form-decisao">
       <input type="hidden" id="dc-id" />
-      <div class="field"><label>Decisão</label>
-        <select id="dc-decisao"><option value="aprovado">Aprovar</option><option value="reprovado">Reprovar</option><option value="esclarecimento">Solicitar esclarecimento</option></select>
-      </div>
-      <div class="field"><label>Comentário</label><textarea id="dc-comentario" placeholder="Opcional"></textarea></div>
-      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar decisão</button>
+      <div class="field"><label>Comentário (opcional)</label><textarea id="dc-comentario" placeholder="Observações, se houver"></textarea></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar ciência</button>
     </form>
   </div>
 </div>

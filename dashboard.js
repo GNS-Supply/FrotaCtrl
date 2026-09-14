@@ -211,17 +211,15 @@ function renderMauUso() {
 function renderFinanceiro() {
   const soma = (campo) => chamados.reduce((s, c) => s + (c.financeiro?.[campo] || 0), 0);
   const apresentado = soma("valorApresentado");
-  const validado = soma("valorValidado");
   const aprovado = soma("valorAprovado");
-  const faturado = soma("valorFaturado");
+  const final = soma("valorFinal");
   const evitado = soma("custoEvitado");
   const comprometido = chamados.filter((c) => !["concluido", "cancelado"].includes(c.status) && c.financeiro?.valorAprovado).reduce((s, c) => s + c.financeiro.valorAprovado, 0);
 
   document.getElementById("kpi-financeiro").innerHTML = kpiGrid([
     { valor: formatarMoeda(apresentado), label: "Apresentado" },
-    { valor: formatarMoeda(validado), label: "Validado" },
-    { valor: formatarMoeda(aprovado), label: "Aprovado" },
-    { valor: formatarMoeda(faturado), label: "Faturado" },
+    { valor: formatarMoeda(aprovado), label: "Aprovado (ciência)" },
+    { valor: formatarMoeda(final), label: "Valor final" },
     { valor: formatarMoeda(evitado), label: "Custo evitado" },
     { valor: formatarMoeda(comprometido), label: "Projeção (comprometido)" }
   ]);
@@ -229,14 +227,14 @@ function renderFinanceiro() {
   new Chart(document.getElementById("chart-fin-funil"), {
     type: "bar",
     data: {
-      labels: ["Apresentado", "Validado", "Aprovado", "Faturado"],
-      datasets: [{ data: [apresentado, validado, aprovado, faturado], backgroundColor: [COR.mutedTint, COR.accentTint, COR.blueTint, COR.green], borderColor: [COR.muted, COR.accent, COR.blue, COR.green], borderWidth: 1.5, borderRadius: 4 }]
+      labels: ["Apresentado", "Aprovado", "Valor final"],
+      datasets: [{ data: [apresentado, aprovado, final], backgroundColor: [COR.mutedTint, COR.accentTint, COR.green], borderColor: [COR.muted, COR.accent, COR.green], borderWidth: 1.5, borderRadius: 4 }]
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => "R$ " + v } } } }
   });
 
   const meses = ultimosMeses(6);
-  const faturadoPorMesReal = meses.map((m) => chamados.filter((c) => chaveMes(tsToMs(c.financeiro?.dataFaturamento)) === m.chave).reduce((s, c) => s + (c.financeiro?.valorFaturado || 0), 0));
+  const faturadoPorMesReal = meses.map((m) => chamados.filter((c) => chaveMes(tsToMs(c.financeiro?.dataFaturamento)) === m.chave).reduce((s, c) => s + (c.financeiro?.valorFinal || 0), 0));
   new Chart(document.getElementById("chart-fin-mensal"), {
     type: "line",
     data: { labels: meses.map((m) => m.label), datasets: [{ label: "Faturado", data: faturadoPorMesReal, borderColor: COR.blue, backgroundColor: COR.blueTint, fill: true, tension: 0.3 }] },
@@ -244,7 +242,7 @@ function renderFinanceiro() {
   });
 
   const porPlanta = {};
-  chamados.forEach((c) => { const v = c.financeiro?.valorFaturado || 0; if (v > 0) porPlanta[c.plantaNome || "—"] = (porPlanta[c.plantaNome || "—"] || 0) + v; });
+  chamados.forEach((c) => { const v = c.financeiro?.valorFinal || 0; if (v > 0) porPlanta[c.plantaNome || "—"] = (porPlanta[c.plantaNome || "—"] || 0) + v; });
   const entradas = Object.entries(porPlanta).sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (entradas.length === 0) graficoVazio("chart-fin-planta", "Nenhum faturamento registrado ainda.");
   else new Chart(document.getElementById("chart-fin-planta"), {

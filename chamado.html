@@ -19,6 +19,7 @@
 
   <div class="page">
     <div class="machine-plate" id="cabecalho"></div>
+    <div id="data-agendada-wrap"></div>
     <div id="stepper-detalhe"></div>
 
     <div id="bloco-acoes" style="display:none;">
@@ -28,42 +29,29 @@
 
     <div class="stats-grid" id="tempos-grid" style="margin-top:4px;"></div>
 
-    <div class="section-title"><span>Classificação</span></div>
+    <div class="section-title"><span>Ocorrência registrada</span></div>
     <div class="kv-row"><span class="kv-row__k">Categoria</span><span id="c-categoria"></span></div>
     <div class="kv-row"><span class="kv-row__k">Turno</span><span id="c-turno"></span></div>
     <div class="kv-row"><span class="kv-row__k">Fluxo</span><span id="c-fluxo"></span></div>
-
-    <div class="section-title"><span>Ocorrência</span></div>
-    <p style="font-size:14px; line-height:1.5; color:var(--text-dim);" id="c-descricao"></p>
-    <div class="callout" id="c-impacto-wrap" style="display:none;"><strong>Impacto e segurança:</strong> <span id="c-impacto"></span></div>
+    <div style="margin-top:10px;" class="destaque-texto" id="c-descricao"></div>
+    <div class="callout" id="c-impacto-wrap" style="display:none; margin-top:10px;"><strong>Impacto e segurança:</strong> <span id="c-impacto"></span></div>
     <div class="photo-grid" id="fotos-grid"></div>
 
-    <div id="bloco-diagnostico" style="display:none;">
-      <div class="section-title"><span>Diagnóstico do fornecedor</span></div>
-      <p style="font-size:14px; color:var(--text-dim);" id="dg-texto"></p>
-      <div class="photo-grid" id="fotos-diagnostico"></div>
+    <div id="bloco-financeiro" style="display:none;">
+      <div class="section-title"><span>Financeiro</span></div>
+      <div class="kv-row"><span class="kv-row__k">Apresentado</span><span id="f-apresentado"></span></div>
+      <div class="kv-row"><span class="kv-row__k">Aprovado (ciência)</span><span id="f-aprovado"></span></div>
+      <div class="kv-row"><span class="kv-row__k">Valor final</span><span id="f-final"></span></div>
+      <div class="kv-row"><span class="kv-row__k">Custo evitado</span><span id="f-evitado"></span></div>
+      <div class="kv-row"><span class="kv-row__k">Ordem de compra</span><span id="f-oc"></span></div>
+      <a id="f-orcamento-link" href="#" target="_blank" class="btn btn--secondary" style="margin-top:8px; display:none;">Ver orçamento final</a>
+      <a id="f-nf-link" href="#" target="_blank" class="btn btn--secondary" style="margin-top:8px; display:none;">Ver nota fiscal</a>
     </div>
 
-    <div id="bloco-parecer" style="display:none;">
-      <div class="section-title"><span>Parecer — Manutenção Magius</span></div>
-      <div class="callout" id="parecer-callout"></div>
-    </div>
+    <div class="section-title"><span>Etapas do chamado</span></div>
+    <div id="etapas-lista"></div>
 
-    <div id="bloco-aprovacao" style="display:none;">
-      <div class="section-title"><span>Aprovação</span></div>
-      <div class="callout" id="aprovacao-callout"></div>
-    </div>
-
-    <div class="section-title"><span>Financeiro</span></div>
-    <div class="kv-row"><span class="kv-row__k">Apresentado</span><span id="f-apresentado"></span></div>
-    <div class="kv-row"><span class="kv-row__k">Validado</span><span id="f-validado"></span></div>
-    <div class="kv-row"><span class="kv-row__k">Aprovado / comprometido</span><span id="f-aprovado"></span></div>
-    <div class="kv-row"><span class="kv-row__k">Custo evitado</span><span id="f-evitado"></span></div>
-    <div class="kv-row"><span class="kv-row__k">Faturado</span><span id="f-faturado"></span></div>
-    <div class="kv-row"><span class="kv-row__k">Tipo de manutenção</span><span id="f-tipo"></span></div>
-    <a id="f-nf-link" href="#" target="_blank" class="btn btn--secondary" style="margin-top:12px; display:none;">Ver nota fiscal</a>
-
-    <div class="section-title"><span>Linha do tempo</span></div>
+    <div class="section-title"><span>Linha do tempo resumida</span></div>
     <div class="timeline" id="timeline"></div>
   </div>
 </div>
@@ -91,10 +79,23 @@
   </div>
 </div>
 
+<!-- SHEET: ORDEM DE COMPRA -->
+<div class="overlay hidden" id="overlay-ordem-compra">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Anexar ordem de compra</h3><button class="close-x" data-close="overlay-ordem-compra">✕</button></div>
+    <form id="form-ordem-compra">
+      <div class="field"><label>Número da ordem de compra</label><input type="text" id="oc-numero" placeholder="Ex: OC-2026-0042" /></div>
+      <div class="field"><label>Anexo (opcional)</label><input type="file" id="oc-arquivo" accept=".pdf,image/*" /></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar</button>
+    </form>
+  </div>
+</div>
+
 <!-- SHEET: PROGRAMAR ATENDIMENTO -->
 <div class="overlay hidden" id="overlay-programar">
   <div class="sheet"><div class="sheet__handle"></div>
     <div class="sheet__header"><h3>Programar atendimento</h3><button class="close-x" data-close="overlay-programar">✕</button></div>
+    <div class="callout">A data/horário informados aqui ficam visíveis para todos que consultarem este chamado.</div>
     <form id="form-programar">
       <div class="field"><label>Data/hora prevista</label><input type="datetime-local" id="pg-data" required /></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar atendimento</button>
@@ -105,14 +106,16 @@
 <!-- SHEET: DIAGNÓSTICO -->
 <div class="overlay hidden" id="overlay-diagnostico">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Registrar diagnóstico</h3><button class="close-x" data-close="overlay-diagnostico">✕</button></div>
+    <div class="sheet__header"><h3 id="dg-titulo">Registrar diagnóstico</h3><button class="close-x" data-close="overlay-diagnostico">✕</button></div>
+    <div class="callout callout--red" id="dg-callout-contestado" style="display:none;">A Manutenção Magius não confirmou mau uso (ou considerou inconclusivo). Reavalie e registre um novo diagnóstico.</div>
     <form id="form-diagnostico">
       <div class="field"><label>Diagnóstico técnico</label><textarea id="dg-texto-input" required placeholder="O que foi encontrado"></textarea></div>
-      <div class="field" id="dg-mauuso-wrap"><label>É um caso de mau uso?</label>
+      <div class="field"><label>É um caso de mau uso?</label>
         <select id="dg-mauuso"><option value="nao">Não — manutenção contratual normal</option><option value="sim">Sim — abrir fluxo de validação de mau uso</option></select>
       </div>
-      <div class="field"><label>Valor apresentado / orçamento (R$)</label><input type="text" id="dg-valor" required inputmode="numeric" placeholder="R$ 0,00" /></div>
-      <div class="field"><label>OS, relatório técnico, fotos (evidências)</label><input type="file" id="dg-anexos" accept="image/*,.pdf" multiple /></div>
+      <div class="field"><label>Valor apresentado / orçamento (R$)</label><input type="text" id="dg-valor" inputmode="numeric" placeholder="R$ 0,00" disabled /></div>
+      <div class="field"><label>Evidências (OS, relatório, fotos, vídeos) — pode anexar vários</label><input type="file" id="dg-anexos" accept="image/*,video/*,.pdf" multiple /></div>
+      <div class="callout" id="dg-aviso-obrigatorio" style="display:none;">Como é um caso de mau uso, valor e ao menos uma evidência são obrigatórios.</div>
       <button type="submit" class="btn btn--primary" id="btn-diagnostico" style="margin-top:20px;">Enviar diagnóstico</button>
     </form>
   </div>
@@ -130,26 +133,24 @@
         <select id="pc-resultado">
           <option value="confirmado">Mau uso confirmado</option>
           <option value="nao_confirmado">Mau uso não confirmado</option>
-          <option value="inconclusivo">Inconclusivo — pedir complementação</option>
+          <option value="inconclusivo">Inconclusivo — pedir novo diagnóstico</option>
         </select>
       </div>
-      <div class="field"><label>Valor validado (R$) — se confirmado</label><input type="text" id="pc-valor" inputmode="numeric" placeholder="R$ 0,00" /></div>
+      <div class="callout">Se não confirmado ou inconclusivo, o chamado volta para o fornecedor registrar um novo diagnóstico.</div>
       <div class="field"><label>Justificativa técnica (obrigatória)</label><textarea id="pc-justificativa" required placeholder="Evidências analisadas, hipótese técnica, limitações e conclusão"></textarea></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Emitir parecer</button>
     </form>
   </div>
 </div>
 
-<!-- SHEET: DECISÃO DO APROVADOR -->
+<!-- SHEET: CIÊNCIA DO APROVADOR -->
 <div class="overlay hidden" id="overlay-decisao">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Decisão de aprovação</h3><button class="close-x" data-close="overlay-decisao">✕</button></div>
+    <div class="sheet__header"><h3>Dar ciência</h3><button class="close-x" data-close="overlay-decisao">✕</button></div>
+    <div class="callout">O aprovador só registra ciência do mau uso já confirmado — não há opção de recusar aqui.</div>
     <form id="form-decisao">
-      <div class="field"><label>Decisão</label>
-        <select id="dc-decisao"><option value="aprovado">Aprovar</option><option value="reprovado">Reprovar</option><option value="esclarecimento">Solicitar esclarecimento</option></select>
-      </div>
-      <div class="field"><label>Comentário</label><textarea id="dc-comentario" placeholder="Opcional"></textarea></div>
-      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar decisão</button>
+      <div class="field"><label>Comentário (opcional)</label><textarea id="dc-comentario"></textarea></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar ciência</button>
     </form>
   </div>
 </div>
@@ -163,22 +164,23 @@
       <div class="field"><label>Operacional ou com restrição após liberação?</label>
         <select id="lb-status-final"><option value="operacional">Operacional</option><option value="operacional_restricao">Operacional com restrição</option></select>
       </div>
+      <div id="lb-bloco-mauuso" style="display:none;">
+        <div class="callout">Mau uso confirmado — anexe o orçamento com o valor final antes de liberar.</div>
+        <div class="field"><label>Valor final (R$)</label><input type="text" id="lb-valor-final" inputmode="numeric" placeholder="R$ 0,00" /></div>
+        <div class="field"><label>Orçamento final (anexo)</label><input type="file" id="lb-orcamento" accept="image/*,.pdf" /></div>
+      </div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar liberação</button>
     </form>
   </div>
 </div>
 
-<!-- SHEET: FATURAMENTO -->
-<div class="overlay hidden" id="overlay-faturar">
+<!-- SHEET: NF DE COBRANÇA -->
+<div class="overlay hidden" id="overlay-nf">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Faturamento</h3><button class="close-x" data-close="overlay-faturar">✕</button></div>
-    <form id="form-faturar">
-      <div class="field"><label>Tipo de manutenção</label>
-        <select id="ft-tipo"><option value="preventiva">Preventiva</option><option value="corretiva">Corretiva</option><option value="mau_uso">Mau uso</option><option value="desgaste">Desgaste padrão</option></select>
-      </div>
-      <div class="field"><label>Valor faturado (R$)</label><input type="text" id="ft-valor" required inputmode="numeric" placeholder="R$ 0,00" /></div>
-      <div class="field"><label>Nota fiscal</label><input type="file" id="ft-nf" accept=".pdf,image/*" /></div>
-      <button type="submit" class="btn btn--primary" id="btn-faturar" style="margin-top:20px;">Concluir chamado</button>
+    <div class="sheet__header"><h3>Anexar NF de cobrança</h3><button class="close-x" data-close="overlay-nf">✕</button></div>
+    <form id="form-nf">
+      <div class="field"><label>Nota fiscal</label><input type="file" id="nf-arquivo" accept=".pdf,image/*" required /></div>
+      <button type="submit" class="btn btn--primary" id="btn-nf" style="margin-top:20px;">Enviar NF e concluir chamado</button>
     </form>
   </div>
 </div>
