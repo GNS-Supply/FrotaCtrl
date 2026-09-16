@@ -146,6 +146,43 @@ da janela de dias configurada em **Administrador → Parâmetros** (não é um
 job em segundo plano — é recalculado toda vez que a tela é aberta, o que é
 suficiente para o volume de uma frota).
 
+## Anexos (upload de arquivos)
+
+Se algum upload falhar, verifique nesta ordem:
+
+1. **Versão do SDK** — o projeto usa Firebase JS SDK **12.4.0**. Buckets no
+   padrão novo (`*.firebasestorage.app`, usado por projetos criados a
+   partir do fim de 2024) **não funcionam** em SDKs antigos: o upload fica
+   pendurado para sempre, sem sucesso nem erro, e a tela congela em
+   "Enviando…". Não volte para versões 10.x.
+2. **Storage ativado** no console do Firebase, com as regras de
+   `storage.rules` publicadas.
+3. **CORS do bucket** — se o erro for `storage/unknown`, o bucket precisa
+   liberar a origem do GitHub Pages. Crie um `cors.json`:
+   ```json
+   [{ "origin": ["https://SEU_USUARIO.github.io"],
+      "method": ["GET","POST","PUT","DELETE","HEAD"],
+      "responseHeader": ["Content-Type","Authorization","Content-Length","User-Agent","x-goog-resumable"],
+      "maxAgeSeconds": 3600 }]
+   ```
+   e aplique com `gsutil cors set cors.json gs://SEU_BUCKET`.
+
+Todo upload passa por `enviarArquivo()` / `enviarArquivos()` (em `app.js`),
+que garantem **timeout de 60s** (nunca trava indefinidamente), **progresso
+em %** no botão e **mensagem de erro traduzida**. Quando o anexo é
+obrigatório (evidência de mau uso), uma falha no envio **impede** o avanço
+da etapa em vez de deixar o chamado seguir sem a evidência.
+
+## Painéis do fornecedor
+
+A tela do fornecedor é dividida em painéis recolhíveis, um por estágio, com
+contador: Novos a programar · Programados (em ordem de data) · Em avaliação
+técnica · Diagnóstico enviado (aguardando Manutenção) · Contestados
+(precisam de resposta) · Aprovados (aguardando autorização) · Liberados para
+execução · Executados (aguardando documentação) · Histórico. Chamados de
+mau uso recebem selo de alerta, e atendimentos com data vencida aparecem
+marcados como atrasados.
+
 ## O que foi simplificado em relação ao PDF (e por quê)
 
 - **Notificações por e-mail**: não implementadas. O app é 100% estático

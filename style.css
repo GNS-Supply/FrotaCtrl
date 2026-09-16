@@ -1252,3 +1252,238 @@ select {
   padding-right: 34px;
   cursor: pointer;
 }
+
+/* ---------- Painéis recolhíveis (tela do fornecedor) ---------- */
+.painel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--sombra-sm);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.painel__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: none;
+  border-radius: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transicao);
+}
+.painel__head:hover { background: var(--surface-2); }
+.painel__titulo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.painel__nome { font-size: 14px; font-weight: 700; color: var(--text); }
+.painel__desc { font-size: 12px; color: var(--text-dim); line-height: 1.35; }
+.painel__contador {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 30px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 100px;
+  background: var(--muted-tint);
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.painel__contador--ativo { background: var(--accent); color: var(--accent-ink); }
+.painel__seta { color: var(--text-dim); display: flex; transition: transform var(--transicao); flex-shrink: 0; }
+.painel--aberto .painel__seta { transform: rotate(90deg); }
+.painel__corpo { padding: 4px 16px 16px; border-top: 1px solid var(--border); }
+.painel__corpo .empty { padding: 26px 18px; }
+
+/* Selo de alerta pra chamados marcados como mau uso */
+.selo-mauuso {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 4px 9px;
+  border-radius: 5px;
+  background: var(--accent-tint);
+  color: var(--accent-tint-ink);
+  border: 1px solid #f0dcb0;
+}
+.selo-mauuso--confirmado { background: var(--red-tint); color: var(--red); border-color: #f3c9c9; }
+
+.destaque-data--atrasado { background: var(--red-tint); border-color: #f3c9c9; color: var(--red); }
+
+/* ============================================================
+   Detalhe do chamado — cabeçalho estruturado
+   ============================================================ */
+.ch-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--sombra-sm);
+  overflow: hidden;
+}
+.ch-header__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.ch-header__numero {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.ch-header__equip { font-size: 13px; color: var(--text-dim); margin-top: 3px; }
+.ch-header__status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Grade de campos: cada dado tem rótulo e valor, em colunas —
+   nada de informação solta espalhada pelo cartão. */
+.ch-header__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+  gap: 1px;
+}
+.ch-header__campo {
+  background: var(--surface);
+  padding: 11px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.ch-header__rotulo {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.ch-header__valor { font-size: 13.5px; color: var(--text); font-weight: 600; }
+.ch-header__valor--mono { font-family: var(--font-mono); }
+
+/* ---------- Bloco de fluxo: linha do tempo + tempos juntos ---------- */
+.bloco-fluxo {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--sombra-sm);
+  margin-top: 14px;
+  padding: 18px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bloco-fluxo__stepper { width: 100%; }
+.bloco-fluxo__tempos {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.tempo-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 5px 12px;
+}
+.tempo-item__valor { font-family: var(--font-mono); font-weight: 700; font-size: 13px; color: var(--text); }
+.tempo-item__label { font-size: 11.5px; color: var(--text-dim); }
+.tempo-item--destaque { background: var(--accent-tint); border-color: #f0dcb0; }
+.tempo-item--destaque .tempo-item__valor { color: var(--accent-tint-ink); }
+
+/* ---------- Linha do tempo interativa ---------- */
+.stepper--interativo .stepper__item {
+  background: transparent;
+  border: none;
+  padding: 4px 2px;
+  border-radius: 8px;
+}
+.stepper--interativo .stepper__item--clicavel { cursor: pointer; }
+.stepper--interativo .stepper__item--clicavel:hover { background: var(--surface-2); }
+.stepper--interativo .stepper__item--clicavel:hover .stepper__label { color: var(--accent-dark); font-weight: 700; }
+.stepper--interativo .stepper__item:disabled { cursor: default; opacity: 0.75; }
+.stepper--interativo .stepper__item--clicavel .stepper__dot { box-shadow: 0 0 0 1px currentColor, 0 0 0 4px rgba(232,163,61,0.12); }
+
+/* ---------- Painel de foco de uma etapa ---------- */
+.etapa-foco {
+  background: var(--surface-2);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-top: 14px;
+}
+.etapa-foco__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.etapa-foco__titulo { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+.etapa-card--destacada { border-left-color: var(--blue); }
+
+/* ---------- Cartão de etapa enriquecido ---------- */
+.etapa-card__macro {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-tint-ink);
+  background: var(--accent-tint);
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-right: 7px;
+  vertical-align: middle;
+}
+.etapa-card__autor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+.etapa-card__avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+/* ---------- Ocorrência em 2 colunas no desktop ---------- */
+.ocorrencia-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 900px) {
+  .ocorrencia-grid { grid-template-columns: minmax(260px, 340px) 1fr; align-items: start; }
+  .bloco-fluxo { flex-direction: row; align-items: center; gap: 26px; }
+  .bloco-fluxo__stepper { flex: 1; }
+  .bloco-fluxo__tempos {
+    flex-direction: column;
+    padding-top: 0;
+    border-top: none;
+    border-left: 1px solid var(--border);
+    padding-left: 22px;
+    flex-shrink: 0;
+  }
+}

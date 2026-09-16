@@ -61,35 +61,34 @@ function abrirFechar(id, abrir) { document.getElementById(id).classList.toggle("
 function render(c) {
   const souManutencao = usuarioAtual.tipo === "manutencao";
 
+  // ---------- Cabeçalho: identificação em blocos claros ----------
+  const dataAtend = c.dataAtendimentoPrevista ? new Date(c.dataAtendimentoPrevista) : null;
   document.getElementById("cabecalho").innerHTML = `
-    <div class="machine-plate__head">
-      <div>
-        <div class="machine-plate__id">${escapeHtml(c.numero || "")} · ${escapeHtml(c.numeroFrota || "")}</div>
-        <div class="machine-plate__model">${escapeHtml(c.tipoModeloEquip || "")}</div>
+    <div class="ch-header">
+      <div class="ch-header__topo">
+        <div class="ch-header__id">
+          <div class="ch-header__numero">${escapeHtml(c.numero || "")}</div>
+          <div class="ch-header__equip">${escapeHtml(c.numeroFrota || "")} · ${escapeHtml(c.tipoModeloEquip || "—")}</div>
+        </div>
+        <div class="ch-header__status">
+          ${badgeHtml(c.status)}
+          ${responsavelAtualHtml(c.status)}
+        </div>
       </div>
-      <div class="hourmeter"><div class="hourmeter__value">${(c.horimetro ?? 0).toLocaleString("pt-BR")}h</div><div class="hourmeter__label">Horímetro</div></div>
+      <div class="ch-header__grid">
+        <div class="ch-header__campo"><span class="ch-header__rotulo">Criticidade</span><span class="ch-header__valor">${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : "—"}</span></div>
+        <div class="ch-header__campo"><span class="ch-header__rotulo">Local</span><span class="ch-header__valor">${escapeHtml(c.plantaNome || "—")} / ${escapeHtml(c.setorNome || "—")}</span></div>
+        <div class="ch-header__campo"><span class="ch-header__rotulo">Horímetro</span><span class="ch-header__valor ch-header__valor--mono">${(c.horimetro ?? 0).toLocaleString("pt-BR")} h</span></div>
+        <div class="ch-header__campo"><span class="ch-header__rotulo">Aberto em</span><span class="ch-header__valor">${formatarData(c.registradoEm)}</span></div>
+        <div class="ch-header__campo"><span class="ch-header__rotulo">Fornecedor</span><span class="ch-header__valor">${escapeHtml(c.fornecedorNome || "—")}</span></div>
+        <div class="ch-header__campo"><span class="ch-header__rotulo">Atendimento</span><span class="ch-header__valor">${dataAtend ? dataAtend.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "a programar"}</span></div>
+      </div>
     </div>
-    <div class="pill-group" style="margin-top:8px;">
-      ${badgeHtml(c.status)}
-      ${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}
-      ${responsavelAtualHtml(c.status)}
-    </div>
-    <div style="font-size:12px; color:var(--text-dim); margin-top:8px;">${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")} · Aberto em ${formatarData(c.registradoEm)} por ${escapeHtml(c.solicitanteNome || "—")}</div>
   `;
 
-  const dataWrap = document.getElementById("data-agendada-wrap");
-  if (c.dataAtendimentoPrevista) {
-    const d = new Date(c.dataAtendimentoPrevista);
-    dataWrap.innerHTML = `<div style="margin:10px 0;"><span class="destaque-data">${icone("calendario", 15)} Atendimento programado: ${d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span></div>`;
-  } else {
-    dataWrap.innerHTML = "";
-  }
+  // ---------- Linha do tempo clicável + tempos compactos ----------
+  document.getElementById("stepper-detalhe").innerHTML = stepperInterativoHtml(c);
 
-  document.getElementById("stepper-detalhe").innerHTML = stepperHtml(c.status, true);
-
-  renderAcoes(c);
-
-  // Tempos
   const registradoMs = tsToMs(c.registradoEm);
   const acionadoMs = tsToMs(c.historico?.find((h) => h.status === "fornecedor_acionado")?.timestamp);
   const avaliacaoMs = tsToMs(c.historico?.find((h) => h.status === "em_avaliacao_tecnica")?.timestamp);
@@ -97,16 +96,18 @@ function render(c) {
   const tempoAteAcionamento = acionadoMs && registradoMs ? acionadoMs - registradoMs : null;
   const tempoManutencao = avaliacaoMs ? (liberadoMs || Date.now()) - avaliacaoMs : null;
   const tempoTotalParada = registradoMs ? (liberadoMs || Date.now()) - registradoMs : null;
-
   document.getElementById("tempos-grid").innerHTML = `
-    <div class="stat-card"><div class="stat-card__value">${msParaDuracao(tempoAteAcionamento)}</div><div class="stat-card__label">Até acionar fornecedor</div></div>
-    <div class="stat-card"><div class="stat-card__value">${msParaDuracao(tempoManutencao)}</div><div class="stat-card__label">Tempo de manutenção (desde a avaliação)</div></div>
-    <div class="stat-card" style="grid-column: 1 / -1;"><div class="stat-card__value">${msParaDuracao(tempoTotalParada)}</div><div class="stat-card__label">Tempo total parado (registro → ${liberadoMs ? "liberação" : "agora"})</div></div>
+    <div class="tempo-item"><span class="tempo-item__valor">${msParaDuracao(tempoAteAcionamento)}</span><span class="tempo-item__label">até acionar</span></div>
+    <div class="tempo-item"><span class="tempo-item__valor">${msParaDuracao(tempoManutencao)}</span><span class="tempo-item__label">manutenção</span></div>
+    <div class="tempo-item tempo-item--destaque"><span class="tempo-item__valor">${msParaDuracao(tempoTotalParada)}</span><span class="tempo-item__label">parado ${liberadoMs ? "(total)" : "(até agora)"}</span></div>
   `;
+
+  renderAcoes(c);
 
   document.getElementById("c-categoria").textContent = c.categoria || "—";
   document.getElementById("c-turno").textContent = TURNO_LABELS[c.turno] || "—";
-  document.getElementById("c-fluxo").textContent = c.fluxo === "mau_uso" ? "Fluxo de mau uso" : c.fluxo === "contratual" ? "Fluxo contratual normal" : "Ainda não definido (aguardando diagnóstico)";
+  document.getElementById("c-fluxo").textContent = c.fluxo === "mau_uso" ? "Mau uso" : c.fluxo === "contratual" ? "Contratual normal" : "A definir";
+  document.getElementById("c-solicitante").textContent = c.solicitanteNome || "—";
   document.getElementById("c-descricao").textContent = c.descricao || "—";
   if (c.impactoSeguranca) {
     document.getElementById("c-impacto-wrap").style.display = "block";
@@ -114,8 +115,7 @@ function render(c) {
   }
   document.getElementById("fotos-grid").innerHTML = (c.fotos || []).map((u) => `<a href="${u}" target="_blank"><img src="${u}" /></a>`).join("");
 
-  // Financeiro — nunca mostrado pra Manutenção Magius (ela avalia só a
-  // evidência técnica, não deve enxergar valores).
+  // Financeiro — nunca mostrado pra Manutenção Magius.
   if (!souManutencao && (c.financeiro?.valorApresentado || c.financeiro?.valorFinal)) {
     document.getElementById("bloco-financeiro").style.display = "block";
     const f = c.financeiro || {};
@@ -124,24 +124,77 @@ function render(c) {
     document.getElementById("f-final").textContent = formatarMoeda(f.valorFinal);
     document.getElementById("f-evitado").textContent = formatarMoeda(f.custoEvitado);
     document.getElementById("f-oc").textContent = f.ordemCompraNumero || "—";
-    if (f.orcamentoFinalUrl) { const l = document.getElementById("f-orcamento-link"); l.href = f.orcamentoFinalUrl; l.style.display = "block"; }
-    if (f.notaFiscalUrl) { const l = document.getElementById("f-nf-link"); l.href = f.notaFiscalUrl; l.style.display = "block"; }
+    if (f.orcamentoFinalUrl) { const l = document.getElementById("f-orcamento-link"); l.href = f.orcamentoFinalUrl; l.style.display = "inline-flex"; }
+    if (f.notaFiscalUrl) { const l = document.getElementById("f-nf-link"); l.href = f.notaFiscalUrl; l.style.display = "inline-flex"; }
   } else {
     document.getElementById("bloco-financeiro").style.display = "none";
   }
 
-  // Etapas detalhadas (cada uma com quem fez e os dados inseridos)
+  // ---------- Etapas (coluna única, cada uma completa) ----------
   const historico = (c.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
-  document.getElementById("etapas-lista").innerHTML = historico.map((h) => `
-    <div class="etapa-card">
+  document.getElementById("etapas-lista").innerHTML = historico.map((h, i) => etapaCardHtml(h, i, souManutencao)).join("");
+}
+
+// Cartão completo de uma etapa: quem deu sequência, quando, o que
+// registrou e todos os anexos/observações daquela etapa.
+function etapaCardHtml(h, indice, souManutencao, destacada) {
+  const macro = STATUS_PARA_ETAPA[h.status] ?? 0;
+  return `
+    <div class="etapa-card ${destacada ? "etapa-card--destacada" : ""}" id="etapa-${indice}">
       <div class="etapa-card__head">
-        <span class="etapa-card__status">${STATUS_LABELS[h.status] || h.status}</span>
+        <span class="etapa-card__status">
+          <span class="etapa-card__macro">${MACRO_ETAPAS[macro]}</span>
+          ${STATUS_LABELS[h.status] || h.status}
+        </span>
         <span class="etapa-card__meta">${formatarData(h.timestamp)}</span>
       </div>
-      <div class="etapa-card__meta">${h.autor ? escapeHtml(h.autor) : "—"} ${h.perfil ? "· " + escapeHtml(h.perfil) : ""}</div>
+      <div class="etapa-card__autor">
+        <span class="etapa-card__avatar">${iniciais(h.autor)}</span>
+        <span><strong>${escapeHtml(h.autor || "—")}</strong>${h.perfil ? ` · ${escapeHtml(h.perfil)}` : ""}</span>
+      </div>
       ${h.obs ? `<div class="etapa-card__obs">${escapeHtml(h.obs)}</div>` : ""}
       ${renderDadosEtapa(h.dados, souManutencao)}
-    </div>`).join("");
+    </div>`;
+}
+
+// Linha do tempo clicável: cada bolinha abre os detalhes da etapa.
+function stepperInterativoHtml(c) {
+  const historico = (c.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
+  const atual = STATUS_PARA_ETAPA[c.status] ?? 0;
+  const concluido = c.status === "concluido";
+  const encerradoSemSucesso = STATUS_ENCERRADO_SEM_SUCESSO.includes(c.status);
+  return `<div class="stepper stepper--interativo">${MACRO_ETAPAS.map((label, i) => {
+    let cor;
+    if (concluido) cor = "verde";
+    else if (encerradoSemSucesso) cor = i < atual ? "verde" : "vermelho";
+    else if (i < atual) cor = "verde";
+    else if (i === atual) cor = "amarelo";
+    else cor = "cinza";
+    const temEtapas = historico.some((h) => (STATUS_PARA_ETAPA[h.status] ?? 0) === i);
+    return `<button type="button" class="stepper__item ${temEtapas ? "stepper__item--clicavel" : ""}" ${temEtapas ? `onclick="mostrarEtapasMacro(${i})"` : "disabled"} title="${temEtapas ? "Ver detalhes desta etapa" : "Etapa ainda não iniciada"}">
+      <div class="stepper__dot stepper__dot--${cor}"></div>
+      <div class="stepper__label">${label}</div>
+    </button>`;
+  }).join("")}</div>`;
+}
+
+// Mostra, num painel logo abaixo da linha do tempo, todas as etapas
+// registradas dentro daquela macro-etapa.
+function mostrarEtapasMacro(indiceMacro) {
+  const souManutencao = usuarioAtual.tipo === "manutencao";
+  const historico = (chamadoAtual.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
+  const doGrupo = historico.filter((h) => (STATUS_PARA_ETAPA[h.status] ?? 0) === indiceMacro);
+  const wrap = document.getElementById("detalhe-etapa-selecionada");
+  if (doGrupo.length === 0) { wrap.innerHTML = ""; return; }
+  wrap.innerHTML = `
+    <div class="etapa-foco">
+      <div class="etapa-foco__head">
+        <span class="etapa-foco__titulo">${MACRO_ETAPAS[indiceMacro]} — ${doGrupo.length} registro(s)</span>
+        <button class="close-x" onclick="document.getElementById('detalhe-etapa-selecionada').innerHTML=''">${icone("x", 14)}</button>
+      </div>
+      ${doGrupo.map((h, i) => etapaCardHtml(h, `foco-${i}`, souManutencao, true)).join("")}
+    </div>`;
+  wrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 // Renderiza os dados específicos de cada tipo de etapa (o que foi
@@ -305,12 +358,12 @@ async function salvarOrdemCompra(e) {
   let ordemCompraUrl = null;
   if (arquivo) {
     try {
-      const ref = storage.ref(`chamados/${chamadoId}/ordem-compra/${Date.now()}-${arquivo.name}`);
-      await ref.put(arquivo);
-      ordemCompraUrl = await ref.getDownloadURL();
+      ordemCompraUrl = await enviarArquivo(`chamados/${chamadoId}/ordem-compra/${Date.now()}-${arquivo.name}`, arquivo, (pct) => { btn.textContent = `Enviando… ${pct}%`; });
     } catch (err) {
-      console.warn("Não foi possível anexar a ordem de compra:", err);
-      alert("O status será atualizado, mas não foi possível anexar o arquivo.");
+      alert("Não foi possível anexar a ordem de compra: " + err.message + "\n\nNada foi alterado. Tente novamente.");
+      btn.disabled = false;
+      btn.textContent = "Confirmar";
+      return;
     }
   }
   try {
@@ -383,14 +436,16 @@ async function salvarDiagnostico(e) {
   let urls = [];
   if (arquivos.length > 0) {
     try {
-      for (const file of arquivos) {
-        const ref = storage.ref(`chamados/${chamadoId}/diagnostico/${Date.now()}-${file.name}`);
-        await ref.put(file);
-        urls.push(await ref.getDownloadURL());
-      }
+      urls = await enviarArquivos(`chamados/${chamadoId}/diagnostico`, arquivos, btn, "Enviar diagnóstico");
     } catch (err) {
+      if (mauUso) {
+        alert("Não foi possível anexar as evidências: " + err.message + "\n\nO diagnóstico não foi enviado. Tente novamente.");
+        btn.disabled = false;
+        btn.textContent = "Enviar diagnóstico";
+        return;
+      }
       console.warn("Não foi possível anexar arquivos do diagnóstico:", err);
-      alert("O diagnóstico será enviado, mas não foi possível anexar os arquivos.");
+      alert("O diagnóstico será enviado, mas não foi possível anexar os arquivos: " + err.message);
     }
   }
   try {
@@ -486,12 +541,11 @@ async function salvarLiberacao(e) {
     let orcamentoUrl = null;
     if (arquivoOrcamento) {
       try {
-        const ref = storage.ref(`chamados/${chamadoId}/orcamento-final/${Date.now()}-${arquivoOrcamento.name}`);
-        await ref.put(arquivoOrcamento);
-        orcamentoUrl = await ref.getDownloadURL();
+        orcamentoUrl = await enviarArquivo(`chamados/${chamadoId}/orcamento-final/${Date.now()}-${arquivoOrcamento.name}`, arquivoOrcamento);
       } catch (err) {
-        console.warn("Não foi possível anexar o orçamento final:", err);
-        alert("A liberação será registrada, mas não foi possível anexar o orçamento.");
+        alert("Não foi possível anexar o orçamento: " + err.message + "\n\nA liberação não foi registrada. Tente novamente.");
+        if (btn) btn.disabled = false;
+        return;
       }
     }
     const extra = { servicoExecutado: servico, liberadoEm: firebase.firestore.FieldValue.serverTimestamp() };
@@ -531,11 +585,9 @@ async function salvarNf(e) {
   btn.textContent = "Enviando…";
   let notaFiscalUrl = null;
   try {
-    const ref = storage.ref(`chamados/${chamadoId}/nota-fiscal/${Date.now()}-${arquivo.name}`);
-    await ref.put(arquivo);
-    notaFiscalUrl = await ref.getDownloadURL();
+    notaFiscalUrl = await enviarArquivo(`chamados/${chamadoId}/nota-fiscal/${Date.now()}-${arquivo.name}`, arquivo, (pct) => { btn.textContent = `Enviando… ${pct}%`; });
   } catch (err) {
-    alert("Não foi possível anexar a nota fiscal agora. Tente novamente.");
+    alert("Não foi possível anexar a nota fiscal: " + err.message);
     btn.disabled = false;
     btn.textContent = "Enviar NF e concluir chamado";
     return;

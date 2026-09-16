@@ -483,3 +483,80 @@ function icone(nome, tamanho) {
   const t = tamanho || 18;
   return `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES_SVG[nome] || ""}</svg>`;
 }
+
+// ---------- Upload de anexos (robusto) ----------
+// Antes o código fazia `await ref.put(file)` direto. Se o upload travasse
+// (bucket mal resolvido, CORS, rede caindo), a promessa nunca resolvia NEM
+// rejeitava — a tela ficava congelada em "Enviando…" pra sempre e o
+// processo não avançava. Agora todo upload passa por aqui, com:
+//   - timeout: nunca fica pendurado pra sempre
+//   - progresso: dá pra mostrar % pro usuário
+//   - erro traduzido: o usuário vê o que houve, não uma tela morta
+const UPLOAD_TIMEOUT_MS = 60000;
+
+function traduzErroUpload(err) {
+  const code = err && err.code ? err.code : "";
+  const mapa = {
+    "storage/unauthorized": "Sem permissão para enviar o arquivo. Verifique as regras do Storage no console do Firebase.",
+    "storage/canceled": "Envio cancelado.",
+    "storage/retry-limit-exceeded": "O envio demorou demais. Verifique sua conexão e tente novamente.",
+    "storage/quota-exceeded": "A cota de armazenamento do projeto foi excedida.",
+    "storage/unauthenticated": "Sessão expirada. Entre novamente e tente de novo.",
+    "storage/unknown": "Falha na comunicação com o Storage. Se o problema persistir, verifique a configuração de CORS do bucket."
+  };
+  return mapa[code] || (err && err.message) || "Falha desconhecida ao enviar o arquivo.";
+}
+
+// Envia UM arquivo e devolve a URL. `onProgresso(pct)` é opcional.
+function enviarArquivo(caminho, file, onProgresso) {
+  return new Promise((resolve, reject) => {
+    let finalizado = false;
+    const tarefa = storage.ref(caminho).put(file);
+
+    const timer = setTimeout(() => {
+      if (finalizado) return;
+      finalizado = true;
+      try { tarefa.cancel(); } catch (e) {}
+      reject(new Error("O envio do arquivo demorou mais que o esperado e foi interrompido. Verifique sua conexão e tente novamente."));
+    }, UPLOAD_TIMEOUT_MS);
+
+    tarefa.on(
+      "state_changed",
+      (snap) => {
+        if (onProgresso && snap.totalBytes) onProgresso(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+      },
+      (err) => {
+        if (finalizado) return;
+        finalizado = true;
+        clearTimeout(timer);
+        reject(new Error(traduzErroUpload(err)));
+      },
+      async () => {
+        if (finalizado) return;
+        finalizado = true;
+        clearTimeout(timer);
+        try {
+          resolve(await tarefa.snapshot.ref.getDownloadURL());
+        } catch (err) {
+          reject(new Error(traduzErroUpload(err)));
+        }
+      }
+    );
+  });
+}
+
+// Envia vários arquivos em sequência, atualizando o texto do botão com o
+// progresso. Lança erro se qualquer um falhar (quem chama decide o que fazer).
+async function enviarArquivos(prefixo, fileList, botao, textoBase) {
+  const urls = [];
+  const arquivos = Array.from(fileList || []);
+  for (let i = 0; i < arquivos.length; i++) {
+    const file = arquivos[i];
+    const url = await enviarArquivo(`${prefixo}/${Date.now()}-${file.name}`, file, (pct) => {
+      if (botao) botao.textContent = `Enviando anexo ${i + 1}/${arquivos.length}… ${pct}%`;
+    });
+    urls.push(url);
+  }
+  if (botao && textoBase) botao.textContent = textoBase;
+  return urls;
+}

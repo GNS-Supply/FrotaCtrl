@@ -513,12 +513,12 @@ async function salvarOrdemCompra(e) {
   let ordemCompraUrl = null;
   if (arquivo) {
     try {
-      const ref = storage.ref(`chamados/${id}/ordem-compra/${Date.now()}-${arquivo.name}`);
-      await ref.put(arquivo);
-      ordemCompraUrl = await ref.getDownloadURL();
+      ordemCompraUrl = await enviarArquivo(`chamados/${id}/ordem-compra/${Date.now()}-${arquivo.name}`, arquivo, (pct) => { btn.textContent = `Enviando… ${pct}%`; });
     } catch (err) {
-      console.warn("Não foi possível anexar a ordem de compra:", err);
-      alert("O status será atualizado, mas não foi possível anexar o arquivo.");
+      alert("Não foi possível anexar a ordem de compra: " + err.message + "\n\nNada foi alterado. Tente novamente.");
+      btn.disabled = false;
+      btn.textContent = "Confirmar";
+      return;
     }
   }
   try {
