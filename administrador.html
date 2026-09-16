@@ -18,40 +18,43 @@
   </div>
 
   <div class="page">
-    <h2 style="margin-bottom:14px; color:var(--text);">Painel Master</h2>
-    <div class="callout">Esta é a conta master da plataforma (oculta da lista de usuários). Ela tem acesso irrestrito a qualquer tela — use os atalhos abaixo ou digite a URL diretamente. Em qualquer painel, o item <strong>"Painel Master"</strong> no menu lateral traz você de volta aqui.</div>
+    <div class="page-header">
+      <h1>Painel Master</h1>
+      <p>Conta oculta com acesso irrestrito a qualquer painel da plataforma.</p>
+    </div>
+    <div class="callout">Esta é a conta master da plataforma (oculta da lista de usuários). Use os atalhos abaixo ou digite a URL diretamente. Em qualquer painel, o item <strong>"Painel Master"</strong> no menu lateral traz você de volta aqui.</div>
 
     <div class="section-title"><span>Acesso a todos os painéis</span></div>
     <div class="card-list">
-      <a class="ticket-card" href="gestao-frota.html">
-        <div class="ticket-card__top"><span class="badge badge--amber">🚜</span></div>
+      <a class="ticket-card launcher-card" href="gestao-frota.html">
+        <div class="icon-tile icon-tile--amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg></div>
         <div class="ticket-card__title">Gestão de Frota</div>
-        <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Fila, equipamentos, chamados, plantas/setores, parâmetros e usuários</div>
+        <div class="launcher-card__desc">Fila, equipamentos, chamados, plantas/setores, parâmetros e usuários</div>
       </a>
-      <a class="ticket-card" href="solicitante.html">
-        <div class="ticket-card__top"><span class="badge badge--blue">📋</span></div>
+      <a class="ticket-card launcher-card" href="solicitante.html">
+        <div class="icon-tile icon-tile--blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 011 1v1H8V4a1 1 0 011-1z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 11h6M9 15h6"/></svg></div>
         <div class="ticket-card__title">Solicitante</div>
-        <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Abertura e acompanhamento de chamados</div>
+        <div class="launcher-card__desc">Abertura e acompanhamento de chamados</div>
       </a>
-      <a class="ticket-card" href="fornecedor.html">
-        <div class="ticket-card__top"><span class="badge badge--green">🔧</span></div>
+      <a class="ticket-card launcher-card" href="fornecedor.html">
+        <div class="icon-tile icon-tile--green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 10-5.4 5.4L4 17v3h3l5.1-5.1a4 4 0 002.4-8.4z"/></svg></div>
         <div class="ticket-card__title">Fornecedor</div>
-        <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Atendimento, diagnóstico, execução e faturamento</div>
+        <div class="launcher-card__desc">Atendimento, diagnóstico, execução e faturamento</div>
       </a>
-      <a class="ticket-card" href="manutencao.html">
-        <div class="ticket-card__top"><span class="badge badge--muted">🔍</span></div>
+      <a class="ticket-card launcher-card" href="manutencao.html">
+        <div class="icon-tile icon-tile--muted"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
         <div class="ticket-card__title">Manutenção Magius</div>
-        <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Validação de mau uso</div>
+        <div class="launcher-card__desc">Validação de mau uso</div>
       </a>
-      <a class="ticket-card" href="aprovador.html">
-        <div class="ticket-card__top"><span class="badge badge--red">✔️</span></div>
+      <a class="ticket-card launcher-card" href="aprovador.html">
+        <div class="icon-tile icon-tile--red"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg></div>
         <div class="ticket-card__title">Aprovador</div>
-        <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Aprovação financeira dos casos de mau uso</div>
+        <div class="launcher-card__desc">Aprovação financeira dos casos de mau uso</div>
       </a>
-      <a class="ticket-card" href="dashboard.html">
-        <div class="ticket-card__top"><span class="badge badge--amber">📊</span></div>
+      <a class="ticket-card launcher-card" href="dashboard.html">
+        <div class="icon-tile icon-tile--amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M11 20V4M18 20v-7"/><path d="M2 20h20"/></svg></div>
         <div class="ticket-card__title">Indicadores</div>
-        <div style="font-size:12.5px; color:var(--text-dim); margin-top:4px;">Dashboards operacional, mau uso, financeiro e recorrência</div>
+        <div class="launcher-card__desc">Dashboards operacional, mau uso, financeiro e recorrência</div>
       </a>
     </div>
 

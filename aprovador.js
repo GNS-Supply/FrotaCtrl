@@ -47,7 +47,7 @@ function escutarChamados() {
 
 function renderFila() {
   const el = document.getElementById("lista-fila");
-  if (filaCache.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__icon">✅</div><div class="empty__title">Nada pendente</div></div>`; return; }
+  if (filaCache.length === 0) { el.innerHTML = `<div class="empty">${icone("checkCirculo", 34)}<div class="empty__title">Nada pendente</div></div>`; return; }
   el.innerHTML = filaCache.map((c) => `
     <div class="ticket-card">
       <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>

@@ -453,3 +453,33 @@ function aplicarFiltroStatus(lista, chaveFiltro) {
   const statusPermitidos = GRUPOS_FILTRO_STATUS[chaveFiltro];
   return statusPermitidos ? lista.filter((c) => statusPermitidos.includes(c.status)) : lista;
 }
+
+// ---------- Ícones (SVG, não emoji) ----------
+// Traço fino consistente com os ícones do menu lateral. Uso:
+// icone("calendario", 16) retorna o <svg> pronto pra inserir no HTML.
+const ICONES_SVG = {
+  calendario: '<path d="M8 2v4M16 2v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/>',
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  checkCirculo: '<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.2 2.2L16 9.5"/>',
+  clipboard: '<path d="M9 3h6a1 1 0 011 1v1H8V4a1 1 0 011-1z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 11h6M9 15h6"/>',
+  chave: '<path d="M14.5 6.5a4 4 0 10-5.4 5.4L4 17v3h3l5.1-5.1a4 4 0 002.4-8.4z"/>',
+  lupa: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  caminhao: '<rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>',
+  usuarios: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M15 13.2c2 .4 3.3 1.9 3.3 4.3"/>',
+  escudo: '<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4.5"/>',
+  aprovacao: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/>',
+  grafico: '<path d="M4 20V10M11 20V4M18 20v-7"/><path d="M2 20h20"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/>',
+  clip: '<path d="M8 12l6-6a3 3 0 114 4l-8 8a5 5 0 01-7-7l8-8"/>',
+  alerta: '<path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17h.01"/>',
+  mais: '<path d="M12 5v14M5 12h14"/>',
+  seta: '<path d="M9 5l7 7-7 7"/>',
+  predio: '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"/>',
+  mapa: '<path d="M9 3v15M15 6v15"/><path d="M4 5l5-2 6 3 5-2v15l-5 2-6-3-5 2z"/>',
+  ajustes: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M21 18h0"/><circle cx="15" cy="6" r="2.2"/><circle cx="7" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>'
+};
+function icone(nome, tamanho) {
+  const t = tamanho || 18;
+  return `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES_SVG[nome] || ""}</svg>`;
+}

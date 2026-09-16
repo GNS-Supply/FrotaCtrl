@@ -80,7 +80,7 @@ function render(c) {
   const dataWrap = document.getElementById("data-agendada-wrap");
   if (c.dataAtendimentoPrevista) {
     const d = new Date(c.dataAtendimentoPrevista);
-    dataWrap.innerHTML = `<div style="margin:10px 0;"><span class="destaque-data">📅 Atendimento programado: ${d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span></div>`;
+    dataWrap.innerHTML = `<div style="margin:10px 0;"><span class="destaque-data">${icone("calendario", 15)} Atendimento programado: ${d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span></div>`;
   } else {
     dataWrap.innerHTML = "";
   }
@@ -141,16 +141,6 @@ function render(c) {
       <div class="etapa-card__meta">${h.autor ? escapeHtml(h.autor) : "—"} ${h.perfil ? "· " + escapeHtml(h.perfil) : ""}</div>
       ${h.obs ? `<div class="etapa-card__obs">${escapeHtml(h.obs)}</div>` : ""}
       ${renderDadosEtapa(h.dados, souManutencao)}
-    </div>`).join("");
-
-  // Linha do tempo resumida (visão rápida, sem os detalhes de cada etapa)
-  document.getElementById("timeline").innerHTML = historico.map((h) => `
-    <div class="timeline-item">
-      <div class="timeline-item__dot"></div>
-      <div class="timeline-item__body">
-        <div class="timeline-item__status">${STATUS_LABELS[h.status] || h.status}</div>
-        <div class="timeline-item__time">${formatarData(h.timestamp)} ${h.autor ? "· " + escapeHtml(h.autor) : ""}</div>
-      </div>
     </div>`).join("");
 }
 

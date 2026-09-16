@@ -18,6 +18,7 @@
   </div>
 
   <div class="page" id="view-fila">
+    <div class="page-header"><h1>Painel da Gestão de Frota</h1><p>Pendências que aguardam sua ação, visão geral da frota e dos chamados.</p></div>
     <div class="stats-grid" id="stats-grid"></div>
     <div class="section-title"><span>Pendências da Gestão de Frota</span></div>
     <div id="lista-fila" class="card-list"></div>
@@ -153,7 +154,7 @@
 <div class="overlay hidden" id="overlay-triagem">
   <div class="sheet">
     <div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Revisar e iniciar triagem</h3><button class="close-x" data-close="overlay-triagem">✕</button></div>
+    <div class="sheet__header"><h3>Revisar e iniciar triagem</h3><button class="close-x" data-close="overlay-triagem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="callout" id="tr-info"></div>
     <form id="form-triagem">
       <input type="hidden" id="tr-chamado-id" />
@@ -168,7 +169,7 @@
 <div class="overlay hidden" id="overlay-acionar">
   <div class="sheet">
     <div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Acionar fornecedor</h3><button class="close-x" data-close="overlay-acionar">✕</button></div>
+    <div class="sheet__header"><h3>Acionar fornecedor</h3><button class="close-x" data-close="overlay-acionar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-acionar">
       <input type="hidden" id="ac-chamado-id" />
       <div class="field"><label>Fornecedor</label><select id="ac-fornecedor" required></select></div>
@@ -181,7 +182,7 @@
 <div class="overlay hidden" id="overlay-ordem-compra">
   <div class="sheet">
     <div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Anexar ordem de compra</h3><button class="close-x" data-close="overlay-ordem-compra">✕</button></div>
+    <div class="sheet__header"><h3>Anexar ordem de compra</h3><button class="close-x" data-close="overlay-ordem-compra"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="callout">Mau uso confirmado — anexe a ordem de compra referente a este chamado antes do fornecedor emitir a NF.</div>
     <form id="form-ordem-compra">
       <input type="hidden" id="oc-chamado-id" />
@@ -196,7 +197,7 @@
 <div class="overlay hidden" id="overlay-equip">
   <div class="sheet">
     <div class="sheet__handle"></div>
-    <div class="sheet__header"><h3 id="equip-titulo">Novo equipamento</h3><button class="close-x" data-close="overlay-equip">✕</button></div>
+    <div class="sheet__header"><h3 id="equip-titulo">Novo equipamento</h3><button class="close-x" data-close="overlay-equip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-equip">
       <input type="hidden" id="eq-id" />
       <div class="grid-2">

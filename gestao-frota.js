@@ -381,7 +381,7 @@ function renderFila() {
   const el = document.getElementById("lista-fila");
   const fila = chamadosCache.filter((c) => STATUS_FILA_GESTAO.includes(c.status));
   if (fila.length === 0) {
-    el.innerHTML = `<div class="empty"><div class="empty__icon">✅</div><div class="empty__title">Nenhuma pendência</div></div>`;
+    el.innerHTML = `<div class="empty">${icone("checkCirculo", 34)}<div class="empty__title">Nenhuma pendência</div></div>`;
     return;
   }
   el.innerHTML = fila.map((c) => {
@@ -547,7 +547,7 @@ function escutarEquipamentos() {
 function renderEquipamentos() {
   const el = document.getElementById("lista-equipamentos");
   if (equipamentosCache.length === 0) {
-    el.innerHTML = `<div class="empty"><div class="empty__icon">🛠️</div><div class="empty__title">Nenhum equipamento cadastrado</div></div>`;
+    el.innerHTML = `<div class="empty">${icone("caminhao", 34)}<div class="empty__title">Nenhum equipamento cadastrado</div></div>`;
     return;
   }
   el.innerHTML = equipamentosCache.map((eq) => {

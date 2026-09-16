@@ -80,7 +80,7 @@ const ACOES_POR_STATUS = {
 function cardDataAgendada(c) {
   if (!c.dataAtendimentoPrevista) return "";
   const d = new Date(c.dataAtendimentoPrevista);
-  return `<div style="margin:8px 0;"><span class="destaque-data">📅 Atendimento: ${d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></div>`;
+  return `<div style="margin:8px 0;"><span class="destaque-data">${icone("calendario", 14)} Atendimento: ${d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></div>`;
 }
 
 function renderFila() {
@@ -88,7 +88,7 @@ function renderFila() {
   const lista = aplicarFiltroStatus(ativosCache, filtroAtualFornecedor);
   if (lista.length === 0) {
     el.innerHTML = ativosCache.length === 0
-      ? `<div class="empty"><div class="empty__icon">🔧</div><div class="empty__title">Nada ativo no momento</div></div>`
+      ? `<div class="empty">${icone("chave", 34)}<div class="empty__title">Nada ativo no momento</div></div>`
       : `<div class="empty"><div class="empty__text">Nenhum chamado nesse filtro.</div></div>`;
     return;
   }

@@ -18,6 +18,7 @@
   </div>
 
   <div class="page" id="view-fila">
+    <div class="page-header"><h1>Chamados ativos</h1><p>Atendimentos sob sua responsabilidade, do acionamento até o faturamento.</p></div>
     <div class="stats-grid" id="stats-grid"></div>
     <div class="section-title"><span>Meus chamados ativos</span></div>
     <div class="pill-group" id="filtro-status-fornecedor"></div>
@@ -57,7 +58,7 @@
 <!-- SHEET: PROGRAMAR ATENDIMENTO -->
 <div class="overlay hidden" id="overlay-programar">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Programar atendimento</h3><button class="close-x" data-close="overlay-programar">✕</button></div>
+    <div class="sheet__header"><h3>Programar atendimento</h3><button class="close-x" data-close="overlay-programar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="callout">A data/horário informados aqui ficam visíveis para todos que consultarem este chamado.</div>
     <form id="form-programar">
       <input type="hidden" id="pg-id" />
@@ -70,7 +71,7 @@
 <!-- SHEET: DIAGNÓSTICO -->
 <div class="overlay hidden" id="overlay-diagnostico">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3 id="dg-titulo">Registrar diagnóstico</h3><button class="close-x" data-close="overlay-diagnostico">✕</button></div>
+    <div class="sheet__header"><h3 id="dg-titulo">Registrar diagnóstico</h3><button class="close-x" data-close="overlay-diagnostico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="callout callout--red" id="dg-callout-contestado" style="display:none;">A Manutenção Magius não confirmou mau uso (ou considerou inconclusivo). Reavalie e registre um novo diagnóstico.</div>
     <form id="form-diagnostico">
       <input type="hidden" id="dg-id" />
@@ -89,7 +90,7 @@
 <!-- SHEET: LIBERAÇÃO -->
 <div class="overlay hidden" id="overlay-liberar">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Liberar máquina</h3><button class="close-x" data-close="overlay-liberar">✕</button></div>
+    <div class="sheet__header"><h3>Liberar máquina</h3><button class="close-x" data-close="overlay-liberar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-liberar">
       <input type="hidden" id="lb-id" />
       <div class="field"><label>Serviço executado / peças substituídas</label><textarea id="lb-servico" required></textarea></div>
@@ -109,7 +110,7 @@
 <!-- SHEET: NF DE COBRANÇA -->
 <div class="overlay hidden" id="overlay-nf">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Anexar NF de cobrança</h3><button class="close-x" data-close="overlay-nf">✕</button></div>
+    <div class="sheet__header"><h3>Anexar NF de cobrança</h3><button class="close-x" data-close="overlay-nf"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-nf">
       <input type="hidden" id="nf-id" />
       <div class="field"><label>Nota fiscal</label><input type="file" id="nf-arquivo" accept=".pdf,image/*" required /></div>

@@ -22,44 +22,53 @@
     <div id="data-agendada-wrap"></div>
     <div id="stepper-detalhe"></div>
 
-    <div id="bloco-acoes" style="display:none;">
-      <div class="section-title"><span>Ações</span></div>
+    <div id="bloco-acoes" class="acoes-bar" style="display:none;">
+      <div class="acoes-bar__label">Ação disponível para você</div>
       <div class="small-btn-row" id="acoes-botoes"></div>
     </div>
 
-    <div class="stats-grid" id="tempos-grid" style="margin-top:4px;"></div>
+    <div class="stats-grid" id="tempos-grid" style="margin-top:14px;"></div>
 
-    <div class="section-title"><span>Ocorrência registrada</span></div>
-    <div class="kv-row"><span class="kv-row__k">Categoria</span><span id="c-categoria"></span></div>
-    <div class="kv-row"><span class="kv-row__k">Turno</span><span id="c-turno"></span></div>
-    <div class="kv-row"><span class="kv-row__k">Fluxo</span><span id="c-fluxo"></span></div>
-    <div style="margin-top:10px;" class="destaque-texto" id="c-descricao"></div>
-    <div class="callout" id="c-impacto-wrap" style="display:none; margin-top:10px;"><strong>Impacto e segurança:</strong> <span id="c-impacto"></span></div>
-    <div class="photo-grid" id="fotos-grid"></div>
+    <div class="detalhe-grid">
+      <div class="detalhe-col">
+        <div class="section-title"><span>Ocorrência registrada</span></div>
+        <div class="info-card">
+          <div class="kv-row"><span class="kv-row__k">Categoria</span><span id="c-categoria"></span></div>
+          <div class="kv-row"><span class="kv-row__k">Turno</span><span id="c-turno"></span></div>
+          <div class="kv-row"><span class="kv-row__k">Fluxo</span><span id="c-fluxo"></span></div>
+        </div>
+        <div style="margin-top:12px;" class="destaque-texto" id="c-descricao"></div>
+        <div class="callout" id="c-impacto-wrap" style="display:none; margin-top:10px;"><strong>Impacto e segurança:</strong> <span id="c-impacto"></span></div>
+        <div class="photo-grid" id="fotos-grid"></div>
 
-    <div id="bloco-financeiro" style="display:none;">
-      <div class="section-title"><span>Financeiro</span></div>
-      <div class="kv-row"><span class="kv-row__k">Apresentado</span><span id="f-apresentado"></span></div>
-      <div class="kv-row"><span class="kv-row__k">Aprovado (ciência)</span><span id="f-aprovado"></span></div>
-      <div class="kv-row"><span class="kv-row__k">Valor final</span><span id="f-final"></span></div>
-      <div class="kv-row"><span class="kv-row__k">Custo evitado</span><span id="f-evitado"></span></div>
-      <div class="kv-row"><span class="kv-row__k">Ordem de compra</span><span id="f-oc"></span></div>
-      <a id="f-orcamento-link" href="#" target="_blank" class="btn btn--secondary" style="margin-top:8px; display:none;">Ver orçamento final</a>
-      <a id="f-nf-link" href="#" target="_blank" class="btn btn--secondary" style="margin-top:8px; display:none;">Ver nota fiscal</a>
+        <div id="bloco-financeiro" style="display:none;">
+          <div class="section-title"><span>Financeiro</span></div>
+          <div class="info-card">
+            <div class="kv-row"><span class="kv-row__k">Apresentado</span><span id="f-apresentado"></span></div>
+            <div class="kv-row"><span class="kv-row__k">Aprovado (ciência)</span><span id="f-aprovado"></span></div>
+            <div class="kv-row"><span class="kv-row__k">Valor final</span><span id="f-final"></span></div>
+            <div class="kv-row"><span class="kv-row__k">Custo evitado</span><span id="f-evitado"></span></div>
+            <div class="kv-row"><span class="kv-row__k">Ordem de compra</span><span id="f-oc"></span></div>
+          </div>
+          <div class="small-btn-row">
+            <a id="f-orcamento-link" href="#" target="_blank" class="btn btn--secondary btn--sm" style="display:none;">Ver orçamento final</a>
+            <a id="f-nf-link" href="#" target="_blank" class="btn btn--secondary btn--sm" style="display:none;">Ver nota fiscal</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="detalhe-col">
+        <div class="section-title"><span>Etapas do chamado</span></div>
+        <div id="etapas-lista"></div>
+      </div>
     </div>
-
-    <div class="section-title"><span>Etapas do chamado</span></div>
-    <div id="etapas-lista"></div>
-
-    <div class="section-title"><span>Linha do tempo resumida</span></div>
-    <div class="timeline" id="timeline"></div>
   </div>
 </div>
 
 <!-- SHEET: TRIAGEM -->
 <div class="overlay hidden" id="overlay-triagem">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Revisar e iniciar triagem</h3><button class="close-x" data-close="overlay-triagem">✕</button></div>
+    <div class="sheet__header"><h3>Revisar e iniciar triagem</h3><button class="close-x" data-close="overlay-triagem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-triagem">
       <div class="field"><label>Criticidade</label><select id="tr-criticidade"></select></div>
       <div class="field"><label>Descrição da ocorrência</label><textarea id="tr-descricao"></textarea></div>
@@ -71,7 +80,7 @@
 <!-- SHEET: ACIONAR FORNECEDOR -->
 <div class="overlay hidden" id="overlay-acionar">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Acionar fornecedor</h3><button class="close-x" data-close="overlay-acionar">✕</button></div>
+    <div class="sheet__header"><h3>Acionar fornecedor</h3><button class="close-x" data-close="overlay-acionar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-acionar">
       <div class="field"><label>Fornecedor</label><select id="ac-fornecedor" required></select></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Acionar</button>
@@ -82,7 +91,7 @@
 <!-- SHEET: ORDEM DE COMPRA -->
 <div class="overlay hidden" id="overlay-ordem-compra">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Anexar ordem de compra</h3><button class="close-x" data-close="overlay-ordem-compra">✕</button></div>
+    <div class="sheet__header"><h3>Anexar ordem de compra</h3><button class="close-x" data-close="overlay-ordem-compra"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-ordem-compra">
       <div class="field"><label>Número da ordem de compra</label><input type="text" id="oc-numero" placeholder="Ex: OC-2026-0042" /></div>
       <div class="field"><label>Anexo (opcional)</label><input type="file" id="oc-arquivo" accept=".pdf,image/*" /></div>
@@ -94,7 +103,7 @@
 <!-- SHEET: PROGRAMAR ATENDIMENTO -->
 <div class="overlay hidden" id="overlay-programar">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Programar atendimento</h3><button class="close-x" data-close="overlay-programar">✕</button></div>
+    <div class="sheet__header"><h3>Programar atendimento</h3><button class="close-x" data-close="overlay-programar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="callout">A data/horário informados aqui ficam visíveis para todos que consultarem este chamado.</div>
     <form id="form-programar">
       <div class="field"><label>Data/hora prevista</label><input type="datetime-local" id="pg-data" required /></div>
@@ -106,7 +115,7 @@
 <!-- SHEET: DIAGNÓSTICO -->
 <div class="overlay hidden" id="overlay-diagnostico">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3 id="dg-titulo">Registrar diagnóstico</h3><button class="close-x" data-close="overlay-diagnostico">✕</button></div>
+    <div class="sheet__header"><h3 id="dg-titulo">Registrar diagnóstico</h3><button class="close-x" data-close="overlay-diagnostico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="callout callout--red" id="dg-callout-contestado" style="display:none;">A Manutenção Magius não confirmou mau uso (ou considerou inconclusivo). Reavalie e registre um novo diagnóstico.</div>
     <form id="form-diagnostico">
       <div class="field"><label>Diagnóstico técnico</label><textarea id="dg-texto-input" required placeholder="O que foi encontrado"></textarea></div>
@@ -124,7 +133,7 @@
 <!-- SHEET: PARECER -->
 <div class="overlay hidden" id="overlay-parecer">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Emitir parecer</h3><button class="close-x" data-close="overlay-parecer">✕</button></div>
+    <div class="sheet__header"><h3>Emitir parecer</h3><button class="close-x" data-close="overlay-parecer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-parecer">
       <div class="field"><label>Modalidade de validação</label>
         <select id="pc-modalidade"><option value="documental">Documental</option><option value="presencial">Presencial</option></select>
@@ -146,7 +155,7 @@
 <!-- SHEET: CIÊNCIA DO APROVADOR -->
 <div class="overlay hidden" id="overlay-decisao">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Dar ciência</h3><button class="close-x" data-close="overlay-decisao">✕</button></div>
+    <div class="sheet__header"><h3>Dar ciência</h3><button class="close-x" data-close="overlay-decisao"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="callout">O aprovador só registra ciência do mau uso já confirmado — não há opção de recusar aqui.</div>
     <form id="form-decisao">
       <div class="field"><label>Comentário (opcional)</label><textarea id="dc-comentario"></textarea></div>
@@ -158,7 +167,7 @@
 <!-- SHEET: LIBERAÇÃO -->
 <div class="overlay hidden" id="overlay-liberar">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Liberar máquina</h3><button class="close-x" data-close="overlay-liberar">✕</button></div>
+    <div class="sheet__header"><h3>Liberar máquina</h3><button class="close-x" data-close="overlay-liberar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-liberar">
       <div class="field"><label>Serviço executado / peças substituídas</label><textarea id="lb-servico" required></textarea></div>
       <div class="field"><label>Operacional ou com restrição após liberação?</label>
@@ -177,7 +186,7 @@
 <!-- SHEET: NF DE COBRANÇA -->
 <div class="overlay hidden" id="overlay-nf">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Anexar NF de cobrança</h3><button class="close-x" data-close="overlay-nf">✕</button></div>
+    <div class="sheet__header"><h3>Anexar NF de cobrança</h3><button class="close-x" data-close="overlay-nf"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-nf">
       <div class="field"><label>Nota fiscal</label><input type="file" id="nf-arquivo" accept=".pdf,image/*" required /></div>
       <button type="submit" class="btn btn--primary" id="btn-nf" style="margin-top:20px;">Enviar NF e concluir chamado</button>

@@ -60,7 +60,7 @@ function renderStats() {
 
 function renderFila() {
   const el = document.getElementById("lista-fila");
-  if (filaCache.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__icon">✅</div><div class="empty__title">Nada para validar</div></div>`; return; }
+  if (filaCache.length === 0) { el.innerHTML = `<div class="empty">${icone("checkCirculo", 34)}<div class="empty__title">Nada para validar</div></div>`; return; }
   // Nota: nenhum valor financeiro é exibido aqui de propósito — a
   // Manutenção Magius avalia só a evidência técnica, não o custo.
   el.innerHTML = filaCache.map((c) => `

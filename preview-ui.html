@@ -1,3 +1,12 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FrotaCTRL — prévia de UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
 /* ============================================================
    FrotaCTRL — estilos globais (identidade "pátio logístico")
    Paleta clara de operação industrial + menu lateral escuro estilo
@@ -1252,3 +1261,212 @@ select {
   padding-right: 34px;
   cursor: pointer;
 }
+.pv-note { padding:12px 18px; font-family:'Inter',sans-serif; font-size:12.5px; background:#FDF1DE; color:#a5680b; border-bottom:1px solid #f0dcb0; }
+.pv-tabs { display:flex; gap:6px; padding:12px 18px; background:#101922; flex-wrap:wrap; }
+.pv-tabs button { background:rgba(255,255,255,.08); color:rgba(255,255,255,.75); border:1px solid rgba(255,255,255,.15); padding:7px 12px; border-radius:100px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; }
+.pv-tabs button.active { background:#E8A33D; color:#2b1c04; border-color:#E8A33D; }
+.pv-screen { display:none; }
+.pv-screen.active { display:block; }
+</style>
+</head>
+<body>
+<div class="pv-note">Prévia de interface com dados fictícios — mesmo CSS do app real. Redimensione a janela para comparar desktop × celular.</div>
+<div class="pv-tabs">
+  <button data-s="lista" class="active">Lista de chamados</button>
+  <button data-s="detalhe">Detalhe do chamado</button>
+  <button data-s="hub">Painel Master</button>
+  <button data-s="form">Formulário</button>
+</div>
+
+<!-- ===== LISTA ===== -->
+<div class="pv-screen active" id="pv-lista">
+<div class="shell shell--nav">
+  <div class="topbar">
+    <div class="topbar__brand"><div class="topbar__logo">F</div><div class="topbar__title">FrotaCTRL</div></div>
+    <div class="topbar__meta"><span class="topbar__meta-nome">Carla Reis</span><span class="topbar__meta-perfil">Gestão de Frota</span></div>
+    <div class="topbar__user">CR</div>
+  </div>
+  <div class="bottomnav">
+    <div class="sidebar-brand"><div class="topbar__logo">F</div><div class="sidebar-brand__title">FrotaCTRL</div></div>
+    <button class="navitem active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 8v4l3 3M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>Fila</button>
+    <button class="navitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>Frota</button>
+    <button class="navitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 011 1v1H8V4a1 1 0 011-1z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 11h6M9 15h6"/></svg>Chamados</button>
+    <button class="navitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Cadastros</button>
+    <a class="navitem" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M11 20V4M18 20v-7"/><path d="M2 20h20"/></svg>Indicadores</a>
+    <button class="navitem" data-view="perfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>Perfil</button>
+  </div>
+  <div class="page">
+    <div class="page-header"><h1>Painel da Gestão de Frota</h1><p>Pendências que aguardam sua ação, visão geral da frota e dos chamados.</p></div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-card__value">3</div><div class="stat-card__label">Pendentes comigo</div></div>
+      <div class="stat-card"><div class="stat-card__value">11</div><div class="stat-card__label">Chamados ativos</div></div>
+      <div class="stat-card"><div class="stat-card__value">2</div><div class="stat-card__label">Equipamentos parados</div></div>
+      <div class="stat-card"><div class="stat-card__value">9</div><div class="stat-card__label">Concluídos no mês</div></div>
+    </div>
+    <div class="section-title"><span>Pendências da Gestão de Frota</span></div>
+    <div class="pill-group">
+      <button class="pill active">Todos</button><button class="pill">Em andamento</button><button class="pill">Registrado</button><button class="pill">Atendimento</button><button class="pill">Validação</button><button class="pill">Execução</button>
+    </div>
+    <div class="card-list">
+      <div class="ticket-card">
+        <div class="ticket-card__top"><div class="ticket-card__title">CH-2026-00044 — EMP-002</div><span class="badge badge--muted">Registrado</span></div>
+        <div style="font-size:13px; color:var(--text-dim);">Vazamento de óleo hidráulico na base do mastro.</div>
+        <div class="ticket-card__meta"><span>101 - Matriz / Expedição</span><span class="chip chip--P1">P1</span></div>
+        <div class="stepper"><div class="stepper__item"><div class="stepper__dot stepper__dot--amarelo"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div></div></div>
+        <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="#">Ver detalhes</a><button class="btn btn--primary btn--sm">Iniciar triagem</button></div>
+      </div>
+      <div class="ticket-card">
+        <div class="ticket-card__top"><div class="ticket-card__title">CH-2026-00041 — EMP-009</div><span class="badge badge--amber">Aguardando autorização</span></div>
+        <div style="font-size:13px; color:var(--text-dim);">Ruído anormal na direção hidráulica após impacto.</div>
+        <div class="ticket-card__meta"><span>102 - Filial Sul / Linha 2</span><span class="chip chip--P2">P2</span></div>
+        <div class="stepper"><div class="stepper__item"><div class="stepper__dot stepper__dot--verde"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--verde"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--verde"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--amarelo"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div></div></div>
+        <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="#">Ver detalhes</a><button class="btn btn--primary btn--sm">Autorizar execução</button></div>
+      </div>
+      <a class="ticket-card" href="#">
+        <div class="ticket-card__top"><div class="ticket-card__title"><span style="color:var(--text-dim); font-weight:400;">#3</span> CH-2026-00039 — EMP-007</div><span class="badge badge--blue">Em execução / teste</span></div>
+        <div class="ticket-card__meta"><span>02/09/26, 13:38</span><span>Direção</span></div>
+        <div class="stepper"><div class="stepper__item"><div class="stepper__dot stepper__dot--verde"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--verde"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--verde"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--verde"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--amarelo"></div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div></div></div>
+        <div style="margin-top:4px;"><span class="badge badge--muted">Aguardando: Fornecedor</span></div>
+      </a>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== DETALHE ===== -->
+<div class="pv-screen" id="pv-detalhe">
+<div class="shell">
+  <div class="topbar">
+    <button class="btn btn--ghost btn--sm" style="width:auto;">← Voltar</button>
+    <div class="topbar__user">CR</div>
+  </div>
+  <div class="page">
+    <div class="machine-plate">
+      <div class="machine-plate__head">
+        <div><div class="machine-plate__id">CH-2026-00042 · EMP-014</div><div class="machine-plate__model">Empilhadeira Hyster H2.5</div></div>
+        <div class="hourmeter"><div class="hourmeter__value">25.110h</div><div class="hourmeter__label">Horímetro</div></div>
+      </div>
+      <div class="pill-group" style="margin-top:8px;"><span class="badge badge--amber">Aguardando validação (Manutenção Magius)</span><span class="chip chip--P1">P1</span><span class="badge badge--muted">Aguardando: Manutenção Magius</span></div>
+      <div style="font-size:12px; color:var(--text-dim); margin-top:8px;">101 - Matriz / SMA · Aberto em 04/09/26, 14:50 por João Pereira</div>
+    </div>
+    <div style="margin:10px 0;"><span class="destaque-data"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/></svg> Atendimento programado: 06/09/2026, 08:00</span></div>
+    <div class="stepper"><div class="stepper__item"><div class="stepper__dot stepper__dot--verde"></div><div class="stepper__label">Registrado</div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--verde"></div><div class="stepper__label">Atendimento</div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--amarelo"></div><div class="stepper__label">Validação</div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div><div class="stepper__label">Autorização</div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div><div class="stepper__label">Execução</div></div><div class="stepper__item"><div class="stepper__dot stepper__dot--cinza"></div><div class="stepper__label">Encerramento</div></div></div>
+
+    <div class="acoes-bar">
+      <div class="acoes-bar__label">Ação disponível para você</div>
+      <div class="small-btn-row"><button class="btn btn--primary btn--sm">Emitir parecer</button></div>
+    </div>
+
+    <div class="stats-grid" style="margin-top:14px;">
+      <div class="stat-card"><div class="stat-card__value">42min</div><div class="stat-card__label">Até acionar fornecedor</div></div>
+      <div class="stat-card"><div class="stat-card__value">1d 6h</div><div class="stat-card__label">Tempo de manutenção</div></div>
+      <div class="stat-card" style="grid-column:1/-1;"><div class="stat-card__value">2d 4h</div><div class="stat-card__label">Tempo total parado (registro → agora)</div></div>
+    </div>
+
+    <div class="detalhe-grid">
+      <div class="detalhe-col">
+        <div class="section-title"><span>Ocorrência registrada</span></div>
+        <div class="info-card">
+          <div class="kv-row"><span class="kv-row__k">Categoria</span><span>Impacto / Colisão</span></div>
+          <div class="kv-row"><span class="kv-row__k">Turno</span><span>Manhã</span></div>
+          <div class="kv-row"><span class="kv-row__k">Fluxo</span><span>Fluxo de mau uso</span></div>
+        </div>
+        <div style="margin-top:12px;" class="destaque-texto">Garfo esquerdo entortado após colisão com a estrutura da prateleira durante movimentação de carga.</div>
+        <div class="callout" style="margin-top:10px;"><strong>Impacto e segurança:</strong> Máquina parada, risco de queda de carga.</div>
+        <div class="section-title"><span>Financeiro</span></div>
+        <div class="info-card">
+          <div class="kv-row"><span class="kv-row__k">Apresentado</span><span>R$ 2.850,00</span></div>
+          <div class="kv-row"><span class="kv-row__k">Aprovado (ciência)</span><span>—</span></div>
+          <div class="kv-row"><span class="kv-row__k">Valor final</span><span>—</span></div>
+          <div class="kv-row"><span class="kv-row__k">Custo evitado</span><span>—</span></div>
+          <div class="kv-row"><span class="kv-row__k">Ordem de compra</span><span>—</span></div>
+        </div>
+      </div>
+      <div class="detalhe-col">
+        <div class="section-title"><span>Etapas do chamado</span></div>
+        <div class="etapa-card">
+          <div class="etapa-card__head"><span class="etapa-card__status">Registrado</span><span class="etapa-card__meta">04/09/26, 14:50</span></div>
+          <div class="etapa-card__meta">João Pereira · Solicitante</div>
+          <div class="etapa-card__obs">Chamado registrado pelo solicitante</div>
+        </div>
+        <div class="etapa-card">
+          <div class="etapa-card__head"><span class="etapa-card__status">Em triagem</span><span class="etapa-card__meta">04/09/26, 15:32</span></div>
+          <div class="etapa-card__meta">Carla Reis · Gestão de Frota</div>
+          <div class="etapa-card__obs">Triagem concluída — criticidade ajustada de P2 para P1</div>
+          <div class="etapa-card__dados"><div class="etapa-card__linha"><span class="k">Criticidade</span><span class="v">P2 → P1</span></div></div>
+        </div>
+        <div class="etapa-card">
+          <div class="etapa-card__head"><span class="etapa-card__status">Aguardando validação</span><span class="etapa-card__meta">06/09/26, 10:14</span></div>
+          <div class="etapa-card__meta">Marcos Tadeu · Fornecedor</div>
+          <div class="etapa-card__obs">Diagnóstico enviado — indicado como possível mau uso</div>
+          <div class="etapa-card__dados"><div class="etapa-card__linha"><span class="k">Mau uso?</span><span class="v">Sim</span></div><div class="etapa-card__linha"><span class="k">Valor apresentado</span><span class="v">R$ 2.850,00</span></div></div>
+          <div class="destaque-texto" style="margin-top:8px;">Garfo com deformação estrutural incompatível com desgaste normal de uso. Marcas de impacto lateral visíveis.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== HUB ===== -->
+<div class="pv-screen" id="pv-hub">
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar__brand"><div class="topbar__logo">F</div><div class="topbar__title">FrotaCTRL</div></div>
+    <div class="topbar__meta"><span class="topbar__meta-nome">genesisgns@gmail.com</span><span class="topbar__meta-perfil">Administrador</span></div>
+    <div class="topbar__user">G</div>
+  </div>
+  <div class="page">
+    <div class="page-header"><h1>Painel Master</h1><p>Conta oculta com acesso irrestrito a qualquer painel da plataforma.</p></div>
+    <div class="callout">Esta é a conta master da plataforma (oculta da lista de usuários). Em qualquer painel, o item <strong>"Painel Master"</strong> no menu lateral traz você de volta aqui.</div>
+    <div class="section-title"><span>Acesso a todos os painéis</span></div>
+    <div class="card-list">
+      <a class="ticket-card launcher-card" href="#"><div class="icon-tile icon-tile--amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg></div><div class="ticket-card__title">Gestão de Frota</div><div class="launcher-card__desc">Fila, equipamentos, chamados, plantas/setores, parâmetros e usuários</div></a>
+      <a class="ticket-card launcher-card" href="#"><div class="icon-tile icon-tile--blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 011 1v1H8V4a1 1 0 011-1z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 11h6M9 15h6"/></svg></div><div class="ticket-card__title">Solicitante</div><div class="launcher-card__desc">Abertura e acompanhamento de chamados</div></a>
+      <a class="ticket-card launcher-card" href="#"><div class="icon-tile icon-tile--green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 10-5.4 5.4L4 17v3h3l5.1-5.1a4 4 0 002.4-8.4z"/></svg></div><div class="ticket-card__title">Fornecedor</div><div class="launcher-card__desc">Atendimento, diagnóstico, execução e faturamento</div></a>
+      <a class="ticket-card launcher-card" href="#"><div class="icon-tile icon-tile--muted"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><div class="ticket-card__title">Manutenção Magius</div><div class="launcher-card__desc">Validação de mau uso</div></a>
+      <a class="ticket-card launcher-card" href="#"><div class="icon-tile icon-tile--red"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg></div><div class="ticket-card__title">Aprovador</div><div class="launcher-card__desc">Aprovação financeira dos casos de mau uso</div></a>
+      <a class="ticket-card launcher-card" href="#"><div class="icon-tile icon-tile--amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M11 20V4M18 20v-7"/><path d="M2 20h20"/></svg></div><div class="ticket-card__title">Indicadores</div><div class="launcher-card__desc">Dashboards operacional, mau uso, financeiro e recorrência</div></a>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== FORM ===== -->
+<div class="pv-screen" id="pv-form">
+<div class="shell"><div class="page">
+  <div class="page-header"><h1>Formulários</h1><p>Campos alinhados, estados desabilitados evidentes e áreas de upload clicáveis.</p></div>
+  <div class="sheet" style="position:static; max-width:760px; width:100%; border-radius:12px; margin:0;">
+    <div class="sheet__header"><h3>Registrar diagnóstico</h3><button class="close-x"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <form>
+      <div class="field"><label>Diagnóstico técnico</label><textarea placeholder="O que foi encontrado"></textarea></div>
+      <div class="grid-2">
+        <div class="field"><label>É um caso de mau uso?</label><select><option>Não — manutenção contratual normal</option><option>Sim — abrir fluxo de validação</option></select></div>
+        <div class="field"><label>Valor apresentado / orçamento (R$)</label><input type="text" placeholder="R$ 0,00" disabled /></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Turno</label><select><option>Manhã</option></select></div>
+        <div class="field"><label>Horímetro atual</label><input type="text" value="25.110,00" /></div>
+      </div>
+      <div class="field"><label>Evidências (OS, relatório, fotos, vídeos)</label><input type="file" multiple /></div>
+      <div class="callout">Como é um caso de mau uso, valor e ao menos uma evidência são obrigatórios.</div>
+      <div class="small-btn-row" style="margin-top:18px;"><button type="button" class="btn btn--secondary">Cancelar</button><button type="button" class="btn btn--primary">Enviar diagnóstico</button></div>
+    </form>
+  </div>
+  <div class="section-title" style="max-width:760px;"><span>Estado vazio</span></div>
+  <div style="max-width:760px;"><div class="empty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 011 1v1H8V4a1 1 0 011-1z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 11h6M9 15h6"/></svg><div class="empty__title">Nenhum chamado ainda</div><div class="empty__text">Toque no + para abrir seu primeiro chamado.</div></div></div>
+</div></div>
+</div>
+
+<script>
+document.querySelectorAll('.pv-tabs button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.pv-tabs button').forEach(function(x){x.classList.remove('active');});
+    b.classList.add('active');
+    document.querySelectorAll('.pv-screen').forEach(function(s){s.classList.remove('active');});
+    document.getElementById('pv-'+b.dataset.s).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

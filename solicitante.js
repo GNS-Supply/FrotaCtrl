@@ -105,7 +105,7 @@ function renderChamados() {
   const lista = aplicarFiltroStatus(chamadosCache, filtroAtualSolicitante);
   if (lista.length === 0) {
     el.innerHTML = chamadosCache.length === 0
-      ? `<div class="empty"><div class="empty__icon">📋</div><div class="empty__title">Nenhum chamado ainda</div><div class="empty__text">Toque no + para abrir seu primeiro chamado.</div></div>`
+      ? `<div class="empty">${icone("clipboard", 34)}<div class="empty__title">Nenhum chamado ainda</div><div class="empty__text">Toque no + para abrir seu primeiro chamado.</div></div>`
       : `<div class="empty"><div class="empty__text">Nenhum chamado nesse filtro.</div></div>`;
     return;
   }
