@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FrotaCTRL — Diagnóstico</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar__brand"><div class="topbar__logo">F</div><div class="topbar__title">Diagnóstico</div></div>
+  </div>
+  <div class="page">
+    <div class="page-header">
+      <h1>Diagnóstico de conexão</h1>
+      <p>Esta página testa cada parte da configuração do Firebase e mostra o erro exato de cada uma. Use quando algo não estiver funcionando — principalmente anexos.</p>
+    </div>
+
+    <div class="callout">Entre com um usuário qualquer da plataforma antes de rodar o teste de upload (o Storage exige login).</div>
+
+    <div class="small-btn-row" style="margin-bottom:18px;">
+      <button class="btn btn--primary btn--sm" id="btn-rodar">Rodar diagnóstico</button>
+      <a class="btn btn--secondary btn--sm" href="index.html">Ir para o login</a>
+    </div>
+
+    <div id="resultados"></div>
+
+    <div class="section-title"><span>Detalhes técnicos</span></div>
+    <pre id="log" class="log-box">Clique em "Rodar diagnóstico" para começar.</pre>
+  </div>
+</div>
+
+<style>
+.log-box {
+  background: var(--dark); color: #cfe3d4; padding: 16px; border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.6; overflow-x: auto;
+  white-space: pre-wrap; word-break: break-word; margin: 0;
+}
+.teste { display:flex; align-items:flex-start; gap:12px; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; }
+.teste__icone { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; font-weight:700; font-size:14px; }
+.teste--ok .teste__icone { background:var(--green-tint); color:var(--green); }
+.teste--erro .teste__icone { background:var(--red-tint); color:var(--red); }
+.teste--rodando .teste__icone { background:var(--accent-tint); color:var(--accent-tint-ink); }
+.teste__titulo { font-weight:700; font-size:14px; }
+.teste__msg { font-size:13px; color:var(--text-dim); margin-top:3px; line-height:1.5; }
+.teste__fix { font-size:12.5px; margin-top:8px; padding:10px 12px; background:var(--red-tint);
+  border-radius:var(--radius-sm); color:#7a2727; line-height:1.55; }
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="diagnostico.js"></script>
+</body>
+</html>

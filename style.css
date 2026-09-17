@@ -1487,3 +1487,92 @@ select {
     flex-shrink: 0;
   }
 }
+
+/* ============================================================
+   CAMADA DE ACABAMENTO
+   Refinamentos finais de tipografia, profundidade e ritmo.
+   Vem por último de propósito: ajusta o que já existe sem
+   reescrever os componentes.
+   ============================================================ */
+
+/* ---------- Tipografia: escala mais definida ---------- */
+body { font-size: 14px; line-height: 1.5; letter-spacing: -0.005em; }
+.page-header h1 { font-size: 21px; letter-spacing: -0.02em; }
+.ticket-card__title { font-size: 14.5px; letter-spacing: -0.01em; }
+.stat-card__value { letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.kv-row, .etapa-card__linha { font-variant-numeric: tabular-nums; }
+
+/* ---------- Profundidade mais sutil e consistente ---------- */
+:root {
+  --sombra-sm: 0 1px 2px rgba(16,25,34,.06), 0 1px 3px rgba(16,25,34,.04);
+  --sombra: 0 2px 6px rgba(16,25,34,.07), 0 4px 12px rgba(16,25,34,.05);
+  --sombra-md: 0 6px 16px rgba(16,25,34,.10), 0 2px 6px rgba(16,25,34,.06);
+  --sombra-lg: 0 12px 32px rgba(16,25,34,.16), 0 4px 10px rgba(16,25,34,.08);
+}
+
+/* ---------- Topbar com leve profundidade ao rolar ---------- */
+.topbar { box-shadow: 0 1px 0 rgba(0,0,0,.06); }
+
+/* ---------- Cartões: transição mais suave e borda reativa ---------- */
+.ticket-card, .stat-card, .info-card, .painel, .ch-header, .bloco-fluxo, .chart-card, .etapa-card {
+  transition: box-shadow 180ms cubic-bezier(.4,0,.2,1), border-color 180ms cubic-bezier(.4,0,.2,1), transform 180ms cubic-bezier(.4,0,.2,1);
+}
+a.ticket-card:hover { border-color: var(--accent); }
+a.ticket-card:active { transform: translateY(0); box-shadow: var(--sombra-sm); }
+
+/* ---------- Badges e chips: leitura mais confortável ---------- */
+.badge { padding: 4px 10px 4px 9px; letter-spacing: 0.02em; }
+.chip { padding: 3px 8px; }
+
+/* ---------- Ritmo vertical mais consistente ---------- */
+.stats-grid + .section-title { margin-top: 28px; }
+.card-list + .section-title { margin-top: 30px; }
+.painel:last-child { margin-bottom: 0; }
+
+/* ---------- Scrollbar discreta (desktop) ---------- */
+@media (min-width: 900px) {
+  * { scrollbar-width: thin; scrollbar-color: var(--border-light) transparent; }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 100px; border: 3px solid var(--bg); }
+  *::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+}
+
+/* ---------- Entrada suave do conteúdo ---------- */
+@keyframes surgir { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.page { animation: surgir 260ms cubic-bezier(.4,0,.2,1); }
+.sheet { animation: surgir 200ms cubic-bezier(.4,0,.2,1); }
+
+/* ---------- Estado de foco uniforme em tudo que é interativo ---------- */
+a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+.painel__head:focus-visible, .stepper__item--clicavel:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- Grade de fotos mais generosa no desktop ---------- */
+@media (min-width: 900px) {
+  .photo-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .photo-grid img { transition: transform 180ms cubic-bezier(.4,0,.2,1), box-shadow 180ms; }
+  .photo-grid a:hover img { transform: scale(1.03); box-shadow: var(--sombra); border-color: var(--accent); }
+}
+
+/* ---------- Sheets: cabeçalho fixo ao rolar formulários longos ---------- */
+.sheet__header {
+  position: sticky;
+  top: -18px;
+  background: var(--surface);
+  padding: 10px 0 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  z-index: 2;
+}
+.sheet__header h3 { font-size: 16px; }
+
+/* ---------- Impressão: layout limpo ---------- */
+@media print {
+  .bottomnav, .topbar, .acoes-bar, .spacer-fab, .overlay, .pill-group { display: none !important; }
+  body, .shell, .page { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+  .ticket-card, .etapa-card, .info-card, .ch-header { box-shadow: none !important; break-inside: avoid; }
+}
