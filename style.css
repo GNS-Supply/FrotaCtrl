@@ -979,6 +979,12 @@ button:focus-visible,
 .dash-head { margin-bottom: 24px; }
 .dash-head h2 { font-size: 20px; color: var(--text); margin-bottom: 6px; }
 .dash-head p { font-size: 13px; color: var(--text-dim); max-width: 640px; line-height: 1.5; }
+.dash-valores-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 12px; font-size: 13px; color: var(--text);
+  cursor: pointer; user-select: none;
+}
+.dash-valores-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
 
 .dash-block { margin-bottom: 40px; }
 .dash-block__header {

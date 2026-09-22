@@ -25,6 +25,46 @@ Chart.defaults.color = COR.texto;
 Chart.defaults.borderColor = COR.grade;
 Chart.defaults.plugins.legend.labels.boxWidth = 12;
 Chart.defaults.plugins.legend.labels.padding = 12;
+if (typeof ChartDataLabels !== "undefined") Chart.register(ChartDataLabels);
+
+// ---------- Caixinha "Mostrar valores nos gráficos" ----------
+// Por padrão os valores só aparecem no hover (tooltip padrão do Chart.js).
+// Quando a caixinha é marcada, todos os gráficos passam a exibir os
+// valores fixos sobre as barras/linhas/fatias, sem precisar passar o mouse.
+let todosGraficos = [];
+let mostrarValores = false;
+
+function criarGrafico(canvasEl, config, opcoes = {}) {
+  const moeda = !!opcoes.moeda;
+  const ehDoughnut = config.type === "doughnut";
+  config.options = config.options || {};
+  config.options.plugins = config.options.plugins || {};
+  config.options.plugins.datalabels = {
+    display: mostrarValores,
+    color: ehDoughnut ? "#fff" : COR.texto,
+    anchor: ehDoughnut ? "center" : "end",
+    align: ehDoughnut ? "center" : (config.type === "line" ? "top" : "end"),
+    offset: 4,
+    font: { size: 10.5, weight: "600" },
+    formatter: (valor) => {
+      if (valor === 0 || valor == null) return "";
+      return moeda ? formatarMoeda(valor) : valor;
+    }
+  };
+  const grafico = new Chart(canvasEl, config);
+  todosGraficos.push(grafico);
+  return grafico;
+}
+
+function alternarMostrarValores(marcado) {
+  mostrarValores = marcado;
+  todosGraficos.forEach((g) => {
+    if (g.options?.plugins?.datalabels) {
+      g.options.plugins.datalabels.display = mostrarValores;
+      g.update();
+    }
+  });
+}
 
 (async function init() {
   usuarioAtual = await requireAuth();
@@ -110,7 +150,7 @@ function renderOperacional() {
   const meses = ultimosMeses(6);
   const registradosPorMes = contarPorMes(chamados, "registradoEm", meses);
   const concluidosPorMes = contarPorMes(chamados, "concluidoEm", meses);
-  new Chart(document.getElementById("chart-op-tendencia"), {
+  criarGrafico(document.getElementById("chart-op-tendencia"), {
     type: "line",
     data: {
       labels: meses.map((m) => m.label),
@@ -125,7 +165,7 @@ function renderOperacional() {
   // Distribuição por macro-etapa
   const porEtapa = MACRO_ETAPAS.map((_, i) => chamados.filter((c) => (STATUS_PARA_ETAPA[c.status] ?? 0) === i && c.status !== "concluido").length);
   porEtapa[5] = chamados.filter((c) => c.status === "concluido").length;
-  new Chart(document.getElementById("chart-op-etapa"), {
+  criarGrafico(document.getElementById("chart-op-etapa"), {
     type: "doughnut",
     data: { labels: MACRO_ETAPAS, datasets: [{ data: porEtapa, backgroundColor: [COR.muted, COR.accent, "#c98a2e", COR.blue, "#5a8fa8", COR.green] }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
@@ -137,7 +177,7 @@ function renderOperacional() {
   const entradasPlanta = Object.entries(porPlanta).sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (entradasPlanta.length === 0) { graficoVazio("chart-op-planta", "Sem chamados registrados ainda."); }
   else {
-    new Chart(document.getElementById("chart-op-planta"), {
+    criarGrafico(document.getElementById("chart-op-planta"), {
       type: "bar",
       data: { labels: entradasPlanta.map((e) => e[0]), datasets: [{ label: "Chamados", data: entradasPlanta.map((e) => e[1]), backgroundColor: COR.accent, borderRadius: 4 }] },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
@@ -169,7 +209,7 @@ function renderMauUso() {
     graficoVazio("chart-mu-ranking", "Sem dados suficientes.");
   } else {
     const semParecer = doMauUso.filter((c) => !c.parecerMauUso).length;
-    new Chart(document.getElementById("chart-mu-resultado"), {
+    criarGrafico(document.getElementById("chart-mu-resultado"), {
       type: "doughnut",
       data: {
         labels: ["Confirmado", "Não confirmado", "Inconclusivo", "Aguardando parecer"],
@@ -182,7 +222,7 @@ function renderMauUso() {
     doMauUso.filter((c) => c.parecerMauUso?.resultado === "confirmado").forEach((c) => { porEquip[c.numeroFrota] = (porEquip[c.numeroFrota] || 0) + 1; });
     const ranking = Object.entries(porEquip).sort((a, b) => b[1] - a[1]).slice(0, 8);
     if (ranking.length === 0) graficoVazio("chart-mu-ranking", "Nenhum mau uso confirmado ainda.");
-    else new Chart(document.getElementById("chart-mu-ranking"), {
+    else criarGrafico(document.getElementById("chart-mu-ranking"), {
       type: "bar",
       data: { labels: ranking.map((e) => e[0]), datasets: [{ label: "Mau uso confirmado", data: ranking.map((e) => e[1]), backgroundColor: COR.red, borderRadius: 4 }] },
       options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
@@ -192,7 +232,7 @@ function renderMauUso() {
   const meses = ultimosMeses(6);
   const apontadosPorMes = contarPorMes(doMauUso, "registradoEm", meses);
   const confirmadosPorMes = meses.map((m) => doMauUso.filter((c) => c.parecerMauUso?.resultado === "confirmado" && chaveMes(c.parecerMauUso.timestamp) === m.chave).length);
-  new Chart(document.getElementById("chart-mu-evolucao"), {
+  criarGrafico(document.getElementById("chart-mu-evolucao"), {
     type: "bar",
     data: {
       labels: meses.map((m) => m.label),
@@ -224,32 +264,32 @@ function renderFinanceiro() {
     { valor: formatarMoeda(comprometido), label: "Projeção (comprometido)" }
   ]);
 
-  new Chart(document.getElementById("chart-fin-funil"), {
+  criarGrafico(document.getElementById("chart-fin-funil"), {
     type: "bar",
     data: {
       labels: ["Apresentado", "Aprovado", "Valor final"],
       datasets: [{ data: [apresentado, aprovado, final], backgroundColor: [COR.mutedTint, COR.accentTint, COR.green], borderColor: [COR.muted, COR.accent, COR.green], borderWidth: 1.5, borderRadius: 4 }]
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => "R$ " + v } } } }
-  });
+  }, { moeda: true });
 
   const meses = ultimosMeses(6);
   const faturadoPorMesReal = meses.map((m) => chamados.filter((c) => chaveMes(tsToMs(c.financeiro?.dataFaturamento)) === m.chave).reduce((s, c) => s + (c.financeiro?.valorFinal || 0), 0));
-  new Chart(document.getElementById("chart-fin-mensal"), {
+  criarGrafico(document.getElementById("chart-fin-mensal"), {
     type: "line",
     data: { labels: meses.map((m) => m.label), datasets: [{ label: "Faturado", data: faturadoPorMesReal, borderColor: COR.blue, backgroundColor: COR.blueTint, fill: true, tension: 0.3 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => "R$ " + v } } } }
-  });
+  }, { moeda: true });
 
   const porPlanta = {};
   chamados.forEach((c) => { const v = c.financeiro?.valorFinal || 0; if (v > 0) porPlanta[c.plantaNome || "—"] = (porPlanta[c.plantaNome || "—"] || 0) + v; });
   const entradas = Object.entries(porPlanta).sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (entradas.length === 0) graficoVazio("chart-fin-planta", "Nenhum faturamento registrado ainda.");
-  else new Chart(document.getElementById("chart-fin-planta"), {
+  else criarGrafico(document.getElementById("chart-fin-planta"), {
     type: "bar",
     data: { labels: entradas.map((e) => e[0]), datasets: [{ label: "Faturado", data: entradas.map((e) => e[1]), backgroundColor: COR.blue, borderRadius: 4 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => "R$ " + v } } } }
-  });
+  }, { moeda: true });
 }
 
 // ============================================================
@@ -274,14 +314,14 @@ async function renderRecorrencia() {
     { valor: maisRecorrente ? maisRecorrente.label : "—", label: "Equipamento mais recorrente" }
   ]);
 
-  new Chart(document.getElementById("chart-rec-nivel"), {
+  criarGrafico(document.getElementById("chart-rec-nivel"), {
     type: "doughnut",
     data: { labels: ["Normal", "Atenção", "Alta recorrência"], datasets: [{ data: [niveis.normal + semChamado, niveis.atencao, niveis.alta], backgroundColor: [COR.muted, COR.accent, COR.red] }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
   });
 
   if (ranking.length === 0) graficoVazio("chart-rec-ranking", "Sem dados suficientes.");
-  else new Chart(document.getElementById("chart-rec-ranking"), {
+  else criarGrafico(document.getElementById("chart-rec-ranking"), {
     type: "bar",
     data: {
       labels: ranking.map((r) => r.label),
@@ -294,7 +334,7 @@ async function renderRecorrencia() {
   chamados.forEach((c) => { const cat = c.categoria || "Outro"; porCategoria[cat] = (porCategoria[cat] || 0) + 1; });
   const entradasCat = Object.entries(porCategoria).sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (entradasCat.length === 0) graficoVazio("chart-rec-categoria", "Sem chamados registrados ainda.");
-  else new Chart(document.getElementById("chart-rec-categoria"), {
+  else criarGrafico(document.getElementById("chart-rec-categoria"), {
     type: "bar",
     data: { labels: entradasCat.map((e) => e[0]), datasets: [{ label: "Chamados", data: entradasCat.map((e) => e[1]), backgroundColor: COR.green, borderRadius: 4 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }

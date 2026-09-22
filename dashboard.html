@@ -22,6 +22,10 @@
     <div class="dash-head">
       <h2>Painel de indicadores</h2>
       <p>Calculado em tempo real a partir da base de chamados e equipamentos. Os 4 blocos abaixo cobrem visão operacional, mau uso, financeiro e recorrência.</p>
+      <label class="dash-valores-toggle">
+        <input type="checkbox" id="chk-mostrar-valores" onchange="alternarMostrarValores(this.checked)" />
+        Mostrar valores nos gráficos
+      </label>
     </div>
 
     <!-- ==================== BLOCO 1: OPERACIONAL ==================== -->
@@ -107,6 +111,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
