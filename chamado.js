@@ -427,7 +427,6 @@ async function salvarDiagnostico(e) {
   const arquivos = document.getElementById("dg-anexos").files;
 
   if (mauUso && (!valor || valor <= 0)) { alert("Informe o valor apresentado — é obrigatório em caso de mau uso."); return; }
-  if (mauUso && arquivos.length === 0) { alert("Anexe ao menos uma evidência — é obrigatório em caso de mau uso."); return; }
 
   const btn = document.getElementById("btn-diagnostico");
   btn.disabled = true;
@@ -438,12 +437,8 @@ async function salvarDiagnostico(e) {
     try {
       urls = await enviarArquivos(`chamados/${chamadoId}/diagnostico`, arquivos, btn, "Enviar diagnóstico");
     } catch (err) {
-      if (mauUso) {
-        alert("Não foi possível anexar as evidências: " + err.message + "\n\nO diagnóstico não foi enviado. Tente novamente.");
-        btn.disabled = false;
-        btn.textContent = "Enviar diagnóstico";
-        return;
-      }
+      // Anexo agora é opcional mesmo em caso de mau uso: se o envio falhar,
+      // apenas avisa e segue o diagnóstico sem a evidência.
       console.warn("Não foi possível anexar arquivos do diagnóstico:", err);
       alert("O diagnóstico será enviado, mas não foi possível anexar os arquivos: " + err.message);
     }

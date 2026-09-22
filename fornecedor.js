@@ -279,7 +279,7 @@ async function iniciarAvaliacao(id) {
 }
 
 // ---------- Diagnóstico ----------
-// Regra do fluxo: se for mau uso, valor e ao menos 1 anexo são obrigatórios.
+// Regra do fluxo: se for mau uso, o valor é obrigatório (anexo é opcional).
 // Se não for, o campo de valor fica INATIVO e anexos são opcionais.
 function atualizarCamposDiagnostico() {
   const mauUso = document.getElementById("dg-mauuso").value === "sim";
@@ -308,7 +308,6 @@ async function salvarDiagnostico(e) {
   const arquivos = document.getElementById("dg-anexos").files;
 
   if (mauUso && (!valor || valor <= 0)) { alert("Informe o valor apresentado — é obrigatório em caso de mau uso."); return; }
-  if (mauUso && arquivos.length === 0) { alert("Anexe ao menos uma evidência (foto, vídeo, relatório ou orçamento) — é obrigatório em caso de mau uso."); return; }
 
   const btn = document.getElementById("btn-diagnostico");
   btn.disabled = true;
@@ -319,15 +318,8 @@ async function salvarDiagnostico(e) {
     try {
       urls = await enviarArquivos(`chamados/${id}/diagnostico`, arquivos, btn, "Enviar diagnóstico");
     } catch (err) {
-      // Em caso de mau uso o anexo é obrigatório: se o envio falhar, o
-      // diagnóstico NÃO pode seguir sem a evidência — mostra o erro e deixa
-      // o usuário tentar de novo, em vez de avançar pela metade.
-      if (mauUso) {
-        alert("Não foi possível anexar as evidências: " + err.message + "\n\nO diagnóstico não foi enviado. Tente novamente.");
-        btn.disabled = false;
-        btn.textContent = "Enviar diagnóstico";
-        return;
-      }
+      // Anexo agora é opcional mesmo em caso de mau uso: se o envio falhar,
+      // apenas avisa e segue o diagnóstico sem a evidência.
       console.warn("Não foi possível anexar arquivos do diagnóstico:", err);
       alert("O diagnóstico será enviado, mas não foi possível anexar os arquivos: " + err.message);
     }
