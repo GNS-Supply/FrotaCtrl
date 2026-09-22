@@ -28,13 +28,33 @@
       </label>
     </div>
 
+    <div class="dash-filtros">
+      <div class="dash-filtros__campo">
+        <label>Planta</label>
+        <select id="filtro-planta" onchange="atualizarSetoresFiltro(); aplicarFiltros();"><option value="">Todas as plantas</option></select>
+      </div>
+      <div class="dash-filtros__campo">
+        <label>Setor</label>
+        <select id="filtro-setor" onchange="aplicarFiltros();"><option value="">Todos os setores</option></select>
+      </div>
+      <div class="dash-filtros__campo">
+        <label>De</label>
+        <input type="date" id="filtro-data-inicio" onchange="aplicarFiltros();" />
+      </div>
+      <div class="dash-filtros__campo">
+        <label>Até</label>
+        <input type="date" id="filtro-data-fim" onchange="aplicarFiltros();" />
+      </div>
+      <button type="button" class="btn btn--ghost btn--sm" style="width:auto;" onclick="limparFiltros()">Limpar filtros</button>
+    </div>
+
     <!-- ==================== BLOCO 1: OPERACIONAL ==================== -->
     <section class="dash-block">
       <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--accent)"></span><h3>Operacional</h3></div>
       <div class="stats-grid" id="kpi-operacional"></div>
       <div class="chart-grid">
         <div class="chart-card chart-card--wide">
-          <div class="chart-card__title">Chamados registrados × concluídos (últimos 6 meses)</div>
+          <div class="chart-card__title" id="titulo-op-tendencia">Chamados registrados × concluídos (últimos 6 meses)</div>
           <div class="chart-card__canvas"><canvas id="chart-op-tendencia"></canvas></div>
         </div>
         <div class="chart-card">
@@ -42,7 +62,7 @@
           <div class="chart-card__canvas"><canvas id="chart-op-etapa"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-card__title">Chamados por planta</div>
+          <div class="chart-card__title">Chamados por planta / setor</div>
           <div class="chart-card__canvas"><canvas id="chart-op-planta"></canvas></div>
         </div>
       </div>
@@ -78,11 +98,11 @@
           <div class="chart-card__canvas"><canvas id="chart-fin-funil"></canvas></div>
         </div>
         <div class="chart-card chart-card--wide">
-          <div class="chart-card__title">Faturamento por mês (últimos 6 meses)</div>
+          <div class="chart-card__title" id="titulo-fin-mensal">Faturamento por mês (últimos 6 meses)</div>
           <div class="chart-card__canvas"><canvas id="chart-fin-mensal"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-card__title">Faturado por planta</div>
+          <div class="chart-card__title">Faturado por planta / setor</div>
           <div class="chart-card__canvas"><canvas id="chart-fin-planta"></canvas></div>
         </div>
       </div>

@@ -986,6 +986,21 @@ button:focus-visible,
 }
 .dash-valores-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
 
+.dash-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 4px 0 22px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.dash-filtros__campo { display: flex; flex-direction: column; min-width: 150px; flex: 1 1 150px; }
+.dash-filtros__campo label { margin: 0 0 6px; }
+.dash-filtros__campo select, .dash-filtros__campo input { padding: 9px 10px; font-size: 13px; }
+
 .dash-block { margin-bottom: 40px; }
 .dash-block__header {
   display: flex;
@@ -1015,6 +1030,9 @@ button:focus-visible,
   border-radius: var(--radius);
   box-shadow: var(--sombra-sm);
   padding: 16px;
+  min-width: 0; /* impede que o item do grid seja "empurrado" pela largura
+                   intrínseca do <canvas>, o que causava o scroll horizontal
+                   quando havia 3 gráficos lado a lado */
 }
 .chart-card__title {
   font-size: 12.5px;
@@ -1022,7 +1040,8 @@ button:focus-visible,
   color: var(--text-dim);
   margin-bottom: 12px;
 }
-.chart-card__canvas { position: relative; height: 240px; }
+.chart-card__canvas { position: relative; height: 240px; max-width: 100%; }
+.chart-card__canvas canvas { max-width: 100%; }
 
 @media (min-width: 700px) {
   .chart-grid { grid-template-columns: 1fr 1fr; }

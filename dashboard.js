@@ -5,6 +5,13 @@
 // ============================================================
 
 let usuarioAtual = null;
+
+// Dados completos, como vieram do Firestore (nunca filtrados).
+let chamadosOriginal = [];
+let equipamentosOriginal = [];
+
+// Dados efetivamente usados pelos gráficos — reflete os filtros de
+// Planta, Setor e Período aplicados no topo da página.
 let chamados = [];
 let equipamentos = [];
 
@@ -30,11 +37,19 @@ if (typeof ChartDataLabels !== "undefined") Chart.register(ChartDataLabels);
 // ---------- Caixinha "Mostrar valores nos gráficos" ----------
 // Por padrão os valores só aparecem no hover (tooltip padrão do Chart.js).
 // Quando a caixinha é marcada, todos os gráficos passam a exibir os
-// valores fixos sobre as barras/linhas/fatias, sem precisar passar o mouse.
+// valores fixos sobre as barras/fatias, sem precisar passar o mouse.
 let todosGraficos = [];
 let mostrarValores = false;
 
 function criarGrafico(canvasEl, config, opcoes = {}) {
+  // Se esse canvas estava marcado como "vazio" (mensagem de "sem dados"),
+  // volta a exibi-lo — importante ao reaplicar filtros, já que agora
+  // pode haver dados onde antes não havia.
+  const wrap = canvasEl.parentElement;
+  const vazio = wrap.querySelector(".empty");
+  if (vazio) vazio.style.display = "none";
+  canvasEl.style.display = "";
+
   const moeda = !!opcoes.moeda;
   const ehDoughnut = config.type === "doughnut";
   config.options = config.options || {};
@@ -43,7 +58,7 @@ function criarGrafico(canvasEl, config, opcoes = {}) {
     display: mostrarValores,
     color: ehDoughnut ? "#fff" : COR.texto,
     anchor: ehDoughnut ? "center" : "end",
-    align: ehDoughnut ? "center" : (config.type === "line" ? "top" : "end"),
+    align: ehDoughnut ? "center" : "end",
     offset: 4,
     font: { size: 10.5, weight: "600" },
     formatter: (valor) => {
@@ -72,16 +87,98 @@ function alternarMostrarValores(marcado) {
   document.getElementById("shell").style.display = "block";
 
   const [chamadosSnap, equipSnap] = await Promise.all([db.collection("chamados").get(), db.collection("equipamentos").get()]);
-  chamados = chamadosSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  equipamentos = equipSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  chamadosOriginal = chamadosSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  equipamentosOriginal = equipSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  chamados = chamadosOriginal;
+  equipamentos = equipamentosOriginal;
 
+  popularFiltros();
+  renderTudo();
+})();
+
+function voltar() { window.location.href = PERFIL_HOME[usuarioAtual?.tipo] || "index.html"; }
+
+function renderTudo() {
   renderOperacional();
   renderMauUso();
   renderFinanceiro();
   renderRecorrencia();
-})();
+}
 
-function voltar() { window.location.href = PERFIL_HOME[usuarioAtual?.tipo] || "index.html"; }
+// ============================================================
+// FILTROS — Planta, Setor e Período
+// ============================================================
+function popularFiltros() {
+  const plantas = new Set();
+  equipamentosOriginal.forEach((e) => e.plantaNome && plantas.add(e.plantaNome));
+  chamadosOriginal.forEach((c) => c.plantaNome && plantas.add(c.plantaNome));
+  const selectPlanta = document.getElementById("filtro-planta");
+  selectPlanta.innerHTML = `<option value="">Todas as plantas</option>` +
+    [...plantas].sort().map((p) => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
+  atualizarSetoresFiltro();
+}
+
+function atualizarSetoresFiltro() {
+  const plantaSel = document.getElementById("filtro-planta").value;
+  const atual = document.getElementById("filtro-setor").value;
+  const setores = new Set();
+  equipamentosOriginal.forEach((e) => { if (!plantaSel || e.plantaNome === plantaSel) e.setorNome && setores.add(e.setorNome); });
+  chamadosOriginal.forEach((c) => { if (!plantaSel || c.plantaNome === plantaSel) c.setorNome && setores.add(c.setorNome); });
+  const selectSetor = document.getElementById("filtro-setor");
+  const ordenados = [...setores].sort();
+  selectSetor.innerHTML = `<option value="">Todos os setores</option>` +
+    ordenados.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  if (ordenados.includes(atual)) selectSetor.value = atual;
+}
+
+function limparFiltros() {
+  document.getElementById("filtro-planta").value = "";
+  atualizarSetoresFiltro();
+  document.getElementById("filtro-setor").value = "";
+  document.getElementById("filtro-data-inicio").value = "";
+  document.getElementById("filtro-data-fim").value = "";
+  aplicarFiltros();
+}
+
+function valoresFiltro() {
+  return {
+    planta: document.getElementById("filtro-planta")?.value || "",
+    setor: document.getElementById("filtro-setor")?.value || "",
+    dataInicio: document.getElementById("filtro-data-inicio")?.value || "",
+    dataFim: document.getElementById("filtro-data-fim")?.value || ""
+  };
+}
+
+function aplicarFiltros() {
+  const { planta, setor, dataInicio, dataFim } = valoresFiltro();
+  const inicioMs = dataInicio ? new Date(dataInicio + "T00:00:00").getTime() : null;
+  const fimMs = dataFim ? new Date(dataFim + "T23:59:59").getTime() : null;
+
+  chamados = chamadosOriginal.filter((c) => {
+    if (planta && c.plantaNome !== planta) return false;
+    if (setor && c.setorNome !== setor) return false;
+    if (inicioMs || fimMs) {
+      const ms = tsToMs(c.registradoEm);
+      if (!ms) return false;
+      if (inicioMs && ms < inicioMs) return false;
+      if (fimMs && ms > fimMs) return false;
+    }
+    return true;
+  });
+
+  equipamentos = equipamentosOriginal.filter((e) => {
+    if (planta && e.plantaNome !== planta) return false;
+    if (setor && e.setorNome !== setor) return false;
+    return true;
+  });
+
+  // Destrói os gráficos atuais antes de recriá-los — o Chart.js não
+  // permite reaproveitar um <canvas> sem antes liberar a instância anterior.
+  todosGraficos.forEach((g) => g.destroy());
+  todosGraficos = [];
+
+  renderTudo();
+}
 
 // ---------- Utilitários ----------
 function kpiGrid(itens) {
@@ -98,6 +195,30 @@ function ultimosMeses(n) {
   }
   return meses;
 }
+
+// Quando há um período (De/Até) selecionado, os gráficos "por mês" passam a
+// cobrir exatamente os meses daquele período em vez dos últimos 6 meses fixos.
+function mesesParaGraficos() {
+  const { dataInicio, dataFim } = valoresFiltro();
+  if (dataInicio && dataFim) {
+    const ini = new Date(dataInicio + "T00:00:00");
+    const fim = new Date(dataFim + "T00:00:00");
+    if (ini <= fim) {
+      const meses = [];
+      let d = new Date(ini.getFullYear(), ini.getMonth(), 1);
+      const fimMes = new Date(fim.getFullYear(), fim.getMonth(), 1);
+      let guarda = 0;
+      while (d <= fimMes && guarda < 36) {
+        meses.push({ chave: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }) });
+        d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+        guarda++;
+      }
+      if (meses.length) return meses;
+    }
+  }
+  return ultimosMeses(6);
+}
+
 function chaveMes(ms) {
   if (!ms) return null;
   const d = new Date(ms);
@@ -113,9 +234,19 @@ function contarPorMes(lista, campoData, meses) {
   return meses.map((m) => mapa[m.chave] || 0);
 }
 function graficoVazio(canvasId, mensagem) {
-  const el = document.getElementById(canvasId);
-  const wrap = el.parentElement;
-  wrap.innerHTML = `<div class="empty" style="padding:30px 10px;"><div class="empty__text">${mensagem}</div></div>`;
+  const canvas = document.getElementById(canvasId);
+  const wrap = canvas.parentElement;
+  canvas.style.display = "none";
+  let vazio = wrap.querySelector(".empty");
+  if (!vazio) {
+    vazio = document.createElement("div");
+    vazio.className = "empty";
+    vazio.style.padding = "30px 10px";
+    vazio.innerHTML = `<div class="empty__text"></div>`;
+    wrap.appendChild(vazio);
+  }
+  vazio.querySelector(".empty__text").textContent = mensagem;
+  vazio.style.display = "";
 }
 
 // ============================================================
@@ -146,17 +277,23 @@ function renderOperacional() {
     { valor: equipamentos.length, label: "Equipamentos na frota" }
   ]);
 
-  // Tendência: registrados x concluídos por mês
-  const meses = ultimosMeses(6);
+  // Tendência: registrados x concluídos por mês (barras — em um gráfico de
+  // linha o valor menor ficava escondido atrás do maior nos meses em que
+  // os dois ficavam próximos).
+  const meses = mesesParaGraficos();
   const registradosPorMes = contarPorMes(chamados, "registradoEm", meses);
   const concluidosPorMes = contarPorMes(chamados, "concluidoEm", meses);
+  const { dataInicio, dataFim } = valoresFiltro();
+  document.getElementById("titulo-op-tendencia").textContent = (dataInicio && dataFim)
+    ? "Chamados registrados × concluídos (período selecionado)"
+    : "Chamados registrados × concluídos (últimos 6 meses)";
   criarGrafico(document.getElementById("chart-op-tendencia"), {
-    type: "line",
+    type: "bar",
     data: {
       labels: meses.map((m) => m.label),
       datasets: [
-        { label: "Registrados", data: registradosPorMes, borderColor: COR.accent, backgroundColor: COR.accentTint, tension: 0.3, fill: true },
-        { label: "Concluídos", data: concluidosPorMes, borderColor: COR.green, backgroundColor: COR.greenTint, tension: 0.3, fill: true }
+        { label: "Registrados", data: registradosPorMes, backgroundColor: COR.accent, borderRadius: 4 },
+        { label: "Concluídos", data: concluidosPorMes, backgroundColor: COR.green, borderRadius: 4 }
       ]
     },
     options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
@@ -171,10 +308,13 @@ function renderOperacional() {
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
   });
 
-  // Por planta
-  const porPlanta = {};
-  chamados.forEach((c) => { const p = c.plantaNome || "—"; porPlanta[p] = (porPlanta[p] || 0) + 1; });
-  const entradasPlanta = Object.entries(porPlanta).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  // Por planta / setor — mostra onde os chamados estão concentrados
+  const porPlantaSetor = {};
+  chamados.forEach((c) => {
+    const chave = `${c.plantaNome || "—"} / ${c.setorNome || "—"}`;
+    porPlantaSetor[chave] = (porPlantaSetor[chave] || 0) + 1;
+  });
+  const entradasPlanta = Object.entries(porPlantaSetor).sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (entradasPlanta.length === 0) { graficoVazio("chart-op-planta", "Sem chamados registrados ainda."); }
   else {
     criarGrafico(document.getElementById("chart-op-planta"), {
@@ -229,7 +369,7 @@ function renderMauUso() {
     });
   }
 
-  const meses = ultimosMeses(6);
+  const meses = mesesParaGraficos();
   const apontadosPorMes = contarPorMes(doMauUso, "registradoEm", meses);
   const confirmadosPorMes = meses.map((m) => doMauUso.filter((c) => c.parecerMauUso?.resultado === "confirmado" && chaveMes(c.parecerMauUso.timestamp) === m.chave).length);
   criarGrafico(document.getElementById("chart-mu-evolucao"), {
@@ -273,8 +413,12 @@ function renderFinanceiro() {
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => "R$ " + v } } } }
   }, { moeda: true });
 
-  const meses = ultimosMeses(6);
+  const meses = mesesParaGraficos();
   const faturadoPorMesReal = meses.map((m) => chamados.filter((c) => chaveMes(tsToMs(c.financeiro?.dataFaturamento)) === m.chave).reduce((s, c) => s + (c.financeiro?.valorFinal || 0), 0));
+  const { dataInicio, dataFim } = valoresFiltro();
+  document.getElementById("titulo-fin-mensal").textContent = (dataInicio && dataFim)
+    ? "Faturamento por mês (período selecionado)"
+    : "Faturamento por mês (últimos 6 meses)";
   criarGrafico(document.getElementById("chart-fin-mensal"), {
     type: "line",
     data: { labels: meses.map((m) => m.label), datasets: [{ label: "Faturado", data: faturadoPorMesReal, borderColor: COR.blue, backgroundColor: COR.blueTint, fill: true, tension: 0.3 }] },
@@ -282,7 +426,10 @@ function renderFinanceiro() {
   }, { moeda: true });
 
   const porPlanta = {};
-  chamados.forEach((c) => { const v = c.financeiro?.valorFinal || 0; if (v > 0) porPlanta[c.plantaNome || "—"] = (porPlanta[c.plantaNome || "—"] || 0) + v; });
+  chamados.forEach((c) => {
+    const v = c.financeiro?.valorFinal || 0;
+    if (v > 0) { const chave = `${c.plantaNome || "—"} / ${c.setorNome || "—"}`; porPlanta[chave] = (porPlanta[chave] || 0) + v; }
+  });
   const entradas = Object.entries(porPlanta).sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (entradas.length === 0) graficoVazio("chart-fin-planta", "Nenhum faturamento registrado ainda.");
   else criarGrafico(document.getElementById("chart-fin-planta"), {
