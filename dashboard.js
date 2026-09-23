@@ -2,6 +2,12 @@
 // dashboard.js — indicadores em página única, 4 blocos, com
 // gráficos reais (Chart.js via CDN — continua sendo estático,
 // sem build, hospedado junto com o resto no GitHub Pages).
+//
+// Cada bloco (Operacional, Mau uso, Financeiro, Recorrência) tem seu
+// próprio filtro independente de Planta / Setor / Período — os
+// prefixos "operacional", "mauuso", "financeiro" e "recorrencia" são
+// usados para achar os campos de cada filtro (filtro-planta-<prefixo>
+// etc.) e para saber quais gráficos redesenhar quando ele muda.
 // ============================================================
 
 let usuarioAtual = null;
@@ -10,10 +16,7 @@ let usuarioAtual = null;
 let chamadosOriginal = [];
 let equipamentosOriginal = [];
 
-// Dados efetivamente usados pelos gráficos — reflete os filtros de
-// Planta, Setor e Período aplicados no topo da página.
-let chamados = [];
-let equipamentos = [];
+const BLOCOS = ["operacional", "mauuso", "financeiro", "recorrencia"];
 
 // Paleta usada nos gráficos (espelha as variáveis do style.css —
 // Chart.js precisa de valores literais, não consegue ler var(--x))
@@ -34,12 +37,23 @@ Chart.defaults.plugins.legend.labels.boxWidth = 12;
 Chart.defaults.plugins.legend.labels.padding = 12;
 if (typeof ChartDataLabels !== "undefined") Chart.register(ChartDataLabels);
 
-// ---------- Caixinha "Mostrar valores nos gráficos" ----------
+// ---------- Caixinha "Mostrar valores nos gráficos" (global) ----------
 // Por padrão os valores só aparecem no hover (tooltip padrão do Chart.js).
 // Quando a caixinha é marcada, todos os gráficos passam a exibir os
 // valores fixos sobre as barras/fatias, sem precisar passar o mouse.
-let todosGraficos = [];
 let mostrarValores = false;
+
+// Instâncias de gráfico, agrupadas por bloco — permite destruir e
+// redesenhar só os gráficos do bloco cujo filtro mudou.
+const graficosPorBloco = { operacional: [], mauuso: [], financeiro: [], recorrencia: [] };
+
+function blocoDoCanvas(id) {
+  if (id.startsWith("chart-op-")) return "operacional";
+  if (id.startsWith("chart-mu-")) return "mauuso";
+  if (id.startsWith("chart-fin-")) return "financeiro";
+  if (id.startsWith("chart-rec-")) return "recorrencia";
+  return "operacional";
+}
 
 function criarGrafico(canvasEl, config, opcoes = {}) {
   // Se esse canvas estava marcado como "vazio" (mensagem de "sem dados"),
@@ -67,17 +81,19 @@ function criarGrafico(canvasEl, config, opcoes = {}) {
     }
   };
   const grafico = new Chart(canvasEl, config);
-  todosGraficos.push(grafico);
+  graficosPorBloco[blocoDoCanvas(canvasEl.id)].push(grafico);
   return grafico;
 }
 
 function alternarMostrarValores(marcado) {
   mostrarValores = marcado;
-  todosGraficos.forEach((g) => {
-    if (g.options?.plugins?.datalabels) {
-      g.options.plugins.datalabels.display = mostrarValores;
-      g.update();
-    }
+  BLOCOS.forEach((bloco) => {
+    graficosPorBloco[bloco].forEach((g) => {
+      if (g.options?.plugins?.datalabels) {
+        g.options.plugins.datalabels.display = mostrarValores;
+        g.update();
+      }
+    });
   });
 }
 
@@ -89,72 +105,78 @@ function alternarMostrarValores(marcado) {
   const [chamadosSnap, equipSnap] = await Promise.all([db.collection("chamados").get(), db.collection("equipamentos").get()]);
   chamadosOriginal = chamadosSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
   equipamentosOriginal = equipSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  chamados = chamadosOriginal;
-  equipamentos = equipamentosOriginal;
 
   popularFiltros();
-  renderTudo();
-})();
-
-function voltar() { window.location.href = PERFIL_HOME[usuarioAtual?.tipo] || "index.html"; }
-
-function renderTudo() {
   renderOperacional();
   renderMauUso();
   renderFinanceiro();
   renderRecorrencia();
-}
+})();
+
+function voltar() { window.location.href = PERFIL_HOME[usuarioAtual?.tipo] || "index.html"; }
+
+const RENDER_POR_BLOCO = {
+  operacional: () => renderOperacional(),
+  mauuso: () => renderMauUso(),
+  financeiro: () => renderFinanceiro(),
+  recorrencia: () => renderRecorrencia()
+};
 
 // ============================================================
-// FILTROS — Planta, Setor e Período
+// FILTROS — Planta, Setor e Período, independentes por bloco
 // ============================================================
 function popularFiltros() {
   const plantas = new Set();
   equipamentosOriginal.forEach((e) => e.plantaNome && plantas.add(e.plantaNome));
   chamadosOriginal.forEach((c) => c.plantaNome && plantas.add(c.plantaNome));
-  const selectPlanta = document.getElementById("filtro-planta");
-  selectPlanta.innerHTML = `<option value="">Todas as plantas</option>` +
+  const opcoesPlanta = `<option value="">Todas as plantas</option>` +
     [...plantas].sort().map((p) => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
-  atualizarSetoresFiltro();
+
+  BLOCOS.forEach((bloco) => {
+    const sel = document.getElementById(`filtro-planta-${bloco}`);
+    if (sel) sel.innerHTML = opcoesPlanta;
+    atualizarSetoresFiltroBloco(bloco);
+  });
 }
 
-function atualizarSetoresFiltro() {
-  const plantaSel = document.getElementById("filtro-planta").value;
-  const atual = document.getElementById("filtro-setor").value;
+function atualizarSetoresFiltroBloco(bloco) {
+  const selPlanta = document.getElementById(`filtro-planta-${bloco}`);
+  const selSetor = document.getElementById(`filtro-setor-${bloco}`);
+  if (!selPlanta || !selSetor) return;
+  const plantaSel = selPlanta.value;
+  const atual = selSetor.value;
   const setores = new Set();
   equipamentosOriginal.forEach((e) => { if (!plantaSel || e.plantaNome === plantaSel) e.setorNome && setores.add(e.setorNome); });
   chamadosOriginal.forEach((c) => { if (!plantaSel || c.plantaNome === plantaSel) c.setorNome && setores.add(c.setorNome); });
-  const selectSetor = document.getElementById("filtro-setor");
   const ordenados = [...setores].sort();
-  selectSetor.innerHTML = `<option value="">Todos os setores</option>` +
+  selSetor.innerHTML = `<option value="">Todos os setores</option>` +
     ordenados.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
-  if (ordenados.includes(atual)) selectSetor.value = atual;
+  if (ordenados.includes(atual)) selSetor.value = atual;
 }
 
-function limparFiltros() {
-  document.getElementById("filtro-planta").value = "";
-  atualizarSetoresFiltro();
-  document.getElementById("filtro-setor").value = "";
-  document.getElementById("filtro-data-inicio").value = "";
-  document.getElementById("filtro-data-fim").value = "";
-  aplicarFiltros();
+function limparFiltroBloco(bloco) {
+  document.getElementById(`filtro-planta-${bloco}`).value = "";
+  atualizarSetoresFiltroBloco(bloco);
+  document.getElementById(`filtro-setor-${bloco}`).value = "";
+  document.getElementById(`filtro-data-inicio-${bloco}`).value = "";
+  document.getElementById(`filtro-data-fim-${bloco}`).value = "";
+  aplicarFiltroBloco(bloco);
 }
 
-function valoresFiltro() {
+function valoresFiltroBloco(bloco) {
   return {
-    planta: document.getElementById("filtro-planta")?.value || "",
-    setor: document.getElementById("filtro-setor")?.value || "",
-    dataInicio: document.getElementById("filtro-data-inicio")?.value || "",
-    dataFim: document.getElementById("filtro-data-fim")?.value || ""
+    planta: document.getElementById(`filtro-planta-${bloco}`)?.value || "",
+    setor: document.getElementById(`filtro-setor-${bloco}`)?.value || "",
+    dataInicio: document.getElementById(`filtro-data-inicio-${bloco}`)?.value || "",
+    dataFim: document.getElementById(`filtro-data-fim-${bloco}`)?.value || ""
   };
 }
 
-function aplicarFiltros() {
-  const { planta, setor, dataInicio, dataFim } = valoresFiltro();
+function chamadosFiltrados(bloco) {
+  const { planta, setor, dataInicio, dataFim } = valoresFiltroBloco(bloco);
   const inicioMs = dataInicio ? new Date(dataInicio + "T00:00:00").getTime() : null;
   const fimMs = dataFim ? new Date(dataFim + "T23:59:59").getTime() : null;
-
-  chamados = chamadosOriginal.filter((c) => {
+  return chamadosOriginal.filter((c) => {
     if (planta && c.plantaNome !== planta) return false;
     if (setor && c.setorNome !== setor) return false;
     if (inicioMs || fimMs) {
@@ -165,19 +187,21 @@ function aplicarFiltros() {
     }
     return true;
   });
+}
 
-  equipamentos = equipamentosOriginal.filter((e) => {
+function equipamentosFiltrados(bloco) {
+  const { planta, setor } = valoresFiltroBloco(bloco);
+  return equipamentosOriginal.filter((e) => {
     if (planta && e.plantaNome !== planta) return false;
     if (setor && e.setorNome !== setor) return false;
     return true;
   });
+}
 
-  // Destrói os gráficos atuais antes de recriá-los — o Chart.js não
-  // permite reaproveitar um <canvas> sem antes liberar a instância anterior.
-  todosGraficos.forEach((g) => g.destroy());
-  todosGraficos = [];
-
-  renderTudo();
+function aplicarFiltroBloco(bloco) {
+  graficosPorBloco[bloco].forEach((g) => g.destroy());
+  graficosPorBloco[bloco] = [];
+  RENDER_POR_BLOCO[bloco]();
 }
 
 // ---------- Utilitários ----------
@@ -196,10 +220,11 @@ function ultimosMeses(n) {
   return meses;
 }
 
-// Quando há um período (De/Até) selecionado, os gráficos "por mês" passam a
-// cobrir exatamente os meses daquele período em vez dos últimos 6 meses fixos.
-function mesesParaGraficos() {
-  const { dataInicio, dataFim } = valoresFiltro();
+// Quando há um período (De/Até) selecionado no filtro do bloco, os
+// gráficos "por mês" passam a cobrir exatamente os meses daquele
+// período, em vez dos últimos 6 meses fixos.
+function mesesParaGraficos(bloco) {
+  const { dataInicio, dataFim } = valoresFiltroBloco(bloco);
   if (dataInicio && dataFim) {
     const ini = new Date(dataInicio + "T00:00:00");
     const fim = new Date(dataFim + "T00:00:00");
@@ -253,6 +278,9 @@ function graficoVazio(canvasId, mensagem) {
 // BLOCO 1 — OPERACIONAL
 // ============================================================
 function renderOperacional() {
+  const chamados = chamadosFiltrados("operacional");
+  const equipamentos = equipamentosFiltrados("operacional");
+
   const abertos = chamados.filter((c) => STATUS_ATIVOS.includes(c.status)).length;
   const parados = equipamentos.filter((e) => ["parado", "indisponivel"].includes(e.statusOperacional)).length;
   const restricao = equipamentos.filter((e) => e.statusOperacional === "operacional_restricao").length;
@@ -280,10 +308,10 @@ function renderOperacional() {
   // Tendência: registrados x concluídos por mês (barras — em um gráfico de
   // linha o valor menor ficava escondido atrás do maior nos meses em que
   // os dois ficavam próximos).
-  const meses = mesesParaGraficos();
+  const meses = mesesParaGraficos("operacional");
   const registradosPorMes = contarPorMes(chamados, "registradoEm", meses);
   const concluidosPorMes = contarPorMes(chamados, "concluidoEm", meses);
-  const { dataInicio, dataFim } = valoresFiltro();
+  const { dataInicio, dataFim } = valoresFiltroBloco("operacional");
   document.getElementById("titulo-op-tendencia").textContent = (dataInicio && dataFim)
     ? "Chamados registrados × concluídos (período selecionado)"
     : "Chamados registrados × concluídos (últimos 6 meses)";
@@ -329,6 +357,8 @@ function renderOperacional() {
 // BLOCO 2 — MAU USO
 // ============================================================
 function renderMauUso() {
+  const chamados = chamadosFiltrados("mauuso");
+
   const doMauUso = chamados.filter((c) => c.fluxo === "mau_uso" || c.parecerMauUso);
   const apontados = doMauUso.length;
   const confirmados = doMauUso.filter((c) => c.parecerMauUso?.resultado === "confirmado").length;
@@ -369,7 +399,7 @@ function renderMauUso() {
     });
   }
 
-  const meses = mesesParaGraficos();
+  const meses = mesesParaGraficos("mauuso");
   const apontadosPorMes = contarPorMes(doMauUso, "registradoEm", meses);
   const confirmadosPorMes = meses.map((m) => doMauUso.filter((c) => c.parecerMauUso?.resultado === "confirmado" && chaveMes(c.parecerMauUso.timestamp) === m.chave).length);
   criarGrafico(document.getElementById("chart-mu-evolucao"), {
@@ -389,6 +419,8 @@ function renderMauUso() {
 // BLOCO 3 — FINANCEIRO
 // ============================================================
 function renderFinanceiro() {
+  const chamados = chamadosFiltrados("financeiro");
+
   const soma = (campo) => chamados.reduce((s, c) => s + (c.financeiro?.[campo] || 0), 0);
   const apresentado = soma("valorApresentado");
   const aprovado = soma("valorAprovado");
@@ -413,9 +445,9 @@ function renderFinanceiro() {
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => "R$ " + v } } } }
   }, { moeda: true });
 
-  const meses = mesesParaGraficos();
+  const meses = mesesParaGraficos("financeiro");
   const faturadoPorMesReal = meses.map((m) => chamados.filter((c) => chaveMes(tsToMs(c.financeiro?.dataFaturamento)) === m.chave).reduce((s, c) => s + (c.financeiro?.valorFinal || 0), 0));
-  const { dataInicio, dataFim } = valoresFiltro();
+  const { dataInicio, dataFim } = valoresFiltroBloco("financeiro");
   document.getElementById("titulo-fin-mensal").textContent = (dataInicio && dataFim)
     ? "Faturamento por mês (período selecionado)"
     : "Faturamento por mês (últimos 6 meses)";
@@ -443,6 +475,9 @@ function renderFinanceiro() {
 // BLOCO 4 — RECORRÊNCIA
 // ============================================================
 async function renderRecorrencia() {
+  const chamados = chamadosFiltrados("recorrencia");
+  const equipamentos = equipamentosFiltrados("recorrencia");
+
   const params = await obterParametrosRecorrencia();
   const porEquip = {};
   chamados.forEach((c) => { if (c.equipamentoId) (porEquip[c.equipamentoId] = porEquip[c.equipamentoId] || []).push(c); });

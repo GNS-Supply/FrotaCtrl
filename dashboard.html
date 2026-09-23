@@ -28,29 +28,28 @@
       </label>
     </div>
 
-    <div class="dash-filtros">
-      <div class="dash-filtros__campo">
-        <label>Planta</label>
-        <select id="filtro-planta" onchange="atualizarSetoresFiltro(); aplicarFiltros();"><option value="">Todas as plantas</option></select>
-      </div>
-      <div class="dash-filtros__campo">
-        <label>Setor</label>
-        <select id="filtro-setor" onchange="aplicarFiltros();"><option value="">Todos os setores</option></select>
-      </div>
-      <div class="dash-filtros__campo">
-        <label>De</label>
-        <input type="date" id="filtro-data-inicio" onchange="aplicarFiltros();" />
-      </div>
-      <div class="dash-filtros__campo">
-        <label>Até</label>
-        <input type="date" id="filtro-data-fim" onchange="aplicarFiltros();" />
-      </div>
-      <button type="button" class="btn btn--ghost btn--sm" style="width:auto;" onclick="limparFiltros()">Limpar filtros</button>
-    </div>
-
     <!-- ==================== BLOCO 1: OPERACIONAL ==================== -->
     <section class="dash-block">
       <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--accent)"></span><h3>Operacional</h3></div>
+      <div class="bloco-filtros" data-cor="accent">
+        <div class="bloco-filtros__grupo">
+          <label>Planta</label>
+          <select id="filtro-planta-operacional" onchange="atualizarSetoresFiltroBloco('operacional'); aplicarFiltroBloco('operacional');"></select>
+        </div>
+        <div class="bloco-filtros__grupo">
+          <label>Setor</label>
+          <select id="filtro-setor-operacional" onchange="aplicarFiltroBloco('operacional');"></select>
+        </div>
+        <div class="bloco-filtros__grupo bloco-filtros__grupo--periodo">
+          <label>Período</label>
+          <div class="bloco-filtros__periodo">
+            <input type="date" id="filtro-data-inicio-operacional" onchange="aplicarFiltroBloco('operacional');" />
+            <span>até</span>
+            <input type="date" id="filtro-data-fim-operacional" onchange="aplicarFiltroBloco('operacional');" />
+          </div>
+        </div>
+        <button type="button" class="bloco-filtros__limpar" onclick="limparFiltroBloco('operacional')">Limpar</button>
+      </div>
       <div class="stats-grid" id="kpi-operacional"></div>
       <div class="chart-grid">
         <div class="chart-card chart-card--wide">
@@ -71,6 +70,25 @@
     <!-- ==================== BLOCO 2: MAU USO ==================== -->
     <section class="dash-block">
       <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--red)"></span><h3>Mau uso</h3></div>
+      <div class="bloco-filtros" data-cor="red">
+        <div class="bloco-filtros__grupo">
+          <label>Planta</label>
+          <select id="filtro-planta-mauuso" onchange="atualizarSetoresFiltroBloco('mauuso'); aplicarFiltroBloco('mauuso');"></select>
+        </div>
+        <div class="bloco-filtros__grupo">
+          <label>Setor</label>
+          <select id="filtro-setor-mauuso" onchange="aplicarFiltroBloco('mauuso');"></select>
+        </div>
+        <div class="bloco-filtros__grupo bloco-filtros__grupo--periodo">
+          <label>Período</label>
+          <div class="bloco-filtros__periodo">
+            <input type="date" id="filtro-data-inicio-mauuso" onchange="aplicarFiltroBloco('mauuso');" />
+            <span>até</span>
+            <input type="date" id="filtro-data-fim-mauuso" onchange="aplicarFiltroBloco('mauuso');" />
+          </div>
+        </div>
+        <button type="button" class="bloco-filtros__limpar" onclick="limparFiltroBloco('mauuso')">Limpar</button>
+      </div>
       <div class="stats-grid" id="kpi-mauuso"></div>
       <div class="chart-grid">
         <div class="chart-card">
@@ -91,6 +109,25 @@
     <!-- ==================== BLOCO 3: FINANCEIRO ==================== -->
     <section class="dash-block">
       <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--blue)"></span><h3>Financeiro</h3></div>
+      <div class="bloco-filtros" data-cor="blue">
+        <div class="bloco-filtros__grupo">
+          <label>Planta</label>
+          <select id="filtro-planta-financeiro" onchange="atualizarSetoresFiltroBloco('financeiro'); aplicarFiltroBloco('financeiro');"></select>
+        </div>
+        <div class="bloco-filtros__grupo">
+          <label>Setor</label>
+          <select id="filtro-setor-financeiro" onchange="aplicarFiltroBloco('financeiro');"></select>
+        </div>
+        <div class="bloco-filtros__grupo bloco-filtros__grupo--periodo">
+          <label>Período</label>
+          <div class="bloco-filtros__periodo">
+            <input type="date" id="filtro-data-inicio-financeiro" onchange="aplicarFiltroBloco('financeiro');" />
+            <span>até</span>
+            <input type="date" id="filtro-data-fim-financeiro" onchange="aplicarFiltroBloco('financeiro');" />
+          </div>
+        </div>
+        <button type="button" class="bloco-filtros__limpar" onclick="limparFiltroBloco('financeiro')">Limpar</button>
+      </div>
       <div class="stats-grid" id="kpi-financeiro"></div>
       <div class="chart-grid">
         <div class="chart-card">
@@ -111,6 +148,25 @@
     <!-- ==================== BLOCO 4: RECORRÊNCIA ==================== -->
     <section class="dash-block">
       <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--green)"></span><h3>Recorrência</h3></div>
+      <div class="bloco-filtros" data-cor="green">
+        <div class="bloco-filtros__grupo">
+          <label>Planta</label>
+          <select id="filtro-planta-recorrencia" onchange="atualizarSetoresFiltroBloco('recorrencia'); aplicarFiltroBloco('recorrencia');"></select>
+        </div>
+        <div class="bloco-filtros__grupo">
+          <label>Setor</label>
+          <select id="filtro-setor-recorrencia" onchange="aplicarFiltroBloco('recorrencia');"></select>
+        </div>
+        <div class="bloco-filtros__grupo bloco-filtros__grupo--periodo">
+          <label>Período</label>
+          <div class="bloco-filtros__periodo">
+            <input type="date" id="filtro-data-inicio-recorrencia" onchange="aplicarFiltroBloco('recorrencia');" />
+            <span>até</span>
+            <input type="date" id="filtro-data-fim-recorrencia" onchange="aplicarFiltroBloco('recorrencia');" />
+          </div>
+        </div>
+        <button type="button" class="bloco-filtros__limpar" onclick="limparFiltroBloco('recorrencia')">Limpar</button>
+      </div>
       <div class="stats-grid" id="kpi-recorrencia"></div>
       <div class="chart-grid">
         <div class="chart-card">
