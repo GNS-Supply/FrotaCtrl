@@ -183,6 +183,42 @@
         </div>
       </div>
     </section>
+
+    <!-- ==================== BLOCO 5: COMPARATIVO DE SETORES ==================== -->
+    <section class="dash-block">
+      <div class="dash-block__header"><span class="dash-block__dot" style="background:var(--muted)"></span><h3>Comparativo de setores</h3></div>
+      <div class="bloco-filtros" data-cor="muted">
+        <div class="bloco-filtros__grupo">
+          <label>Planta</label>
+          <select id="filtro-planta-setores" onchange="aplicarFiltroBloco('setores');"></select>
+        </div>
+        <div class="bloco-filtros__grupo bloco-filtros__grupo--periodo">
+          <label>Período</label>
+          <div class="bloco-filtros__periodo">
+            <input type="date" id="filtro-data-inicio-setores" onchange="aplicarFiltroBloco('setores');" />
+            <span>até</span>
+            <input type="date" id="filtro-data-fim-setores" onchange="aplicarFiltroBloco('setores');" />
+          </div>
+        </div>
+        <button type="button" class="bloco-filtros__limpar" onclick="limparFiltroBloco('setores')">Limpar</button>
+      </div>
+      <p class="dash-block__nota">Escolha uma planta para comparar os setores entre si (sem o filtro de Planta, a comparação mostra planta/setor juntos).</p>
+      <div class="stats-grid" id="kpi-setores"></div>
+      <div class="chart-grid">
+        <div class="chart-card chart-card--wide">
+          <div class="chart-card__title" id="titulo-setores-chamados">Chamados por setor (todas as plantas)</div>
+          <div class="chart-card__canvas"><canvas id="chart-setores-chamados"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card__title">Mau uso confirmado por setor</div>
+          <div class="chart-card__canvas"><canvas id="chart-setores-mauuso"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card__title">Faturado por setor</div>
+          <div class="chart-card__canvas"><canvas id="chart-setores-financeiro"></canvas></div>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 

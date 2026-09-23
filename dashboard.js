@@ -16,7 +16,7 @@ let usuarioAtual = null;
 let chamadosOriginal = [];
 let equipamentosOriginal = [];
 
-const BLOCOS = ["operacional", "mauuso", "financeiro", "recorrencia"];
+const BLOCOS = ["operacional", "mauuso", "financeiro", "recorrencia", "setores"];
 
 // Paleta usada nos gráficos (espelha as variáveis do style.css —
 // Chart.js precisa de valores literais, não consegue ler var(--x))
@@ -45,13 +45,14 @@ let mostrarValores = false;
 
 // Instâncias de gráfico, agrupadas por bloco — permite destruir e
 // redesenhar só os gráficos do bloco cujo filtro mudou.
-const graficosPorBloco = { operacional: [], mauuso: [], financeiro: [], recorrencia: [] };
+const graficosPorBloco = { operacional: [], mauuso: [], financeiro: [], recorrencia: [], setores: [] };
 
 function blocoDoCanvas(id) {
   if (id.startsWith("chart-op-")) return "operacional";
   if (id.startsWith("chart-mu-")) return "mauuso";
   if (id.startsWith("chart-fin-")) return "financeiro";
   if (id.startsWith("chart-rec-")) return "recorrencia";
+  if (id.startsWith("chart-setores-")) return "setores";
   return "operacional";
 }
 
@@ -111,6 +112,7 @@ function alternarMostrarValores(marcado) {
   renderMauUso();
   renderFinanceiro();
   renderRecorrencia();
+  renderComparativoSetores();
 })();
 
 function voltar() { window.location.href = PERFIL_HOME[usuarioAtual?.tipo] || "index.html"; }
@@ -119,7 +121,8 @@ const RENDER_POR_BLOCO = {
   operacional: () => renderOperacional(),
   mauuso: () => renderMauUso(),
   financeiro: () => renderFinanceiro(),
-  recorrencia: () => renderRecorrencia()
+  recorrencia: () => renderRecorrencia(),
+  setores: () => renderComparativoSetores()
 };
 
 // ============================================================
@@ -157,7 +160,8 @@ function atualizarSetoresFiltroBloco(bloco) {
 function limparFiltroBloco(bloco) {
   document.getElementById(`filtro-planta-${bloco}`).value = "";
   atualizarSetoresFiltroBloco(bloco);
-  document.getElementById(`filtro-setor-${bloco}`).value = "";
+  const selSetor = document.getElementById(`filtro-setor-${bloco}`);
+  if (selSetor) selSetor.value = "";
   document.getElementById(`filtro-data-inicio-${bloco}`).value = "";
   document.getElementById(`filtro-data-fim-${bloco}`).value = "";
   aplicarFiltroBloco(bloco);
@@ -521,4 +525,68 @@ async function renderRecorrencia() {
     data: { labels: entradasCat.map((e) => e[0]), datasets: [{ label: "Chamados", data: entradasCat.map((e) => e[1]), backgroundColor: COR.green, borderRadius: 4 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
   });
+}
+
+// ============================================================
+// BLOCO 5 — COMPARATIVO DE SETORES
+// Filtro só de Planta (+ Período) — sem filtro de Setor, já que o
+// objetivo aqui é justamente comparar os setores entre si. Escolhendo
+// uma planta, a comparação fica só entre os setores dela; sem escolher,
+// mostra "planta / setor" para não misturar setores de plantas diferentes
+// que tenham o mesmo nome.
+// ============================================================
+function renderComparativoSetores() {
+  const chamados = chamadosFiltrados("setores");
+  const { planta } = valoresFiltroBloco("setores");
+  const chaveDoSetor = (c) => (planta ? (c.setorNome || "—") : `${c.plantaNome || "—"} / ${c.setorNome || "—"}`);
+
+  document.getElementById("titulo-setores-chamados").textContent = planta
+    ? `Chamados por setor — ${planta}`
+    : "Chamados por setor (todas as plantas)";
+
+  const porSetorChamados = {};
+  chamados.forEach((c) => { const k = chaveDoSetor(c); porSetorChamados[k] = (porSetorChamados[k] || 0) + 1; });
+  const rankingChamados = Object.entries(porSetorChamados).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+  const porSetorMauUso = {};
+  chamados.filter((c) => c.parecerMauUso?.resultado === "confirmado").forEach((c) => { const k = chaveDoSetor(c); porSetorMauUso[k] = (porSetorMauUso[k] || 0) + 1; });
+  const rankingMauUso = Object.entries(porSetorMauUso).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+  const porSetorFinanceiro = {};
+  chamados.forEach((c) => {
+    const v = c.financeiro?.valorFinal || 0;
+    if (v > 0) { const k = chaveDoSetor(c); porSetorFinanceiro[k] = (porSetorFinanceiro[k] || 0) + v; }
+  });
+  const rankingFinanceiro = Object.entries(porSetorFinanceiro).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+  const topChamados = rankingChamados[0];
+  const topMauUso = rankingMauUso[0];
+  const topFinanceiro = rankingFinanceiro[0];
+
+  document.getElementById("kpi-setores").innerHTML = kpiGrid([
+    { valor: topChamados ? topChamados[0] : "—", label: "Setor com mais chamados" },
+    { valor: topMauUso ? topMauUso[0] : "—", label: "Setor com mais mau uso confirmado" },
+    { valor: topFinanceiro ? formatarMoeda(topFinanceiro[1]) : "—", label: topFinanceiro ? `Maior custo: ${topFinanceiro[0]}` : "Maior custo por setor" }
+  ]);
+
+  if (rankingChamados.length === 0) graficoVazio("chart-setores-chamados", "Sem chamados registrados ainda.");
+  else criarGrafico(document.getElementById("chart-setores-chamados"), {
+    type: "bar",
+    data: { labels: rankingChamados.map((e) => e[0]), datasets: [{ label: "Chamados", data: rankingChamados.map((e) => e[1]), backgroundColor: COR.accent, borderRadius: 4 }] },
+    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  if (rankingMauUso.length === 0) graficoVazio("chart-setores-mauuso", "Nenhum mau uso confirmado ainda.");
+  else criarGrafico(document.getElementById("chart-setores-mauuso"), {
+    type: "bar",
+    data: { labels: rankingMauUso.map((e) => e[0]), datasets: [{ label: "Mau uso confirmado", data: rankingMauUso.map((e) => e[1]), backgroundColor: COR.red, borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  if (rankingFinanceiro.length === 0) graficoVazio("chart-setores-financeiro", "Nenhum faturamento registrado ainda.");
+  else criarGrafico(document.getElementById("chart-setores-financeiro"), {
+    type: "bar",
+    data: { labels: rankingFinanceiro.map((e) => e[0]), datasets: [{ label: "Faturado", data: rankingFinanceiro.map((e) => e[1]), backgroundColor: COR.blue, borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => "R$ " + v } } } }
+  }, { moeda: true });
 }

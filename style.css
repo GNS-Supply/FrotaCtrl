@@ -1005,6 +1005,7 @@ button:focus-visible,
 .bloco-filtros[data-cor="red"] { border-left-color: var(--red); }
 .bloco-filtros[data-cor="blue"] { border-left-color: var(--blue); }
 .bloco-filtros[data-cor="green"] { border-left-color: var(--green); }
+.bloco-filtros[data-cor="muted"] { border-left-color: var(--muted); }
 
 .bloco-filtros__grupo { display: flex; flex-direction: column; min-width: 150px; }
 .bloco-filtros__grupo label {
@@ -1048,6 +1049,13 @@ button:focus-visible,
 @media (max-width: 640px) {
   .bloco-filtros__limpar { margin-left: 0; }
   .bloco-filtros__periodo input { width: 100%; }
+}
+
+.dash-block__nota {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin: -6px 0 14px;
+  font-style: italic;
 }
 
 .dash-block { margin-bottom: 40px; }
