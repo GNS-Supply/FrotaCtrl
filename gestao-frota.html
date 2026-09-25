@@ -26,7 +26,8 @@
 
   <div class="page" id="view-equipamentos" style="display:none;">
     <div class="section-title"><span>Equipamentos</span><button class="btn btn--ghost btn--sm" id="btn-novo-equip">+ Equipamento</button></div>
-    <div id="lista-equipamentos" class="card-list"></div>
+    <p class="dash-block__nota" style="margin:-4px 0 12px;">Toque numa máquina para ver o histórico dos últimos chamados dela.</p>
+    <div id="lista-equipamentos" class="lista-linhas"></div>
   </div>
 
   <div class="page" id="view-chamados" style="display:none;">
@@ -41,7 +42,7 @@
       <button class="pill" data-filtro="concluido">Concluído</button>
       <button class="pill" data-filtro="encerrado">Reprovado/Cancelado</button>
     </div>
-    <div id="lista-todos-chamados" class="card-list"></div>
+    <div id="lista-todos-chamados" class="lista-linhas"></div>
   </div>
 
   <div class="page" id="view-cadastros" style="display:none;">
@@ -234,10 +235,10 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
 <script src="gestao-frota.js"></script>

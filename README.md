@@ -2,8 +2,8 @@
 
 Plataforma de gestão de frota — chamados de manutenção, mau uso, custos e
 recorrência. HTML + CSS + JavaScript puro (sem build), Firebase (Auth,
-Firestore) + Cloudinary (anexos), pronta para GitHub Pages. Todos os
-arquivos ficam na raiz do repositório.
+Firestore, Storage), pronta para GitHub Pages. Todos os arquivos ficam na
+raiz do repositório.
 
 Esta versão segue o direcionamento funcional "Plataforma de Gestão de
 Frota" (Magius/MGPress): 6 perfis, cadastro mestre de equipamentos,
@@ -23,29 +23,23 @@ administrador.html / .js       → plantas, setores, parâmetros de recorrência
 chamado.html / .js             → detalhe completo (timeline, financeiro, pareceres)
 dashboard.html / .js           → indicadores: operacional, mau uso, financeiro, recorrência
 app.js                         → constantes e utilitários compartilhados
-firebase-config.js             → suas credenciais do Firebase + do Cloudinary (edite este arquivo)
+firebase-config.js             → suas credenciais do Firebase (edite este arquivo)
 style.css                      → visual do app
-firestore.rules                → regras de segurança do Firestore (colar no console do Firebase)
-storage.rules                  → não usado mais (ver seção "Anexos" abaixo) — mantido só de referência
+firestore.rules / storage.rules → regras de segurança (colar no console do Firebase)
 ```
 
-## Setup (Firebase + Cloudinary)
+## Setup (Firebase)
 
 1. Crie um projeto em https://console.firebase.google.com
 2. **Authentication** → ative o provedor E-mail/senha
 3. **Firestore Database** → crie em modo produção
-4. **Configurações do projeto → Seus apps** → registre um app Web, copie o
+4. **Storage** → ative
+5. **Configurações do projeto → Seus apps** → registre um app Web, copie o
    `firebaseConfig` e cole em `firebase-config.js`
-5. Cole `firestore.rules` na aba "Regras" do Firestore, no console, e
-   publique
-6. **Authentication → Settings → Authorized domains**: adicione o domínio
+6. Cole `firestore.rules` e `storage.rules` nas respectivas abas "Regras"
+   do console e publique
+7. **Authentication → Settings → Authorized domains**: adicione o domínio
    do GitHub Pages
-7. Crie uma conta grátis em https://cloudinary.com (não pede cartão).
-   No painel: **Settings → Upload → Add upload preset** → defina
-   **Signing Mode = Unsigned** e, se quiser, uma pasta fixa em
-   **Asset Folder**. Copie o **Cloud name** (na página inicial do
-   dashboard) e o **nome do preset** para `CLOUDINARY_CONFIG` em
-   `firebase-config.js`
 8. Suba os arquivos para a raiz do repositório e ative GitHub Pages em
    Settings → Pages → Deploy from branch → `main` → `/ (root)`
 
@@ -154,24 +148,24 @@ suficiente para o volume de uma frota).
 
 ## Anexos (upload de arquivos)
 
-Os anexos (fotos, PDFs, vídeos) **não usam mais o Firebase Storage** — desde
-o fim de 2024 o Storage passou a exigir o plano pago Blaze (com cartão de
-crédito cadastrado) mesmo para uso dentro da cota gratuita, o que travava o
-app em "Enviando…" para sempre em contas sem cartão. Agora eles vão direto
-para o **Cloudinary**, por um upload "unsigned" (sem nenhuma chave secreta
-exposta no navegador — só o `cloud name` e o nome do `upload preset`, que
-não são segredos).
-
 Se algum upload falhar, verifique nesta ordem:
 
-1. **`CLOUDINARY_CONFIG`** em `firebase-config.js` — `cloudName` e
-   `uploadPreset` precisam bater com o que está no seu painel Cloudinary.
-2. **O preset existe e está "Unsigned"** — painel Cloudinary → Settings →
-   Upload → Upload presets. Se o modo estiver como "Signed", o upload
-   direto do navegador é recusado (erro 401/403).
-3. Use a página `diagnostico.html` do próprio app — ela testa a
-   configuração e faz um upload de teste real, mostrando o motivo exato de
-   qualquer falha.
+1. **Versão do SDK** — o projeto usa Firebase JS SDK **12.4.0**. Buckets no
+   padrão novo (`*.firebasestorage.app`, usado por projetos criados a
+   partir do fim de 2024) **não funcionam** em SDKs antigos: o upload fica
+   pendurado para sempre, sem sucesso nem erro, e a tela congela em
+   "Enviando…". Não volte para versões 10.x.
+2. **Storage ativado** no console do Firebase, com as regras de
+   `storage.rules` publicadas.
+3. **CORS do bucket** — se o erro for `storage/unknown`, o bucket precisa
+   liberar a origem do GitHub Pages. Crie um `cors.json`:
+   ```json
+   [{ "origin": ["https://SEU_USUARIO.github.io"],
+      "method": ["GET","POST","PUT","DELETE","HEAD"],
+      "responseHeader": ["Content-Type","Authorization","Content-Length","User-Agent","x-goog-resumable"],
+      "maxAgeSeconds": 3600 }]
+   ```
+   e aplique com `gsutil cors set cors.json gs://SEU_BUCKET`.
 
 Todo upload passa por `enviarArquivo()` / `enviarArquivos()` (em `app.js`),
 que garantem **timeout de 60s** (nunca trava indefinidamente), **progresso

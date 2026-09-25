@@ -332,41 +332,105 @@ function definirValorFracionado(el, numero) {
   el.value = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + decPart;
 }
 
-// ---------- Indicador de progresso (bolinhas) ----------
-// Simplifica o fluxo completo (que tem ~17 status) em 6 macro-etapas
-// visuais, do jeito que foi pedido: concluídas em verde, a atual em
-// amarelo, as futuras em cinza — e se o chamado foi encerrado no meio
-// do caminho (reprovado/cancelado), as etapas não completadas ficam
-// vermelhas em vez de cinza.
-const MACRO_ETAPAS = ["Registrado", "Atendimento", "Validação", "Autorização", "Execução", "Encerramento"];
+// ---------- As 9 etapas do processo (linha do tempo) ----------
+// Corresponde exatamente ao fluxograma oficial (Solicitante → Gestão de
+// Frota → Fornecedor → Manutenção → Aprovador → ... → Fornecedor).
+// As etapas 4 (índice 3, Validação de mau uso) e 5 (índice 4, Aprovação do
+// valor) são OPCIONAIS: só existem quando o fornecedor indica mau uso no
+// diagnóstico. Elas também podem se repetir várias vezes (Manutenção pode
+// devolver o diagnóstico ao fornecedor mais de uma vez) — cada ocorrência
+// fica registrada no histórico e é contada como uma "repetição" daquela etapa.
+const ETAPAS_PROCESSO = [
+  { titulo: "Chamado aberto", responsavel: "solicitante" },
+  { titulo: "Triagem e acionamento", responsavel: "gestao_frota" },
+  { titulo: "Diagnóstico do fornecedor", responsavel: "fornecedor" },
+  { titulo: "Validação de mau uso", responsavel: "manutencao" },
+  { titulo: "Aprovação do valor", responsavel: "aprovador" },
+  { titulo: "Autorização de execução", responsavel: "gestao_frota" },
+  { titulo: "Execução até liberar a máquina", responsavel: "fornecedor" },
+  { titulo: "Ordem de compra", responsavel: "gestao_frota" },
+  { titulo: "Nota fiscal", responsavel: "fornecedor" }
+];
+// Mantido por compatibilidade com trechos que só precisam do título da etapa.
+const MACRO_ETAPAS = ETAPAS_PROCESSO.map((e) => e.titulo);
+const ETAPAS_OPCIONAIS = [3, 4];
+
 const STATUS_PARA_ETAPA = {
   registrado: 0,
-  em_triagem: 1, fornecedor_acionado: 1, atendimento_programado: 1, em_avaliacao_tecnica: 1, diagnostico_contestado: 1,
-  aguardando_validacao: 2, aguardando_aprovacao: 2,
-  aguardando_autorizacao: 3,
-  em_teste: 4, liberado: 4,
-  aguardando_ordem_compra: 5, aguardando_nf: 5, concluido: 5,
+  em_triagem: 1, fornecedor_acionado: 1,
+  atendimento_programado: 2, em_avaliacao_tecnica: 2, diagnostico_contestado: 2,
+  aguardando_validacao: 3,
+  aguardando_aprovacao: 4,
+  aguardando_autorizacao: 5,
+  em_teste: 6, liberado: 6,
+  aguardando_ordem_compra: 7,
+  aguardando_nf: 8, concluido: 8,
   cancelado: 0
 };
 const STATUS_ENCERRADO_SEM_SUCESSO = ["cancelado"];
 
-function stepperHtml(status, comLabels) {
+// Em qual das 9 etapas o chamado está agora. Para um chamado cancelado, usa
+// a etapa do status anterior ao cancelamento (onde o processo realmente
+// parou), em vez de sempre cair na etapa 0.
+function etapaDoChamado(c) {
+  if (c.status === "cancelado") {
+    const hist = (c.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
+    const anterior = hist.length >= 2 ? hist[hist.length - 2] : null;
+    return anterior ? (STATUS_PARA_ETAPA[anterior.status] ?? 0) : 0;
+  }
+  return STATUS_PARA_ETAPA[c.status] ?? 0;
+}
+
+// Monta o estado completo das 9 etapas para um chamado: quais já foram
+// concluídas, qual está em andamento, quais ainda faltam, e quais (3 e 4)
+// nem chegaram a ocorrer neste chamado. `repeticoes` conta quantas vezes
+// aquela etapa apareceu no histórico (relevante pra 3 e 4, que podem se
+// repetir quando o mau uso é contestado).
+function etapasStatusChamado(c) {
+  const historico = (c.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
+  const atual = etapaDoChamado(c);
+  const concluido = c.status === "concluido";
+  const cancelado = c.status === "cancelado";
+
+  return ETAPAS_PROCESSO.map((etapa, i) => {
+    const registros = historico.filter((h) => (STATUS_PARA_ETAPA[h.status] ?? 0) === i);
+    const opcional = ETAPAS_OPCIONAIS.includes(i);
+    let estado;
+    if (concluido) {
+      estado = registros.length || !opcional ? "concluida" : "nao_aplicavel";
+    } else if (cancelado) {
+      if (i < atual) estado = registros.length || !opcional ? "concluida" : "nao_aplicavel";
+      else if (i === atual) estado = "cancelada";
+      else estado = "pendente";
+    } else if (i < atual) {
+      estado = registros.length || !opcional ? "concluida" : "nao_aplicavel";
+    } else if (i === atual) {
+      estado = "atual";
+    } else {
+      estado = "pendente";
+    }
+    return { indice: i, titulo: etapa.titulo, responsavel: etapa.responsavel, registros, estado, repeticoes: registros.length };
+  });
+}
+
+// ---------- Indicador de progresso compacto (usado nos cartões de lista) ----------
+// Uma barra fina + "Etapa X/9 · título" — 9 bolinhas ficariam apertadas
+// demais num cartão pequeno, então aqui a linha do tempo completa (ver
+// timelineHtml, em chamado.js) fica só na tela de detalhe do chamado.
+function stepperHtml(status) {
+  const total = ETAPAS_PROCESSO.length;
   const atual = STATUS_PARA_ETAPA[status] ?? 0;
   const concluido = status === "concluido";
   const encerradoSemSucesso = STATUS_ENCERRADO_SEM_SUCESSO.includes(status);
-  return `<div class="stepper">${MACRO_ETAPAS.map((label, i) => {
-    let cor;
-    if (concluido) cor = "verde";
-    else if (encerradoSemSucesso) cor = i < atual ? "verde" : "vermelho";
-    else if (i < atual) cor = "verde";
-    else if (i === atual) cor = "amarelo";
-    else cor = "cinza";
-    return `<div class="stepper__item">
-      <div class="stepper__dot stepper__dot--${cor}"></div>
-      ${comLabels ? `<div class="stepper__label">${label}</div>` : ""}
-    </div>`;
-  }).join("")}</div>`;
+  const cor = encerradoSemSucesso ? "vermelho" : concluido ? "verde" : "amarelo";
+  const pct = concluido ? 100 : Math.round(((atual + 0.5) / total) * 100);
+  const legenda = concluido ? "Concluído" : encerradoSemSucesso ? "Cancelado" : `Etapa ${atual + 1}/${total} · ${ETAPAS_PROCESSO[atual]?.titulo || ""}`;
+  return `<div class="mini-stepper">
+    <div class="mini-stepper__barra"><div class="mini-stepper__preenchido mini-stepper__preenchido--${cor}" style="width:${pct}%"></div></div>
+    <div class="mini-stepper__legenda">${legenda}</div>
+  </div>`;
 }
+
 
 // ---------- Atalho para o Painel Master ----------
 // Quem está logado como "administrador" (a conta master oculta) navega
@@ -477,9 +541,87 @@ const ICONES_SVG = {
   predio: '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"/>',
   mapa: '<path d="M9 3v15M15 6v15"/><path d="M4 5l5-2 6 3 5-2v15l-5 2-6-3-5 2z"/>',
   ajustes: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M21 18h0"/><circle cx="15" cy="6" r="2.2"/><circle cx="7" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>',
+  relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>'
 };
 function icone(nome, tamanho) {
   const t = tamanho || 18;
   return `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES_SVG[nome] || ""}</svg>`;
+}
+
+// ---------- Upload de anexos (robusto) ----------
+// Antes o código fazia `await ref.put(file)` direto. Se o upload travasse
+// (bucket mal resolvido, CORS, rede caindo), a promessa nunca resolvia NEM
+// rejeitava — a tela ficava congelada em "Enviando…" pra sempre e o
+// processo não avançava. Agora todo upload passa por aqui, com:
+//   - timeout: nunca fica pendurado pra sempre
+//   - progresso: dá pra mostrar % pro usuário
+//   - erro traduzido: o usuário vê o que houve, não uma tela morta
+const UPLOAD_TIMEOUT_MS = 60000;
+
+function traduzErroUpload(err) {
+  const code = err && err.code ? err.code : "";
+  const mapa = {
+    "storage/unauthorized": "Sem permissão para enviar o arquivo. Verifique as regras do Storage no console do Firebase.",
+    "storage/canceled": "Envio cancelado.",
+    "storage/retry-limit-exceeded": "O envio demorou demais. Verifique sua conexão e tente novamente.",
+    "storage/quota-exceeded": "A cota de armazenamento do projeto foi excedida.",
+    "storage/unauthenticated": "Sessão expirada. Entre novamente e tente de novo.",
+    "storage/unknown": "Falha na comunicação com o Storage. Se o problema persistir, verifique a configuração de CORS do bucket."
+  };
+  return mapa[code] || (err && err.message) || "Falha desconhecida ao enviar o arquivo.";
+}
+
+// Envia UM arquivo e devolve a URL. `onProgresso(pct)` é opcional.
+function enviarArquivo(caminho, file, onProgresso) {
+  return new Promise((resolve, reject) => {
+    let finalizado = false;
+    const tarefa = storage.ref(caminho).put(file);
+
+    const timer = setTimeout(() => {
+      if (finalizado) return;
+      finalizado = true;
+      try { tarefa.cancel(); } catch (e) {}
+      reject(new Error("O envio do arquivo demorou mais que o esperado e foi interrompido. Verifique sua conexão e tente novamente."));
+    }, UPLOAD_TIMEOUT_MS);
+
+    tarefa.on(
+      "state_changed",
+      (snap) => {
+        if (onProgresso && snap.totalBytes) onProgresso(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+      },
+      (err) => {
+        if (finalizado) return;
+        finalizado = true;
+        clearTimeout(timer);
+        reject(new Error(traduzErroUpload(err)));
+      },
+      async () => {
+        if (finalizado) return;
+        finalizado = true;
+        clearTimeout(timer);
+        try {
+          resolve(await tarefa.snapshot.ref.getDownloadURL());
+        } catch (err) {
+          reject(new Error(traduzErroUpload(err)));
+        }
+      }
+    );
+  });
+}
+
+// Envia vários arquivos em sequência, atualizando o texto do botão com o
+// progresso. Lança erro se qualquer um falhar (quem chama decide o que fazer).
+async function enviarArquivos(prefixo, fileList, botao, textoBase) {
+  const urls = [];
+  const arquivos = Array.from(fileList || []);
+  for (let i = 0; i < arquivos.length; i++) {
+    const file = arquivos[i];
+    const url = await enviarArquivo(`${prefixo}/${Date.now()}-${file.name}`, file, (pct) => {
+      if (botao) botao.textContent = `Enviando anexo ${i + 1}/${arquivos.length}… ${pct}%`;
+    });
+    urls.push(url);
+  }
+  if (botao && textoBase) botao.textContent = textoBase;
+  return urls;
 }
