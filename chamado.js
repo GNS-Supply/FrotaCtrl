@@ -87,7 +87,7 @@ function render(c) {
   `;
 
   // ---------- Linha do tempo clicável + tempos compactos ----------
-  document.getElementById("stepper-detalhe").innerHTML = stepperInterativoHtml(c);
+  document.getElementById("stepper-detalhe").innerHTML = timelineHtml(c);
 
   const registradoMs = tsToMs(c.registradoEm);
   const acionadoMs = tsToMs(c.historico?.find((h) => h.status === "fornecedor_acionado")?.timestamp);
@@ -157,25 +157,47 @@ function etapaCardHtml(h, indice, souManutencao, destacada) {
     </div>`;
 }
 
-// Linha do tempo clicável: cada bolinha abre os detalhes da etapa.
-function stepperInterativoHtml(c) {
-  const historico = (c.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
-  const atual = STATUS_PARA_ETAPA[c.status] ?? 0;
-  const concluido = c.status === "concluido";
-  const encerradoSemSucesso = STATUS_ENCERRADO_SEM_SUCESSO.includes(c.status);
-  return `<div class="stepper stepper--interativo">${MACRO_ETAPAS.map((label, i) => {
-    let cor;
-    if (concluido) cor = "verde";
-    else if (encerradoSemSucesso) cor = i < atual ? "verde" : "vermelho";
-    else if (i < atual) cor = "verde";
-    else if (i === atual) cor = "amarelo";
-    else cor = "cinza";
-    const temEtapas = historico.some((h) => (STATUS_PARA_ETAPA[h.status] ?? 0) === i);
-    return `<button type="button" class="stepper__item ${temEtapas ? "stepper__item--clicavel" : ""}" ${temEtapas ? `onclick="mostrarEtapasMacro(${i})"` : "disabled"} title="${temEtapas ? "Ver detalhes desta etapa" : "Etapa ainda não iniciada"}">
-      <div class="stepper__dot stepper__dot--${cor}"></div>
-      <div class="stepper__label">${label}</div>
+// Linha do tempo vertical com as 9 etapas do processo. Mostra, num só
+// lugar: em qual etapa o chamado está agora, quais já foram concluídas,
+// quais ainda faltam, quais (3 e 4, mau uso) nem chegaram a acontecer
+// neste chamado — e, se uma etapa se repetiu (fornecedor refazendo
+// diagnóstico depois de um parecer de "não confirmado"), quantas vezes.
+function timelineHtml(c) {
+  const etapas = etapasStatusChamado(c);
+  const indiceFoco = etapas.findIndex((e) => e.estado === "atual" || e.estado === "cancelada");
+
+  let banner;
+  if (c.status === "concluido") {
+    banner = `<div class="timeline-banner timeline-banner--ok">${icone("checkCirculo", 20)}<div><strong>Chamado concluído</strong><span>Todas as etapas foram encerradas com sucesso.</span></div></div>`;
+  } else if (c.status === "cancelado") {
+    const e = etapas[indiceFoco];
+    banner = `<div class="timeline-banner timeline-banner--erro">${icone("x", 20)}<div><strong>Chamado cancelado</strong><span>Parou na etapa ${indiceFoco + 1}/9 — ${e ? e.titulo : ""}.</span></div></div>`;
+  } else {
+    const e = etapas[indiceFoco];
+    const perfil = PERFIL_LABELS[PROXIMO_RESPONSAVEL[c.status]] || "—";
+    banner = `<div class="timeline-banner">${icone("relogio", 20)}<div><strong>Parado na etapa ${indiceFoco + 1}/9 — ${e ? e.titulo : ""}</strong><span>Precisa cobrar: <strong>${perfil}</strong></span></div></div>`;
+  }
+
+  return `${banner}<div class="timeline">${etapas.map((e) => timelineItemHtml(e)).join("")}</div>`;
+}
+
+const LABEL_ESTADO_ETAPA = { concluida: "Concluída", atual: "Em andamento", pendente: "Pendente", nao_aplicavel: "Não ocorreu", cancelada: "Parou aqui" };
+
+function timelineItemHtml(e) {
+  const clicavel = e.registros.length > 0;
+  return `
+    <button type="button" class="timeline-item timeline-item--${e.estado} ${clicavel ? "timeline-item--clicavel" : ""}" ${clicavel ? `onclick="mostrarEtapasMacro(${e.indice})"` : "disabled"} title="${clicavel ? "Ver detalhes desta etapa" : ""}">
+      <div class="timeline-item__marcador">${e.estado === "concluida" ? icone("check", 13) : e.indice + 1}</div>
+      <div class="timeline-item__corpo">
+        <div class="timeline-item__topo">
+          <span class="timeline-item__titulo">${e.titulo}</span>
+          ${e.repeticoes > 1 ? `<span class="timeline-item__badge-rep">repetiu ${e.repeticoes}×</span>` : ""}
+        </div>
+        <span class="timeline-item__responsavel">${PERFIL_LABELS[e.responsavel] || ""}</span>
+        ${e.estado === "nao_aplicavel" ? `<span class="timeline-item__nota">Não houve indício de mau uso — etapa pulada</span>` : ""}
+      </div>
+      <div class="timeline-item__status">${LABEL_ESTADO_ETAPA[e.estado] || ""}</div>
     </button>`;
-  }).join("")}</div>`;
 }
 
 // Mostra, num painel logo abaixo da linha do tempo, todas as etapas

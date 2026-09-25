@@ -333,11 +333,11 @@ function renderOperacional() {
 
   // Distribuição por macro-etapa
   const porEtapa = MACRO_ETAPAS.map((_, i) => chamados.filter((c) => (STATUS_PARA_ETAPA[c.status] ?? 0) === i && c.status !== "concluido").length);
-  porEtapa[5] = chamados.filter((c) => c.status === "concluido").length;
+  porEtapa[8] = chamados.filter((c) => c.status === "concluido").length;
   criarGrafico(document.getElementById("chart-op-etapa"), {
     type: "doughnut",
-    data: { labels: MACRO_ETAPAS, datasets: [{ data: porEtapa, backgroundColor: [COR.muted, COR.accent, "#c98a2e", COR.blue, "#5a8fa8", COR.green] }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+    data: { labels: MACRO_ETAPAS, datasets: [{ data: porEtapa, backgroundColor: [COR.muted, COR.accent, "#c98a2e", "#b5842a", COR.blue, "#5a8fa8", "#3f7a99", "#2a5f7a", COR.green] }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 9, font: { size: 10 } } } } }
   });
 
   // Por planta / setor — mostra onde os chamados estão concentrados
