@@ -549,64 +549,78 @@ function icone(nome, tamanho) {
   return `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES_SVG[nome] || ""}</svg>`;
 }
 
-// ---------- Upload de anexos (robusto) ----------
-// Antes o código fazia `await ref.put(file)` direto. Se o upload travasse
-// (bucket mal resolvido, CORS, rede caindo), a promessa nunca resolvia NEM
-// rejeitava — a tela ficava congelada em "Enviando…" pra sempre e o
-// processo não avançava. Agora todo upload passa por aqui, com:
+// ---------- Upload de anexos (Cloudinary) ----------
+// Antes o código fazia `await storage.ref(caminho).put(file)` (Firebase
+// Storage). Isso passou a exigir o plano pago (Blaze) do Firebase mesmo
+// dentro da cota gratuita, e sem isso o upload travava a tela em
+// "Enviando…" pra sempre. Agora os anexos vão para o Cloudinary por um
+// upload "unsigned" (sem nenhuma chave secreta exposta no navegador), com:
 //   - timeout: nunca fica pendurado pra sempre
 //   - progresso: dá pra mostrar % pro usuário
 //   - erro traduzido: o usuário vê o que houve, não uma tela morta
 const UPLOAD_TIMEOUT_MS = 60000;
 
-function traduzErroUpload(err) {
-  const code = err && err.code ? err.code : "";
-  const mapa = {
-    "storage/unauthorized": "Sem permissão para enviar o arquivo. Verifique as regras do Storage no console do Firebase.",
-    "storage/canceled": "Envio cancelado.",
-    "storage/retry-limit-exceeded": "O envio demorou demais. Verifique sua conexão e tente novamente.",
-    "storage/quota-exceeded": "A cota de armazenamento do projeto foi excedida.",
-    "storage/unauthenticated": "Sessão expirada. Entre novamente e tente de novo.",
-    "storage/unknown": "Falha na comunicação com o Storage. Se o problema persistir, verifique a configuração de CORS do bucket."
-  };
-  return mapa[code] || (err && err.message) || "Falha desconhecida ao enviar o arquivo.";
+function traduzErroUpload(status, corpoResposta) {
+  if (status === 0) return "Falha de conexão ao enviar o arquivo. Verifique sua internet e tente novamente.";
+  if (status === 400) return "Arquivo recusado (formato ou tamanho não permitido pelo upload preset do Cloudinary).";
+  if (status === 401 || status === 403) return "Sem permissão para enviar o arquivo. Verifique o upload preset no painel do Cloudinary.";
+  let detalhe = "";
+  try { detalhe = JSON.parse(corpoResposta).error.message; } catch (e) {}
+  return `Falha ao enviar o arquivo${status ? ` (erro ${status})` : ""}.${detalhe ? " " + detalhe : ""}`;
 }
 
-// Envia UM arquivo e devolve a URL. `onProgresso(pct)` é opcional.
+// Envia UM arquivo ao Cloudinary e devolve a URL pública. `onProgresso(pct)` é opcional.
 function enviarArquivo(caminho, file, onProgresso) {
   return new Promise((resolve, reject) => {
     let finalizado = false;
-    const tarefa = storage.ref(caminho).put(file);
+    const xhr = new XMLHttpRequest();
+    const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`;
+
+    // Mantém o "caminho" (ex: chamados/abc123/diagnostico/169...-foto.jpg)
+    // como identificador do arquivo no Cloudinary, só sem barras (o preset
+    // já define a pasta fixa "frotactrl" no painel).
+    const publicId = caminho.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9/_-]/g, "_").replace(/\//g, "__");
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", CLOUDINARY_CONFIG.uploadPreset);
+    formData.append("public_id", publicId);
 
     const timer = setTimeout(() => {
       if (finalizado) return;
       finalizado = true;
-      try { tarefa.cancel(); } catch (e) {}
+      xhr.abort();
       reject(new Error("O envio do arquivo demorou mais que o esperado e foi interrompido. Verifique sua conexão e tente novamente."));
     }, UPLOAD_TIMEOUT_MS);
 
-    tarefa.on(
-      "state_changed",
-      (snap) => {
-        if (onProgresso && snap.totalBytes) onProgresso(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
-      },
-      (err) => {
-        if (finalizado) return;
-        finalizado = true;
-        clearTimeout(timer);
-        reject(new Error(traduzErroUpload(err)));
-      },
-      async () => {
-        if (finalizado) return;
-        finalizado = true;
-        clearTimeout(timer);
+    xhr.upload.addEventListener("progress", (e) => {
+      if (onProgresso && e.lengthComputable) onProgresso(Math.round((e.loaded / e.total) * 100));
+    });
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== 4 || finalizado) return;
+      finalizado = true;
+      clearTimeout(timer);
+      if (xhr.status >= 200 && xhr.status < 300) {
         try {
-          resolve(await tarefa.snapshot.ref.getDownloadURL());
+          resolve(JSON.parse(xhr.responseText).secure_url);
         } catch (err) {
-          reject(new Error(traduzErroUpload(err)));
+          reject(new Error("Resposta inesperada do Cloudinary ao enviar o arquivo."));
         }
+      } else {
+        reject(new Error(traduzErroUpload(xhr.status, xhr.responseText)));
       }
-    );
+    };
+
+    xhr.onerror = () => {
+      if (finalizado) return;
+      finalizado = true;
+      clearTimeout(timer);
+      reject(new Error(traduzErroUpload(0)));
+    };
+
+    xhr.open("POST", endpoint);
+    xhr.send(formData);
   });
 }
 
