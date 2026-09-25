@@ -14,7 +14,17 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 // Ajuda o Firestore a funcionar melhor offline / em conexões ruins de obra/pátio
 db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
+// ============================================================
+// CONFIGURAÇÃO DO CLOUDINARY — usado para anexos (fotos, PDFs, vídeos)
+// O plano gratuito do Firebase (Spark) não permite mais usar o Storage
+// sem cartão de crédito cadastrado, então os anexos vão para o Cloudinary
+// via upload "unsigned" (sem expor nenhuma chave secreta no navegador).
+// ============================================================
+const CLOUDINARY_CONFIG = {
+  cloudName: "ukjt4x0w",
+  uploadPreset: "nuvem_frota_ctrl"
+};

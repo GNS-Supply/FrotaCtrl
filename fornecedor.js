@@ -5,6 +5,7 @@
 let usuarioAtual = null;
 let ativosCache = [];
 let historicoCache = [];
+let filtroAtualFornecedor = "todos";
 
 (async function init() {
   usuarioAtual = await requireAuth("fornecedor");
@@ -21,6 +22,7 @@ let historicoCache = [];
   aplicarMascaraMoeda(document.getElementById("dg-valor"));
   aplicarMascaraMoeda(document.getElementById("lb-valor-final"));
   adicionarAtalhoMaster(usuarioAtual);
+  montarFiltroStatus("filtro-status-fornecedor", (chave) => { filtroAtualFornecedor = chave; renderFila(); }, ["todos", "atendimento", "validacao", "autorizacao", "execucao", "encerramento"]);
 })();
 
 function configurarNav() {
@@ -59,14 +61,9 @@ function escutarChamados() {
 }
 
 function renderStats() {
-  const naoProgramados = ativosCache.filter((c) => c.status === "fornecedor_acionado").length;
-  const emExecucao = ativosCache.filter((c) => ["em_teste", "liberado", "aguardando_ordem_compra", "aguardando_nf"].includes(c.status)).length;
-  const aguardandoTerceiros = ativosCache.filter((c) => ["aguardando_validacao", "aguardando_aprovacao", "aguardando_autorizacao"].includes(c.status)).length;
   document.getElementById("stats-grid").innerHTML = `
-    <div class="stat-card"><div class="stat-card__value">${naoProgramados}</div><div class="stat-card__label">Novos a programar</div></div>
-    <div class="stat-card"><div class="stat-card__value">${ativosCache.length}</div><div class="stat-card__label">Ativos no total</div></div>
-    <div class="stat-card"><div class="stat-card__value">${aguardandoTerceiros}</div><div class="stat-card__label">Aguardando terceiros</div></div>
-    <div class="stat-card"><div class="stat-card__value">${emExecucao}</div><div class="stat-card__label">Em execução / encerrando</div></div>
+    <div class="stat-card"><div class="stat-card__value">${ativosCache.length}</div><div class="stat-card__label">Ativos</div></div>
+    <div class="stat-card"><div class="stat-card__value">${historicoCache.length}</div><div class="stat-card__label">Concluídos</div></div>
   `;
 }
 
@@ -80,175 +77,46 @@ const ACOES_POR_STATUS = {
   aguardando_nf: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirNf('${c.id}')">Anexar NF de cobrança</button>`
 };
 
-// ============================================================
-// Painéis: cada um mostra só os chamados daquele estágio, na
-// ordem que faz sentido pra quem trabalha naquele estágio.
-// ============================================================
-const PAINEIS_FORNECEDOR = [
-  {
-    id: "novos",
-    titulo: "Novos — a programar",
-    descricao: "Chamados que você recebeu e ainda não têm data de atendimento.",
-    cor: "amber",
-    icone: "alerta",
-    status: ["fornecedor_acionado"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhum chamado novo aguardando programação."
-  },
-  {
-    id: "programados",
-    titulo: "Programados — aguardando início",
-    descricao: "Atendimentos agendados, em ordem de data.",
-    cor: "blue",
-    icone: "calendario",
-    status: ["atendimento_programado"],
-    // Ordem por data do atendimento (o mais próximo primeiro)
-    ordenar: (a, b) => new Date(a.dataAtendimentoPrevista || 0) - new Date(b.dataAtendimentoPrevista || 0),
-    vazio: "Nenhum atendimento programado."
-  },
-  {
-    id: "avaliacao",
-    titulo: "Em avaliação técnica",
-    descricao: "Você já iniciou a avaliação — o tempo de manutenção está contando.",
-    cor: "blue",
-    icone: "lupa",
-    status: ["em_avaliacao_tecnica"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhuma avaliação em andamento."
-  },
-  {
-    id: "aguardando-manutencao",
-    titulo: "Diagnóstico enviado — aguardando Manutenção",
-    descricao: "Você já deu o diagnóstico; aguardando resposta da Manutenção Magius.",
-    cor: "muted",
-    icone: "escudo",
-    status: ["aguardando_validacao"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nada aguardando a Manutenção."
-  },
-  {
-    id: "contestados",
-    titulo: "Contestados — precisam da sua resposta",
-    descricao: "A Manutenção não confirmou o mau uso (ou foi inconclusivo). Registre um novo diagnóstico.",
-    cor: "red",
-    icone: "alerta",
-    status: ["diagnostico_contestado"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhum diagnóstico contestado."
-  },
-  {
-    id: "aprovados",
-    titulo: "Aprovados — aguardando autorização",
-    descricao: "Mau uso confirmado e com ciência do aprovador; aguardando a Gestão de Frota liberar a execução.",
-    cor: "amber",
-    icone: "aprovacao",
-    status: ["aguardando_aprovacao", "aguardando_autorizacao"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhum chamado aguardando autorização."
-  },
-  {
-    id: "executando",
-    titulo: "Liberados para execução",
-    descricao: "Autorizados — você já pode executar o serviço na máquina.",
-    cor: "green",
-    icone: "chave",
-    status: ["em_teste"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhum serviço em execução."
-  },
-  {
-    id: "documentacao",
-    titulo: "Executados — aguardando documentação",
-    descricao: "Máquina já liberada; falta concluir a papelada (ordem de compra e NF).",
-    cor: "amber",
-    icone: "clip",
-    status: ["liberado", "aguardando_ordem_compra", "aguardando_nf"],
-    ordenar: (a, b) => (tsToMs(a.liberadoEm) || 0) - (tsToMs(b.liberadoEm) || 0),
-    vazio: "Nenhuma documentação pendente."
-  },
-  {
-    id: "historico",
-    titulo: "Histórico — concluídos",
-    descricao: "Chamados já finalizados.",
-    cor: "muted",
-    icone: "checkCirculo",
-    historico: true,
-    ordenar: (a, b) => (tsToMs(b.concluidoEm) || 0) - (tsToMs(a.concluidoEm) || 0),
-    vazio: "Nenhum chamado concluído ainda."
-  }
-];
-
-// Painéis começam abertos, menos o histórico (que tende a crescer muito)
-const painelAberto = {};
-PAINEIS_FORNECEDOR.forEach((p) => { painelAberto[p.id] = p.id !== "historico"; });
-
-function alternarPainel(id) {
-  painelAberto[id] = !painelAberto[id];
-  renderFila();
-}
-
 function cardDataAgendada(c) {
   if (!c.dataAtendimentoPrevista) return "";
   const d = new Date(c.dataAtendimentoPrevista);
-  const atrasado = d.getTime() < Date.now() && c.status === "atendimento_programado";
-  return `<div style="margin:8px 0;"><span class="destaque-data ${atrasado ? "destaque-data--atrasado" : ""}">${icone("calendario", 14)} ${atrasado ? "Atrasado desde" : "Atendimento"}: ${d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></div>`;
-}
-
-// Alerta visual destacado pros chamados marcados como mau uso
-function seloMauUso(c) {
-  if (c.fluxo !== "mau_uso") return "";
-  const confirmado = c.parecerMauUso?.resultado === "confirmado";
-  return `<span class="selo-mauuso ${confirmado ? "selo-mauuso--confirmado" : ""}">${icone("alerta", 13)} ${confirmado ? "Mau uso confirmado" : "Mau uso alegado"}</span>`;
-}
-
-function cardChamado(c) {
-  const acaoFn = ACOES_POR_STATUS[c.status];
-  const acao = acaoFn ? acaoFn(c) : "";
-  return `
-    <div class="ticket-card">
-      <div class="ticket-card__top">
-        <div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>
-        ${badgeHtml(c.status)}
-      </div>
-      <div class="pill-group" style="margin:6px 0;">
-        ${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}
-        ${seloMauUso(c)}
-      </div>
-      <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 90))}</div>
-      <div class="ticket-card__meta"><span>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")}</span></div>
-      ${cardDataAgendada(c)}
-      ${stepperHtml(c.status)}
-      <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver detalhes</a>${acao}</div>
-    </div>`;
+  return `<div style="margin:8px 0;"><span class="destaque-data">${icone("calendario", 14)} Atendimento: ${d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></div>`;
 }
 
 function renderFila() {
-  const wrap = document.getElementById("paineis-fornecedor");
-  wrap.innerHTML = PAINEIS_FORNECEDOR.map((p) => {
-    const base = p.historico ? historicoCache : ativosCache;
-    const lista = (p.historico ? base : base.filter((c) => p.status.includes(c.status))).slice().sort(p.ordenar);
-    const aberto = painelAberto[p.id];
+  const el = document.getElementById("lista-fila");
+  const lista = aplicarFiltroStatus(ativosCache, filtroAtualFornecedor);
+  if (lista.length === 0) {
+    el.innerHTML = ativosCache.length === 0
+      ? `<div class="empty">${icone("chave", 34)}<div class="empty__title">Nada ativo no momento</div></div>`
+      : `<div class="empty"><div class="empty__text">Nenhum chamado nesse filtro.</div></div>`;
+    return;
+  }
+  el.innerHTML = lista.map((c) => {
+    const acaoFn = ACOES_POR_STATUS[c.status];
+    const acao = acaoFn ? acaoFn(c) : "";
     return `
-      <section class="painel ${aberto ? "painel--aberto" : ""}">
-        <button class="painel__head" onclick="alternarPainel('${p.id}')">
-          <span class="icon-tile icon-tile--${p.cor} icon-tile--sm">${icone(p.icone, 16)}</span>
-          <span class="painel__titulo">
-            <span class="painel__nome">${p.titulo}</span>
-            <span class="painel__desc">${p.descricao}</span>
-          </span>
-          <span class="painel__contador ${lista.length > 0 ? "painel__contador--ativo" : ""}">${lista.length}</span>
-          <span class="painel__seta">${icone("seta", 16)}</span>
-        </button>
-        ${aberto ? `<div class="painel__corpo">${
-          lista.length === 0
-            ? `<div class="empty"><div class="empty__text">${p.vazio}</div></div>`
-            : `<div class="card-list">${lista.map(cardChamado).join("")}</div>`
-        }</div>` : ""}
-      </section>`;
+    <div class="ticket-card">
+      <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>
+      <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 80))}</div>
+      <div class="ticket-card__meta"><span>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")}</span><span class="chip chip--${c.criticidade}">${c.criticidade || ""}</span></div>
+      ${cardDataAgendada(c)}
+      <div style="margin:8px 0;">${responsavelAtualHtml(c.status)}</div>
+      ${stepperHtml(c.status)}
+      <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver detalhes</a>${acao}</div>
+    </div>`;
   }).join("");
 }
 
-function renderHistorico() { /* histórico agora é um dos painéis acima */ }
+function renderHistorico() {
+  const el = document.getElementById("lista-historico");
+  if (historicoCache.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__text">Nenhum chamado concluído ainda.</div></div>`; return; }
+  el.innerHTML = historicoCache.map((c) => `
+    <a class="ticket-card" href="chamado.html?id=${c.id}">
+      <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>
+      <div class="ticket-card__meta"><span>${c.fluxo === "mau_uso" ? "Mau uso confirmado" : "Contratual"}</span><span>${formatarMoeda(c.financeiro?.valorFinal || c.financeiro?.valorFaturado)}</span></div>
+    </a>`).join("");
+}
 
 // ---------- Programar atendimento ----------
 function abrirProgramar(id) { document.getElementById("pg-id").value = id; abrirFechar("overlay-programar", true); }
@@ -279,7 +147,7 @@ async function iniciarAvaliacao(id) {
 }
 
 // ---------- Diagnóstico ----------
-// Regra do fluxo: se for mau uso, o valor é obrigatório (anexo é opcional).
+// Regra do fluxo: se for mau uso, valor e ao menos 1 anexo são obrigatórios.
 // Se não for, o campo de valor fica INATIVO e anexos são opcionais.
 function atualizarCamposDiagnostico() {
   const mauUso = document.getElementById("dg-mauuso").value === "sim";
@@ -308,6 +176,7 @@ async function salvarDiagnostico(e) {
   const arquivos = document.getElementById("dg-anexos").files;
 
   if (mauUso && (!valor || valor <= 0)) { alert("Informe o valor apresentado — é obrigatório em caso de mau uso."); return; }
+  if (mauUso && arquivos.length === 0) { alert("Anexe ao menos uma evidência (foto, vídeo, relatório ou orçamento) — é obrigatório em caso de mau uso."); return; }
 
   const btn = document.getElementById("btn-diagnostico");
   btn.disabled = true;
@@ -316,12 +185,14 @@ async function salvarDiagnostico(e) {
   let urls = [];
   if (arquivos.length > 0) {
     try {
-      urls = await enviarArquivos(`chamados/${id}/diagnostico`, arquivos, btn, "Enviar diagnóstico");
+      for (const file of arquivos) {
+        const ref = storage.ref(`chamados/${id}/diagnostico/${Date.now()}-${file.name}`);
+        await ref.put(file);
+        urls.push(await ref.getDownloadURL());
+      }
     } catch (err) {
-      // Anexo agora é opcional mesmo em caso de mau uso: se o envio falhar,
-      // apenas avisa e segue o diagnóstico sem a evidência.
       console.warn("Não foi possível anexar arquivos do diagnóstico:", err);
-      alert("O diagnóstico será enviado, mas não foi possível anexar os arquivos: " + err.message);
+      alert("O diagnóstico será enviado, mas não foi possível anexar os arquivos.");
     }
   }
 
@@ -388,11 +259,12 @@ async function salvarLiberacao(e) {
     let orcamentoUrl = null;
     if (arquivoOrcamento) {
       try {
-        orcamentoUrl = await enviarArquivo(`chamados/${id}/orcamento-final/${Date.now()}-${arquivoOrcamento.name}`, arquivoOrcamento);
+        const ref = storage.ref(`chamados/${id}/orcamento-final/${Date.now()}-${arquivoOrcamento.name}`);
+        await ref.put(arquivoOrcamento);
+        orcamentoUrl = await ref.getDownloadURL();
       } catch (err) {
-        alert("Não foi possível anexar o orçamento: " + err.message + "\n\nA liberação não foi registrada. Tente novamente.");
-        btn.disabled = false;
-        return;
+        console.warn("Não foi possível anexar o orçamento final:", err);
+        alert("A liberação será registrada, mas não foi possível anexar o orçamento.");
       }
     }
 
@@ -438,9 +310,12 @@ async function salvarNf(e) {
 
   let notaFiscalUrl = null;
   try {
-    notaFiscalUrl = await enviarArquivo(`chamados/${id}/nota-fiscal/${Date.now()}-${arquivo.name}`, arquivo, (pct) => { btn.textContent = `Enviando… ${pct}%`; });
+    const ref = storage.ref(`chamados/${id}/nota-fiscal/${Date.now()}-${arquivo.name}`);
+    await ref.put(arquivo);
+    notaFiscalUrl = await ref.getDownloadURL();
   } catch (err) {
-    alert("Não foi possível anexar a nota fiscal: " + err.message);
+    console.warn("Não foi possível anexar a NF:", err);
+    alert("Não foi possível anexar a nota fiscal agora. Tente novamente.");
     btn.disabled = false;
     btn.textContent = "Enviar NF e concluir chamado";
     return;

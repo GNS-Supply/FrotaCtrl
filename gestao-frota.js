@@ -423,22 +423,14 @@ function renderTodosChamados() {
 
   if (lista.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__text">Nenhum chamado nesse filtro.</div></div>`; return; }
   el.innerHTML = lista.map((c, i) => `
-    <a class="chamado-row" href="chamado.html?id=${c.id}">
-      <div class="chamado-row__principal">
-        <div class="chamado-row__topo">
-          <span class="chamado-row__numero"><span style="color:var(--text-dim); font-weight:400;">#${i + 1}</span> ${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</span>
-          ${badgeHtml(c.status)}
-        </div>
-        <div class="chamado-row__meta">
-          <span>${formatarData(c.registradoEm)}</span>
-          <span>${escapeHtml(c.categoria || "")}</span>
-          <span>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")}</span>
-        </div>
+    <a class="ticket-card" href="chamado.html?id=${c.id}">
+      <div class="ticket-card__top">
+        <div class="ticket-card__title"><span style="color:var(--text-dim); font-weight:400;">#${i + 1}</span> ${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>
+        ${badgeHtml(c.status)}
       </div>
-      <div class="chamado-row__progresso">
-        ${stepperHtml(c.status)}
-        ${STATUS_ATIVOS.includes(c.status) ? responsavelAtualHtml(c.status) : ""}
-      </div>
+      <div class="ticket-card__meta"><span>${formatarData(c.registradoEm)}</span><span>${escapeHtml(c.categoria || "")}</span></div>
+      ${stepperHtml(c.status)}
+      ${STATUS_ATIVOS.includes(c.status) ? `<div style="margin-top:4px;">${responsavelAtualHtml(c.status)}</div>` : ""}
     </a>`).join("");
 }
 
@@ -521,12 +513,12 @@ async function salvarOrdemCompra(e) {
   let ordemCompraUrl = null;
   if (arquivo) {
     try {
-      ordemCompraUrl = await enviarArquivo(`chamados/${id}/ordem-compra/${Date.now()}-${arquivo.name}`, arquivo, (pct) => { btn.textContent = `Enviando… ${pct}%`; });
+      const ref = storage.ref(`chamados/${id}/ordem-compra/${Date.now()}-${arquivo.name}`);
+      await ref.put(arquivo);
+      ordemCompraUrl = await ref.getDownloadURL();
     } catch (err) {
-      alert("Não foi possível anexar a ordem de compra: " + err.message + "\n\nNada foi alterado. Tente novamente.");
-      btn.disabled = false;
-      btn.textContent = "Confirmar";
-      return;
+      console.warn("Não foi possível anexar a ordem de compra:", err);
+      alert("O status será atualizado, mas não foi possível anexar o arquivo.");
     }
   }
   try {
@@ -562,63 +554,25 @@ function renderEquipamentos() {
     const doEquip = chamadosCache.filter((c) => c.equipamentoId === eq.id);
     const nivel = classificarRecorrencia(doEquip, parametrosRecorrencia);
     return `
-    <div class="equip-row-wrap">
-      <div class="equip-row">
-        <div class="equip-row__clique" onclick="alternarHistoricoEquip('${eq.id}')">
-          <span class="equip-row__chevron" id="chevron-${eq.id}">${icone("seta", 14)}</span>
-          <div class="equip-row__id">
-            <span class="equip-row__numero">${escapeHtml(eq.numeroFrota)}</span>
-            <span class="equip-row__modelo">${escapeHtml(eq.tipoModelo || "")}</span>
-          </div>
-          <span class="equip-row__local">${escapeHtml(eq.plantaNome || "—")} / ${escapeHtml(eq.setorNome || "—")}</span>
-          <div class="equip-row__badges">
-            <span class="badge badge--${STATUS_OPERACIONAL_COLORS[eq.statusOperacional]}">${STATUS_OPERACIONAL_LABELS[eq.statusOperacional]}</span>
-            ${eq.criticidade ? `<span class="chip chip--${eq.criticidade}">${eq.criticidade}</span>` : ""}
-            <span class="badge badge--${RECORRENCIA_COLORS[nivel]}">${RECORRENCIA_LABELS[nivel]}</span>
-          </div>
-          <div class="hourmeter equip-row__horimetro"><div class="hourmeter__value">${(eq.horimetroAtual ?? 0).toLocaleString("pt-BR")}h</div><div class="hourmeter__label">Horímetro</div></div>
-          <span class="equip-row__chamados">${doEquip.length} chamado(s)</span>
+    <div class="machine-plate">
+      <div class="machine-plate__head">
+        <div>
+          <div class="machine-plate__id">${escapeHtml(eq.numeroFrota)} · ${escapeHtml(eq.plantaNome || "—")}/${escapeHtml(eq.setorNome || "—")}</div>
+          <div class="machine-plate__model">${escapeHtml(eq.tipoModelo)}</div>
         </div>
+        <div class="hourmeter"><div class="hourmeter__value">${(eq.horimetroAtual ?? 0).toLocaleString("pt-BR")}h</div><div class="hourmeter__label">Horímetro</div></div>
+      </div>
+      <div class="pill-group" style="margin-top:8px;">
+        <span class="badge badge--${STATUS_OPERACIONAL_COLORS[eq.statusOperacional]}">${STATUS_OPERACIONAL_LABELS[eq.statusOperacional]}</span>
+        ${eq.criticidade ? `<span class="chip chip--${eq.criticidade}">${eq.criticidade}</span>` : ""}
+        <span class="badge badge--${RECORRENCIA_COLORS[nivel]}">${RECORRENCIA_LABELS[nivel]}</span>
+      </div>
+      <div class="machine-plate__footer">
+        <span style="font-size:12px; color:var(--text-dim);">${doEquip.length} chamado(s) no total</span>
         <button class="btn btn--secondary btn--sm" onclick="abrirFormEquip('${eq.id}')">Editar</button>
       </div>
-      <div class="equip-row__historico" id="historico-equip-${eq.id}" style="display:none;"></div>
     </div>`;
   }).join("");
-}
-
-// Expande/recolhe, embaixo da própria máquina, os últimos chamados dela —
-// sem precisar sair da tela de Frota para consultar o histórico.
-function alternarHistoricoEquip(id) {
-  const painel = document.getElementById(`historico-equip-${id}`);
-  const chevron = document.getElementById(`chevron-${id}`);
-  const abrindo = painel.style.display === "none";
-  painel.style.display = abrindo ? "block" : "none";
-  chevron.classList.toggle("equip-row__chevron--aberto", abrindo);
-  if (!abrindo || painel.dataset.carregado) return;
-  painel.dataset.carregado = "1";
-
-  const doEquip = chamadosCache
-    .filter((c) => c.equipamentoId === id)
-    .slice()
-    .sort((a, b) => (tsToMs(b.registradoEm) || 0) - (tsToMs(a.registradoEm) || 0))
-    .slice(0, 5);
-
-  if (doEquip.length === 0) {
-    painel.innerHTML = `<div class="empty__text">Nenhum chamado registrado para este equipamento ainda.</div>`;
-    return;
-  }
-  painel.innerHTML = `
-    <div class="equip-historico-titulo">Últimos chamados</div>
-    ${doEquip.map((c) => `
-      <a class="equip-historico-item" href="chamado.html?id=${c.id}">
-        <div class="equip-historico-item__topo">
-          <span>${escapeHtml(c.numero)}</span>
-          ${badgeHtml(c.status)}
-        </div>
-        <div class="equip-historico-item__meta"><span>${escapeHtml(c.categoria || "")}</span><span>${formatarData(c.registradoEm)}</span></div>
-        ${stepperHtml(c.status)}
-      </a>`).join("")}
-  `;
 }
 
 function abrirFormEquip(id) {

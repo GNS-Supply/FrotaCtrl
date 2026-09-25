@@ -193,12 +193,17 @@ async function salvarChamado(e) {
   try {
     const arquivos = document.getElementById("ch-fotos").files;
     if (arquivos.length > 0) {
-      const urls = await enviarArquivos(`chamados/${docRef.id}/fotos`, arquivos, btn, "Enviar chamado");
+      const urls = [];
+      for (const file of arquivos) {
+        const ref = storage.ref(`chamados/${docRef.id}/fotos/${Date.now()}-${file.name}`);
+        await ref.put(file);
+        urls.push(await ref.getDownloadURL());
+      }
       await docRef.update({ fotos: urls });
     }
   } catch (err) {
     console.warn("Não foi possível anexar as fotos:", err);
-    alert("O chamado foi aberto, mas houve um problema ao anexar as fotos: " + err.message + "\n\nVocê pode tentar anexá-las novamente pelo detalhe do chamado.");
+    alert("O chamado foi aberto, mas houve um problema ao anexar as fotos. Você pode tentar anexá-las novamente pelo detalhe do chamado.");
   }
 
   e.target.reset();

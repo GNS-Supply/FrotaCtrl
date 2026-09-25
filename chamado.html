@@ -18,52 +18,50 @@
   </div>
 
   <div class="page">
-    <div id="cabecalho"></div>
-
-    <div class="bloco-fluxo">
-      <div class="bloco-fluxo__stepper" id="stepper-detalhe"></div>
-      <div class="bloco-fluxo__tempos" id="tempos-grid"></div>
-    </div>
-
-    <div id="detalhe-etapa-selecionada"></div>
+    <div class="machine-plate" id="cabecalho"></div>
+    <div id="data-agendada-wrap"></div>
+    <div id="stepper-detalhe"></div>
 
     <div id="bloco-acoes" class="acoes-bar" style="display:none;">
       <div class="acoes-bar__label">Ação disponível para você</div>
       <div class="small-btn-row" id="acoes-botoes"></div>
     </div>
 
-    <div class="section-title"><span>Ocorrência registrada</span></div>
-    <div class="ocorrencia-grid">
-      <div class="info-card">
-        <div class="kv-row"><span class="kv-row__k">Categoria</span><span id="c-categoria"></span></div>
-        <div class="kv-row"><span class="kv-row__k">Turno</span><span id="c-turno"></span></div>
-        <div class="kv-row"><span class="kv-row__k">Fluxo</span><span id="c-fluxo"></span></div>
-        <div class="kv-row"><span class="kv-row__k">Solicitante</span><span id="c-solicitante"></span></div>
-      </div>
-      <div>
-        <div class="destaque-texto" id="c-descricao"></div>
+    <div class="stats-grid" id="tempos-grid" style="margin-top:14px;"></div>
+
+    <div class="detalhe-grid">
+      <div class="detalhe-col">
+        <div class="section-title"><span>Ocorrência registrada</span></div>
+        <div class="info-card">
+          <div class="kv-row"><span class="kv-row__k">Categoria</span><span id="c-categoria"></span></div>
+          <div class="kv-row"><span class="kv-row__k">Turno</span><span id="c-turno"></span></div>
+          <div class="kv-row"><span class="kv-row__k">Fluxo</span><span id="c-fluxo"></span></div>
+        </div>
+        <div style="margin-top:12px;" class="destaque-texto" id="c-descricao"></div>
         <div class="callout" id="c-impacto-wrap" style="display:none; margin-top:10px;"><strong>Impacto e segurança:</strong> <span id="c-impacto"></span></div>
         <div class="photo-grid" id="fotos-grid"></div>
+
+        <div id="bloco-financeiro" style="display:none;">
+          <div class="section-title"><span>Financeiro</span></div>
+          <div class="info-card">
+            <div class="kv-row"><span class="kv-row__k">Apresentado</span><span id="f-apresentado"></span></div>
+            <div class="kv-row"><span class="kv-row__k">Aprovado (ciência)</span><span id="f-aprovado"></span></div>
+            <div class="kv-row"><span class="kv-row__k">Valor final</span><span id="f-final"></span></div>
+            <div class="kv-row"><span class="kv-row__k">Custo evitado</span><span id="f-evitado"></span></div>
+            <div class="kv-row"><span class="kv-row__k">Ordem de compra</span><span id="f-oc"></span></div>
+          </div>
+          <div class="small-btn-row">
+            <a id="f-orcamento-link" href="#" target="_blank" class="btn btn--secondary btn--sm" style="display:none;">Ver orçamento final</a>
+            <a id="f-nf-link" href="#" target="_blank" class="btn btn--secondary btn--sm" style="display:none;">Ver nota fiscal</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="detalhe-col">
+        <div class="section-title"><span>Etapas do chamado</span></div>
+        <div id="etapas-lista"></div>
       </div>
     </div>
-
-    <div id="bloco-financeiro" style="display:none;">
-      <div class="section-title"><span>Financeiro</span></div>
-      <div class="info-card">
-        <div class="kv-row"><span class="kv-row__k">Apresentado</span><span id="f-apresentado"></span></div>
-        <div class="kv-row"><span class="kv-row__k">Aprovado (ciência)</span><span id="f-aprovado"></span></div>
-        <div class="kv-row"><span class="kv-row__k">Valor final</span><span id="f-final"></span></div>
-        <div class="kv-row"><span class="kv-row__k">Custo evitado</span><span id="f-evitado"></span></div>
-        <div class="kv-row"><span class="kv-row__k">Ordem de compra</span><span id="f-oc"></span></div>
-      </div>
-      <div class="small-btn-row">
-        <a id="f-orcamento-link" href="#" target="_blank" class="btn btn--secondary btn--sm" style="display:none;">Ver orçamento final</a>
-        <a id="f-nf-link" href="#" target="_blank" class="btn btn--secondary btn--sm" style="display:none;">Ver nota fiscal</a>
-      </div>
-    </div>
-
-    <div class="section-title"><span>Etapas do chamado</span></div>
-    <div id="etapas-lista"></div>
   </div>
 </div>
 
@@ -126,7 +124,7 @@
       </div>
       <div class="field"><label>Valor apresentado / orçamento (R$)</label><input type="text" id="dg-valor" inputmode="numeric" placeholder="R$ 0,00" disabled /></div>
       <div class="field"><label>Evidências (OS, relatório, fotos, vídeos) — pode anexar vários</label><input type="file" id="dg-anexos" accept="image/*,video/*,.pdf" multiple /></div>
-      <div class="callout" id="dg-aviso-obrigatorio" style="display:none;">Como é um caso de mau uso, o valor apresentado é obrigatório. O anexo de evidências é opcional, mas recomendado.</div>
+      <div class="callout" id="dg-aviso-obrigatorio" style="display:none;">Como é um caso de mau uso, valor e ao menos uma evidência são obrigatórios.</div>
       <button type="submit" class="btn btn--primary" id="btn-diagnostico" style="margin-top:20px;">Enviar diagnóstico</button>
     </form>
   </div>
@@ -196,10 +194,10 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
 <script src="chamado.js"></script>

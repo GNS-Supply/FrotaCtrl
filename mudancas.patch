@@ -1,0 +1,475 @@
+diff --git a/README.md b/README.md
+index 4c29ca8..920460b 100644
+--- a/README.md
++++ b/README.md
+@@ -2,8 +2,8 @@
+ 
+ Plataforma de gestão de frota — chamados de manutenção, mau uso, custos e
+ recorrência. HTML + CSS + JavaScript puro (sem build), Firebase (Auth,
+-Firestore, Storage), pronta para GitHub Pages. Todos os arquivos ficam na
+-raiz do repositório.
++Firestore) + Cloudinary (anexos), pronta para GitHub Pages. Todos os
++arquivos ficam na raiz do repositório.
+ 
+ Esta versão segue o direcionamento funcional "Plataforma de Gestão de
+ Frota" (Magius/MGPress): 6 perfis, cadastro mestre de equipamentos,
+@@ -23,23 +23,29 @@ administrador.html / .js       → plantas, setores, parâmetros de recorrência
+ chamado.html / .js             → detalhe completo (timeline, financeiro, pareceres)
+ dashboard.html / .js           → indicadores: operacional, mau uso, financeiro, recorrência
+ app.js                         → constantes e utilitários compartilhados
+-firebase-config.js             → suas credenciais do Firebase (edite este arquivo)
++firebase-config.js             → suas credenciais do Firebase + do Cloudinary (edite este arquivo)
+ style.css                      → visual do app
+-firestore.rules / storage.rules → regras de segurança (colar no console do Firebase)
++firestore.rules                → regras de segurança do Firestore (colar no console do Firebase)
++storage.rules                  → não usado mais (ver seção "Anexos" abaixo) — mantido só de referência
+ ```
+ 
+-## Setup (Firebase)
++## Setup (Firebase + Cloudinary)
+ 
+ 1. Crie um projeto em https://console.firebase.google.com
+ 2. **Authentication** → ative o provedor E-mail/senha
+ 3. **Firestore Database** → crie em modo produção
+-4. **Storage** → ative
+-5. **Configurações do projeto → Seus apps** → registre um app Web, copie o
++4. **Configurações do projeto → Seus apps** → registre um app Web, copie o
+    `firebaseConfig` e cole em `firebase-config.js`
+-6. Cole `firestore.rules` e `storage.rules` nas respectivas abas "Regras"
+-   do console e publique
+-7. **Authentication → Settings → Authorized domains**: adicione o domínio
++5. Cole `firestore.rules` na aba "Regras" do Firestore, no console, e
++   publique
++6. **Authentication → Settings → Authorized domains**: adicione o domínio
+    do GitHub Pages
++7. Crie uma conta grátis em https://cloudinary.com (não pede cartão).
++   No painel: **Settings → Upload → Add upload preset** → defina
++   **Signing Mode = Unsigned** e, se quiser, uma pasta fixa em
++   **Asset Folder**. Copie o **Cloud name** (na página inicial do
++   dashboard) e o **nome do preset** para `CLOUDINARY_CONFIG` em
++   `firebase-config.js`
+ 8. Suba os arquivos para a raiz do repositório e ative GitHub Pages em
+    Settings → Pages → Deploy from branch → `main` → `/ (root)`
+ 
+@@ -148,24 +154,24 @@ suficiente para o volume de uma frota).
+ 
+ ## Anexos (upload de arquivos)
+ 
++Os anexos (fotos, PDFs, vídeos) **não usam mais o Firebase Storage** — desde
++o fim de 2024 o Storage passou a exigir o plano pago Blaze (com cartão de
++crédito cadastrado) mesmo para uso dentro da cota gratuita, o que travava o
++app em "Enviando…" para sempre em contas sem cartão. Agora eles vão direto
++para o **Cloudinary**, por um upload "unsigned" (sem nenhuma chave secreta
++exposta no navegador — só o `cloud name` e o nome do `upload preset`, que
++não são segredos).
++
+ Se algum upload falhar, verifique nesta ordem:
+ 
+-1. **Versão do SDK** — o projeto usa Firebase JS SDK **12.4.0**. Buckets no
+-   padrão novo (`*.firebasestorage.app`, usado por projetos criados a
+-   partir do fim de 2024) **não funcionam** em SDKs antigos: o upload fica
+-   pendurado para sempre, sem sucesso nem erro, e a tela congela em
+-   "Enviando…". Não volte para versões 10.x.
+-2. **Storage ativado** no console do Firebase, com as regras de
+-   `storage.rules` publicadas.
+-3. **CORS do bucket** — se o erro for `storage/unknown`, o bucket precisa
+-   liberar a origem do GitHub Pages. Crie um `cors.json`:
+-   ```json
+-   [{ "origin": ["https://SEU_USUARIO.github.io"],
+-      "method": ["GET","POST","PUT","DELETE","HEAD"],
+-      "responseHeader": ["Content-Type","Authorization","Content-Length","User-Agent","x-goog-resumable"],
+-      "maxAgeSeconds": 3600 }]
+-   ```
+-   e aplique com `gsutil cors set cors.json gs://SEU_BUCKET`.
++1. **`CLOUDINARY_CONFIG`** em `firebase-config.js` — `cloudName` e
++   `uploadPreset` precisam bater com o que está no seu painel Cloudinary.
++2. **O preset existe e está "Unsigned"** — painel Cloudinary → Settings →
++   Upload → Upload presets. Se o modo estiver como "Signed", o upload
++   direto do navegador é recusado (erro 401/403).
++3. Use a página `diagnostico.html` do próprio app — ela testa a
++   configuração e faz um upload de teste real, mostrando o motivo exato de
++   qualquer falha.
+ 
+ Todo upload passa por `enviarArquivo()` / `enviarArquivos()` (em `app.js`),
+ que garantem **timeout de 60s** (nunca trava indefinidamente), **progresso
+diff --git a/administrador.html b/administrador.html
+index d0b6275..570ea78 100644
+--- a/administrador.html
++++ b/administrador.html
+@@ -79,7 +79,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="app.js"></script>
+ <script src="administrador.js"></script>
+diff --git a/app.js b/app.js
+index c18b231..6ee1255 100644
+--- a/app.js
++++ b/app.js
+@@ -549,64 +549,78 @@ function icone(nome, tamanho) {
+   return `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES_SVG[nome] || ""}</svg>`;
+ }
+ 
+-// ---------- Upload de anexos (robusto) ----------
+-// Antes o código fazia `await ref.put(file)` direto. Se o upload travasse
+-// (bucket mal resolvido, CORS, rede caindo), a promessa nunca resolvia NEM
+-// rejeitava — a tela ficava congelada em "Enviando…" pra sempre e o
+-// processo não avançava. Agora todo upload passa por aqui, com:
++// ---------- Upload de anexos (Cloudinary) ----------
++// Antes o código fazia `await storage.ref(caminho).put(file)` (Firebase
++// Storage). Isso passou a exigir o plano pago (Blaze) do Firebase mesmo
++// dentro da cota gratuita, e sem isso o upload travava a tela em
++// "Enviando…" pra sempre. Agora os anexos vão para o Cloudinary por um
++// upload "unsigned" (sem nenhuma chave secreta exposta no navegador), com:
+ //   - timeout: nunca fica pendurado pra sempre
+ //   - progresso: dá pra mostrar % pro usuário
+ //   - erro traduzido: o usuário vê o que houve, não uma tela morta
+ const UPLOAD_TIMEOUT_MS = 60000;
+ 
+-function traduzErroUpload(err) {
+-  const code = err && err.code ? err.code : "";
+-  const mapa = {
+-    "storage/unauthorized": "Sem permissão para enviar o arquivo. Verifique as regras do Storage no console do Firebase.",
+-    "storage/canceled": "Envio cancelado.",
+-    "storage/retry-limit-exceeded": "O envio demorou demais. Verifique sua conexão e tente novamente.",
+-    "storage/quota-exceeded": "A cota de armazenamento do projeto foi excedida.",
+-    "storage/unauthenticated": "Sessão expirada. Entre novamente e tente de novo.",
+-    "storage/unknown": "Falha na comunicação com o Storage. Se o problema persistir, verifique a configuração de CORS do bucket."
+-  };
+-  return mapa[code] || (err && err.message) || "Falha desconhecida ao enviar o arquivo.";
++function traduzErroUpload(status, corpoResposta) {
++  if (status === 0) return "Falha de conexão ao enviar o arquivo. Verifique sua internet e tente novamente.";
++  if (status === 400) return "Arquivo recusado (formato ou tamanho não permitido pelo upload preset do Cloudinary).";
++  if (status === 401 || status === 403) return "Sem permissão para enviar o arquivo. Verifique o upload preset no painel do Cloudinary.";
++  let detalhe = "";
++  try { detalhe = JSON.parse(corpoResposta).error.message; } catch (e) {}
++  return `Falha ao enviar o arquivo${status ? ` (erro ${status})` : ""}.${detalhe ? " " + detalhe : ""}`;
+ }
+ 
+-// Envia UM arquivo e devolve a URL. `onProgresso(pct)` é opcional.
++// Envia UM arquivo ao Cloudinary e devolve a URL pública. `onProgresso(pct)` é opcional.
+ function enviarArquivo(caminho, file, onProgresso) {
+   return new Promise((resolve, reject) => {
+     let finalizado = false;
+-    const tarefa = storage.ref(caminho).put(file);
++    const xhr = new XMLHttpRequest();
++    const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`;
++
++    // Mantém o "caminho" (ex: chamados/abc123/diagnostico/169...-foto.jpg)
++    // como identificador do arquivo no Cloudinary, só sem barras (o preset
++    // já define a pasta fixa "frotactrl" no painel).
++    const publicId = caminho.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9/_-]/g, "_").replace(/\//g, "__");
++
++    const formData = new FormData();
++    formData.append("file", file);
++    formData.append("upload_preset", CLOUDINARY_CONFIG.uploadPreset);
++    formData.append("public_id", publicId);
+ 
+     const timer = setTimeout(() => {
+       if (finalizado) return;
+       finalizado = true;
+-      try { tarefa.cancel(); } catch (e) {}
++      xhr.abort();
+       reject(new Error("O envio do arquivo demorou mais que o esperado e foi interrompido. Verifique sua conexão e tente novamente."));
+     }, UPLOAD_TIMEOUT_MS);
+ 
+-    tarefa.on(
+-      "state_changed",
+-      (snap) => {
+-        if (onProgresso && snap.totalBytes) onProgresso(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+-      },
+-      (err) => {
+-        if (finalizado) return;
+-        finalizado = true;
+-        clearTimeout(timer);
+-        reject(new Error(traduzErroUpload(err)));
+-      },
+-      async () => {
+-        if (finalizado) return;
+-        finalizado = true;
+-        clearTimeout(timer);
++    xhr.upload.addEventListener("progress", (e) => {
++      if (onProgresso && e.lengthComputable) onProgresso(Math.round((e.loaded / e.total) * 100));
++    });
++
++    xhr.onreadystatechange = () => {
++      if (xhr.readyState !== 4 || finalizado) return;
++      finalizado = true;
++      clearTimeout(timer);
++      if (xhr.status >= 200 && xhr.status < 300) {
+         try {
+-          resolve(await tarefa.snapshot.ref.getDownloadURL());
++          resolve(JSON.parse(xhr.responseText).secure_url);
+         } catch (err) {
+-          reject(new Error(traduzErroUpload(err)));
++          reject(new Error("Resposta inesperada do Cloudinary ao enviar o arquivo."));
+         }
++      } else {
++        reject(new Error(traduzErroUpload(xhr.status, xhr.responseText)));
+       }
+-    );
++    };
++
++    xhr.onerror = () => {
++      if (finalizado) return;
++      finalizado = true;
++      clearTimeout(timer);
++      reject(new Error(traduzErroUpload(0)));
++    };
++
++    xhr.open("POST", endpoint);
++    xhr.send(formData);
+   });
+ }
+ 
+diff --git a/aprovador.html b/aprovador.html
+index 59915c1..7b14b4d 100644
+--- a/aprovador.html
++++ b/aprovador.html
+@@ -64,7 +64,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="app.js"></script>
+ <script src="aprovador.js"></script>
+diff --git a/chamado.html b/chamado.html
+index dc65aa2..5418b02 100644
+--- a/chamado.html
++++ b/chamado.html
+@@ -199,7 +199,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="app.js"></script>
+ <script src="chamado.js"></script>
+diff --git a/dashboard.html b/dashboard.html
+index 97a07d9..1630cb8 100644
+--- a/dashboard.html
++++ b/dashboard.html
+@@ -227,7 +227,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="app.js"></script>
+ <script src="dashboard.js"></script>
+diff --git a/diagnostico.html b/diagnostico.html
+index c715ea8..beec78d 100644
+--- a/diagnostico.html
++++ b/diagnostico.html
+@@ -55,7 +55,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="diagnostico.js"></script>
+ </body>
+diff --git a/diagnostico.js b/diagnostico.js
+index 2fc5b80..50d11b6 100644
+--- a/diagnostico.js
++++ b/diagnostico.js
+@@ -48,19 +48,18 @@ async function rodarDiagnostico() {
+   log("");
+ 
+   // ---- 1. Configuração ----
+-  const t1 = addTeste("config", "Configuração do Firebase");
++  const t1 = addTeste("config", "Configuração do Firebase e do Cloudinary");
+   try {
+     const cfg = firebase.app().options;
+     log("projectId:      " + cfg.projectId);
+-    log("storageBucket:  " + cfg.storageBucket);
+     log("authDomain:     " + cfg.authDomain);
+-    const bucketNovo = (cfg.storageBucket || "").endsWith(".firebasestorage.app");
+-    const sdkMaior = parseInt((firebase.SDK_VERSION || "0").split(".")[0], 10);
+-    if (bucketNovo && sdkMaior < 11) {
+-      concluirTeste(t1, false, `Bucket no padrão novo (${cfg.storageBucket}) com SDK ${firebase.SDK_VERSION} — incompatível.`,
+-        "Atualize a versão do SDK nas tags &lt;script&gt; de todas as páginas para 12.4.0 ou superior.");
++    log("SDK Firebase:   " + firebase.SDK_VERSION);
++    log("Cloudinary:     cloud=" + CLOUDINARY_CONFIG.cloudName + " · preset=" + CLOUDINARY_CONFIG.uploadPreset);
++    if (!CLOUDINARY_CONFIG.cloudName || !CLOUDINARY_CONFIG.uploadPreset) {
++      concluirTeste(t1, false, "CLOUDINARY_CONFIG está incompleto em firebase-config.js.",
++        "Preencha cloudName e uploadPreset com os valores do seu painel Cloudinary.");
+     } else {
+-      concluirTeste(t1, true, `Projeto ${cfg.projectId} · bucket ${cfg.storageBucket} · SDK ${firebase.SDK_VERSION}`);
++      concluirTeste(t1, true, `Projeto ${cfg.projectId} · SDK ${firebase.SDK_VERSION} · Cloudinary ${CLOUDINARY_CONFIG.cloudName}`);
+     }
+   } catch (err) {
+     concluirTeste(t1, false, "Falha ao ler a configuração: " + err.message, "Verifique o arquivo firebase-config.js.");
+@@ -103,46 +102,62 @@ async function rodarDiagnostico() {
+     concluirTeste(t3, false, "Pulado — exige login.");
+   }
+ 
+-  // ---- 4. Storage: upload de teste ----
+-  const t4 = addTeste("upload", "Upload no Storage (arquivo de teste)");
++  // ---- 4. Cloudinary: upload de teste ----
++  // Os anexos não usam mais o Firebase Storage (passou a exigir plano
++  // pago mesmo na cota gratuita) — agora vão para o Cloudinary via
++  // upload "unsigned", configurado em CLOUDINARY_CONFIG (firebase-config.js).
++  const t4 = addTeste("upload", "Upload no Cloudinary (arquivo de teste)");
+   if (user) {
+     try {
+-      const caminho = `chamados/_diagnostico/${Date.now()}-teste.txt`;
++      const publicId = `_diagnostico__${Date.now()}-teste`;
+       log("");
+-      log("Tentando upload em: " + caminho);
++      log(`Tentando upload no Cloudinary (cloud: ${CLOUDINARY_CONFIG.cloudName}, preset: ${CLOUDINARY_CONFIG.uploadPreset})`);
+       const blob = new Blob(["teste de diagnostico frotactrl"], { type: "text/plain" });
+       const url = await new Promise((resolve, reject) => {
+         let fim = false;
+-        const tarefa = storage.ref(caminho).put(blob);
++        const xhr = new XMLHttpRequest();
++        const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`;
++        const formData = new FormData();
++        formData.append("file", blob, "teste.txt");
++        formData.append("upload_preset", CLOUDINARY_CONFIG.uploadPreset);
++        formData.append("public_id", publicId);
+         const timer = setTimeout(() => {
+           if (fim) return;
+           fim = true;
+-          try { tarefa.cancel(); } catch (e) {}
++          xhr.abort();
+           reject(new Error("TIMEOUT: o upload ficou pendurado por 25s sem resposta."));
+         }, 25000);
+-        tarefa.on("state_changed",
+-          (s) => log("  progresso: " + s.bytesTransferred + "/" + s.totalBytes),
+-          (e) => { if (fim) return; fim = true; clearTimeout(timer); reject(e); },
+-          async () => { if (fim) return; fim = true; clearTimeout(timer); try { resolve(await tarefa.snapshot.ref.getDownloadURL()); } catch (e) { reject(e); } });
++        xhr.upload.addEventListener("progress", (e) => {
++          if (e.lengthComputable) log("  progresso: " + e.loaded + "/" + e.total);
++        });
++        xhr.onreadystatechange = () => {
++          if (xhr.readyState !== 4 || fim) return;
++          fim = true;
++          clearTimeout(timer);
++          if (xhr.status >= 200 && xhr.status < 300) {
++            try { resolve(JSON.parse(xhr.responseText).secure_url); } catch (e) { reject(new Error("Resposta inesperada do Cloudinary: " + xhr.responseText)); }
++          } else {
++            reject(Object.assign(new Error(xhr.responseText), { status: xhr.status }));
++          }
++        };
++        xhr.onerror = () => { if (fim) return; fim = true; clearTimeout(timer); reject(new Error("TIMEOUT ou CORS: falha de rede ao contatar o Cloudinary.")); };
++        xhr.open("POST", endpoint);
++        xhr.send(formData);
+       });
+       concluirTeste(t4, true, "Upload concluído com sucesso — os anexos devem funcionar.");
+       log("Upload OK. URL: " + url);
+     } catch (err) {
+-      const code = err.code || "";
+-      log("ERRO upload: " + code + " " + err.message);
+-      let fix = "Veja o código do erro acima e o log abaixo.";
+-      if (code === "storage/unauthorized") {
+-        fix = "As regras do <strong>Storage</strong> estão bloqueando. No console do Firebase: <strong>Storage → Regras</strong>, cole o conteúdo do arquivo <code>storage.rules</code> deste projeto e publique. (Atenção: as regras do Storage são SEPARADAS das do Firestore.)";
+-      } else if (code === "storage/unauthenticated") {
+-        fix = "Sessão não reconhecida pelo Storage. Saia e entre novamente.";
+-      } else if (code === "storage/unknown" || String(err.message).includes("TIMEOUT") || String(err.message).includes("CORS")) {
+-        fix = "Provável bloqueio de <strong>CORS</strong> ou Storage não provisionado. 1) Confirme que o Storage está ativado no console (Build → Storage → Começar). 2) Se estiver ativo, aplique o CORS no bucket com o arquivo <code>cors.json</code> descrito no README.";
+-      } else if (code === "storage/retry-limit-exceeded") {
+-        fix = "A rede interrompeu o envio várias vezes. Teste em outra conexão.";
+-      } else if (code === "storage/quota-exceeded") {
+-        fix = "A cota gratuita do Storage foi excedida neste projeto.";
++      const status = err.status || 0;
++      log("ERRO upload: " + status + " " + err.message);
++      let fix = "Veja o log abaixo.";
++      if (status === 400) {
++        fix = "O Cloudinary recusou o arquivo/parâmetros. Confira no painel se o upload preset <code>" + CLOUDINARY_CONFIG.uploadPreset + "</code> existe, está como <strong>Unsigned</strong> e pertence ao cloud <code>" + CLOUDINARY_CONFIG.cloudName + "</code>.";
++      } else if (status === 401 || status === 403) {
++        fix = "Sem permissão. Confirme que o upload preset está com Signing Mode = <strong>Unsigned</strong> no painel do Cloudinary (Settings → Upload).";
++      } else if (status === 0) {
++        fix = "Falha de conexão/CORS ao contatar api.cloudinary.com. Verifique sua internet ou se algum bloqueador de rede/anúncios está interferindo.";
+       }
+-      concluirTeste(t4, false, `${code || "falha"}: ${err.message}`, fix);
++      concluirTeste(t4, false, `${status || "falha"}: ${err.message}`, fix);
+     }
+   } else {
+     concluirTeste(t4, false, "Pulado — exige login.");
+diff --git a/firebase-config.js b/firebase-config.js
+index eeef0bf..96f0125 100644
+--- a/firebase-config.js
++++ b/firebase-config.js
+@@ -14,7 +14,17 @@ firebase.initializeApp(firebaseConfig);
+ 
+ const auth = firebase.auth();
+ const db = firebase.firestore();
+-const storage = firebase.storage();
+ 
+ // Ajuda o Firestore a funcionar melhor offline / em conexões ruins de obra/pátio
+ db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
++
++// ============================================================
++// CONFIGURAÇÃO DO CLOUDINARY — usado para anexos (fotos, PDFs, vídeos)
++// O plano gratuito do Firebase (Spark) não permite mais usar o Storage
++// sem cartão de crédito cadastrado, então os anexos vão para o Cloudinary
++// via upload "unsigned" (sem expor nenhuma chave secreta no navegador).
++// ============================================================
++const CLOUDINARY_CONFIG = {
++  cloudName: "ukjt4x0w",
++  uploadPreset: "nuvem_frota_ctrl"
++};
+diff --git a/fornecedor.html b/fornecedor.html
+index 1a419c0..a235b05 100644
+--- a/fornecedor.html
++++ b/fornecedor.html
+@@ -111,7 +111,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="app.js"></script>
+ <script src="fornecedor.js"></script>
+diff --git a/gestao-frota.html b/gestao-frota.html
+index 9a5c16d..b5b886c 100644
+--- a/gestao-frota.html
++++ b/gestao-frota.html
+@@ -238,7 +238,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="app.js"></script>
+ <script src="gestao-frota.js"></script>
+diff --git a/index.html b/index.html
+index 058228d..efcd344 100644
+--- a/index.html
++++ b/index.html
+@@ -57,7 +57,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="app.js"></script>
+ <script src="auth.js"></script>
+diff --git a/manutencao.html b/manutencao.html
+index dee03e9..96d501a 100644
+--- a/manutencao.html
++++ b/manutencao.html
+@@ -79,7 +79,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="app.js"></script>
+ <script src="manutencao.js"></script>
+diff --git a/solicitante.html b/solicitante.html
+index a1d943c..0343419 100644
+--- a/solicitante.html
++++ b/solicitante.html
+@@ -78,7 +78,6 @@
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
+-<script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-storage-compat.js"></script>
+ <script src="firebase-config.js"></script>
+ <script src="app.js"></script>
+ <script src="solicitante.js"></script>
