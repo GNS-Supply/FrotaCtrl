@@ -5,6 +5,8 @@
 let usuarioAtual = null;
 let ativosCache = [];
 let historicoCache = [];
+let todosCache = [];
+let telaFornecedor = "todos";
 
 (async function init() {
   usuarioAtual = await requireAuth("fornecedor");
@@ -114,15 +116,39 @@ const COLUNAS_KANBAN = [
 ];
 function porRegistro(a, b) { return (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0); }
 
-let filtroKanban = "todos";   // todos | minha_vez | mau_uso
+let filtroKanban = "todos";
 let buscaKanban = "";
-let historicoAberto = false;
+let filtroLista = { busca: "", status: "todos", criticidade: "todos", fluxo: "todos", minhaVez: false };
 
+const TELAS_FORNECEDOR = [
+  { id: "todos", titulo: "Todos os chamados", subtitulo: "Consulta geral e filtros", tipo: "lista" },
+  { id: "iniciais", titulo: "Primeiras etapas", subtitulo: "Chamados que exigem atuação inicial", tipo: "kanban", colunas: [
+    { id: "programar", n: 1, titulo: "A programar atendimento", sub: "Definir data do atendimento", cor: "amber", status: ["fornecedor_acionado"], ordenar: porRegistro },
+    { id: "iniciar", n: 2, titulo: "Iniciar avaliação técnica", sub: "Atendimento programado", cor: "blue", status: ["atendimento_programado"], ordenar: (a,b) => new Date(a.dataAtendimentoPrevista || 0) - new Date(b.dataAtendimentoPrevista || 0) },
+    { id: "diagnostico", n: 3, titulo: "Registrar diagnóstico", sub: "Avaliação técnica em andamento", cor: "blue", status: ["em_avaliacao_tecnica"], ordenar: porRegistro }
+  ]},
+  { id: "mauuso", titulo: "Mau uso", subtitulo: "Validação e contestação", tipo: "kanban", colunas: [
+    { id: "contestado", n: 1, titulo: "Mau uso contestado", sub: "Dar novo diagnóstico", cor: "red", status: ["diagnostico_contestado"], ordenar: porRegistro },
+    { id: "validacao", n: 2, titulo: "Aguardando avaliação do mau uso", sub: "Status — Manutenção Magius", cor: "muted", status: ["aguardando_validacao"], ordenar: porRegistro }
+  ]},
+  { id: "execucao", titulo: "Liberados para execução", subtitulo: "Execução, testes e liberação", tipo: "kanban", colunas: [
+    { id: "liberado_execucao", n: 1, titulo: "Liberados para execução", sub: "A iniciar testes", cor: "green", status: ["aguardando_aprovacao", "aguardando_autorizacao"], ordenar: porRegistro },
+    { id: "em_teste", n: 2, titulo: "Testes iniciados", sub: "Em execução", cor: "blue", status: ["em_teste"], ordenar: porRegistro },
+    { id: "testes_concluidos", n: 3, titulo: "Testes concluídos", sub: "Liberar máquina e anexar orçamento", cor: "green", status: ["testes_concluidos"], ordenar: porRegistro }
+  ]},
+  { id: "documentacao", titulo: "Aguardando documentação", subtitulo: "Etapas administrativas após a execução", tipo: "kanban", colunas: [
+    { id: "oc", n: 1, titulo: "Aguardando Ordem de compra", sub: "Status — Gestão de Frota", cor: "amber", status: ["liberado", "aguardando_ordem_compra"], ordenar: porRegistro },
+    { id: "nf", n: 2, titulo: "Aguardando anexar NF", sub: "Anexar NF para concluir", cor: "amber", status: ["aguardando_nf"], ordenar: porRegistro }
+  ]}
+];
+
+function telaAtual() { return TELAS_FORNECEDOR.find(t => t.id === telaFornecedor) || TELAS_FORNECEDOR[0]; }
+function setTelaFornecedor(id) { telaFornecedor = id; renderFila(); }
+function setBuscaLista(v) { filtroLista.busca = v.trim().toLowerCase(); renderFila(); }
+function setFiltroLista(campo, valor) { filtroLista[campo] = valor; renderFila(); }
 function setFiltroKanban(f) { filtroKanban = f; renderFila(); }
-function setBuscaKanban(v) { buscaKanban = v.trim().toLowerCase(); renderFila(); document.getElementById("kb-busca").focus(); }
-function alternarHistorico() { historicoAberto = !historicoAberto; renderFila(); }
+function setBuscaKanban(v) { buscaKanban = v.trim().toLowerCase(); renderFila(); }
 
-// Há quanto tempo o chamado está na etapa atual (último evento do histórico)
 function tempoNaEtapa(c) {
   const hist = c.historico || [];
   const ult = hist.length ? Math.max(...hist.map((h) => h.timestamp || 0)) : (tsToMs(c.registradoEm) || 0);
@@ -136,74 +162,73 @@ function tagAguardando(c) {
   const quem = { aguardando_validacao: "Manutenção Magius", aguardando_aprovacao: "Aprovador", aguardando_autorizacao: "Gestão de Frota", aguardando_ordem_compra: "Gestão de Frota (OC)", liberado: "Gestão de Frota (OC)" }[c.status];
   return quem ? `<div class="kcard__espera">${icone("relogio", 12)} Aguardando ${quem}</div>` : "";
 }
-
 function cardChamado(c, opts = {}) {
   const acaoFn = ACOES_POR_STATUS[c.status];
   const acao = acaoFn ? acaoFn(c) : "";
   const tempo = opts.historico ? "" : tempoNaEtapa(c);
-  return `
-    <div class="kcard ${acao ? "kcard--acao" : ""}">
-      <div class="kcard__top">
-        <a class="kcard__num" href="chamado.html?id=${c.id}">${escapeHtml(c.numeroFrota || "—")}</a>
-        ${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}
-      </div>
-      <div class="kcard__id">${escapeHtml(c.numero || "")}${tempo ? ` · <span title="Tempo na etapa atual">${tempo} na etapa</span>` : ""}</div>
-      ${seloMauUso(c)}
-      <div class="kcard__desc">${escapeHtml((c.descricao || "").slice(0, 70))}</div>
-      <div class="kcard__local">${escapeHtml(c.plantaNome || "")}${c.setorNome ? " / " + escapeHtml(c.setorNome) : ""}</div>
-      ${cardDataAgendada(c)}
-      ${tagAguardando(c)}
-      <div class="kcard__acoes">${acao}<a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Detalhes</a></div>
-    </div>`;
+  return `<div class="kcard ${acao ? "kcard--acao" : ""}">
+    <div class="kcard__top"><a class="kcard__num" href="chamado.html?id=${c.id}">${escapeHtml(c.numeroFrota || "—")}</a>${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}</div>
+    <div class="kcard__id">${escapeHtml(c.numero || "")}${tempo ? ` · <span title="Tempo na etapa atual">${tempo} na etapa</span>` : ""}</div>
+    ${seloMauUso(c)}
+    <div class="kcard__desc">${escapeHtml((c.descricao || "").slice(0, 90))}</div>
+    <div class="kcard__local">${escapeHtml(c.plantaNome || "")}${c.setorNome ? " / " + escapeHtml(c.setorNome) : ""}</div>
+    ${cardDataAgendada(c)}${tagAguardando(c)}
+    <div class="kcard__acoes">${acao}<a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Detalhes</a></div>
+  </div>`;
 }
-
 function passaFiltro(c) {
   if (filtroKanban === "minha_vez" && !minhaVez(c)) return false;
   if (filtroKanban === "mau_uso" && c.fluxo !== "mau_uso") return false;
   if (buscaKanban && !`${c.numeroFrota || ""} ${c.numero || ""}`.toLowerCase().includes(buscaKanban)) return false;
   return true;
 }
-
-function renderFila() {
-  const wrap = document.getElementById("paineis-fornecedor");
+function passaFiltroLista(c) {
+  const f = filtroLista;
+  if (f.busca && !`${c.numeroFrota || ""} ${c.numero || ""} ${c.descricao || ""} ${c.plantaNome || ""} ${c.setorNome || ""}`.toLowerCase().includes(f.busca)) return false;
+  if (f.status !== "todos" && c.status !== f.status) return false;
+  if (f.criticidade !== "todos" && c.criticidade !== f.criticidade) return false;
+  if (f.fluxo !== "todos" && (c.fluxo || "contratual") !== f.fluxo) return false;
+  if (f.minhaVez && !minhaVez(c)) return false;
+  return true;
+}
+function selectStatusLista() {
+  const ordem = ["fornecedor_acionado","atendimento_programado","em_avaliacao_tecnica","diagnostico_contestado","aguardando_validacao","aguardando_aprovacao","aguardando_autorizacao","em_teste","testes_concluidos","liberado","aguardando_ordem_compra","aguardando_nf","concluido"];
+  const nomes = { fornecedor_acionado:"A programar", atendimento_programado:"Atendimento programado", em_avaliacao_tecnica:"Em avaliação", diagnostico_contestado:"Mau uso contestado", aguardando_validacao:"Aguardando validação", aguardando_aprovacao:"Aguardando aprovação", aguardando_autorizacao:"Aguardando autorização", em_teste:"Em testes", testes_concluidos:"Testes concluídos", liberado:"Liberado / aguardando OC", aguardando_ordem_compra:"Aguardando OC", aguardando_nf:"Aguardando NF", concluido:"Concluído" };
+  return ordem.filter(st => todosCache.some(c => c.status === st)).map(st => `<option value="${st}">${nomes[st] || st}</option>`).join("");
+}
+function renderListaTodos() {
+  const lista = [...todosCache].filter(passaFiltroLista).sort((a,b) => (tsToMs(b.registradoEm)||0) - (tsToMs(a.registradoEm)||0));
+  const statusNome = { fornecedor_acionado:"A programar", atendimento_programado:"Atendimento programado", em_avaliacao_tecnica:"Em avaliação técnica", diagnostico_contestado:"Mau uso contestado", aguardando_validacao:"Aguardando validação", aguardando_aprovacao:"Aguardando aprovação", aguardando_autorizacao:"Aguardando autorização", em_teste:"Em testes", testes_concluidos:"Testes concluídos", liberado:"Aguardando OC", aguardando_ordem_compra:"Aguardando OC", aguardando_nf:"Aguardando NF", concluido:"Concluído" };
+  return `<div class="lista-filtros">
+    <div class="lista-filtros__busca"><input type="search" placeholder="Buscar frota, chamado, descrição ou planta" value="${escapeHtml(filtroLista.busca)}" oninput="setBuscaLista(this.value)"></div>
+    <select onchange="setFiltroLista('status',this.value)"><option value="todos">Todos os status</option>${selectStatusLista()}</select>
+    <select onchange="setFiltroLista('criticidade',this.value)"><option value="todos">Todas as prioridades</option><option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option></select>
+    <select onchange="setFiltroLista('fluxo',this.value)"><option value="todos">Todos os fluxos</option><option value="contratual">Contratual</option><option value="mau_uso">Mau uso</option></select>
+    <button class="kb-filtro ${filtroLista.minhaVez ? "kb-filtro--on" : ""}" onclick="setFiltroLista('minhaVez',!filtroLista.minhaVez)">Sua vez <b>${todosCache.filter(minhaVez).length}</b></button>
+  </div>
+  <div class="lista-total"><strong>${lista.length}</strong> chamados encontrados</div>
+  <div class="chamados-lista">${lista.length ? lista.map(c => `<a class="chamado-lista-row" href="chamado.html?id=${c.id}">
+    <div class="chamado-lista-row__main"><div class="chamado-lista-row__top"><strong>${escapeHtml(c.numeroFrota || "—")}</strong>${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}${c.fluxo === "mau_uso" ? seloMauUso(c) : ""}</div><div class="chamado-lista-row__id">${escapeHtml(c.numero || "—")}</div><div class="chamado-lista-row__desc">${escapeHtml(c.descricao || "Sem descrição")}</div></div>
+    <div class="chamado-lista-row__status"><span class="badge badge--${c.status === "concluido" ? "green" : minhaVez(c) ? "amber" : "muted"}">${statusNome[c.status] || c.status || "—"}</span><span>${escapeHtml(c.plantaNome || "—")}${c.setorNome ? " · " + escapeHtml(c.setorNome) : ""}</span></div>
+  </a>`).join("") : `<div class="kcol__vazio">Nenhum chamado encontrado com os filtros atuais.</div>`}</div>`;
+}
+function renderKanbanTela(tela) {
   const qtdMinha = ativosCache.filter(minhaVez).length;
-  const qtdMau = ativosCache.filter((c) => c.fluxo === "mau_uso").length;
-  const btn = (id, txt, n) => `<button class="kb-filtro ${filtroKanban === id ? "kb-filtro--on" : ""}" onclick="setFiltroKanban('${id}')">${txt} <b>${n}</b></button>`;
-
-  const colunas = COLUNAS_KANBAN.map((col) => {
-    const todos = ativosCache.filter((c) => col.status.includes(c.status));
+  const colunas = tela.colunas.map(col => {
+    const todos = ativosCache.filter(c => col.status.includes(c.status));
     const lista = todos.filter(passaFiltro).sort(col.ordenar);
     const nMinha = todos.filter(minhaVez).length;
-    return `
-      <section class="kcol kcol--${col.cor} ${todos.length === 0 ? "kcol--vazia" : ""}">
-        <header class="kcol__head">
-          <div class="kcol__n">${col.n}</div>
-          <div class="kcol__tit"><div class="kcol__nome">${col.titulo}</div><div class="kcol__sub">${col.sub}</div></div>
-          <div class="kcol__cont ${nMinha > 0 ? "kcol__cont--acao" : ""}">${todos.length}</div>
-        </header>
-        ${nMinha > 0 ? `<div class="kcol__faixa">${nMinha} para você agir</div>` : ""}
-        <div class="kcol__corpo">${lista.length ? lista.map((c) => cardChamado(c)).join("") : `<div class="kcol__vazio">—</div>`}</div>
-      </section>`;
+    return `<section class="kcol kcol--${col.cor} ${todos.length === 0 ? "kcol--vazia" : ""}"><header class="kcol__head"><div class="kcol__n">${col.n}</div><div class="kcol__tit"><div class="kcol__nome">${col.titulo}</div><div class="kcol__sub">${col.sub}</div></div><div class="kcol__cont ${nMinha > 0 ? "kcol__cont--acao" : ""}">${todos.length}</div></header>${nMinha > 0 ? `<div class="kcol__faixa">${nMinha} para você agir</div>` : ""}<div class="kcol__corpo">${lista.length ? lista.map(c => cardChamado(c)).join("") : `<div class="kcol__vazio">Nenhum chamado</div>`}</div></section>`;
   }).join("");
-
-  const hist = historicoCache.filter(passaFiltro).slice(0, 50);
-  wrap.innerHTML = `
-    <div class="kb-barra">
-      <div class="kb-filtros">
-        ${btn("todos", "Todos", ativosCache.length)}
-        ${btn("minha_vez", "Sua vez", qtdMinha)}
-        ${btn("mau_uso", "Mau uso", qtdMau)}
-      </div>
-      <input id="kb-busca" class="kb-busca" type="search" placeholder="Buscar nº da frota ou chamado" value="${escapeHtml(buscaKanban)}" oninput="setBuscaKanban(this.value)" />
-    </div>
-    <div class="kanban">${colunas}</div>
-    <div class="kb-hist">
-      <button class="kb-hist__toggle" onclick="alternarHistorico()">${icone("checkCirculo", 16)} Histórico de encerrados <b>${historicoCache.length}</b> <span class="kb-hist__seta ${historicoAberto ? "kb-hist__seta--on" : ""}">${icone("seta", 14)}</span></button>
-      ${historicoAberto ? `<div class="kb-hist__lista">${hist.length ? hist.map((c) => cardChamado(c, { historico: true })).join("") : `<div class="kcol__vazio">Nenhum chamado concluído.</div>`}</div>` : ""}
-    </div>`;
+  return `<div class="kb-barra"><div class="kb-filtros"><button class="kb-filtro ${filtroKanban === "todos" ? "kb-filtro--on" : ""}" onclick="setFiltroKanban('todos')">Todos <b>${ativosCache.length}</b></button><button class="kb-filtro ${filtroKanban === "minha_vez" ? "kb-filtro--on" : ""}" onclick="setFiltroKanban('minha_vez')">Sua vez <b>${qtdMinha}</b></button>${tela.id === "mauuso" ? `<button class="kb-filtro ${filtroKanban === "mau_uso" ? "kb-filtro--on" : ""}" onclick="setFiltroKanban('mau_uso')">Mau uso</button>` : ""}</div><input class="kb-busca" type="search" placeholder="Buscar nº da frota ou chamado" value="${escapeHtml(buscaKanban)}" oninput="setBuscaKanban(this.value)"></div><div class="kanban kanban--${tela.colunas.length}">${colunas}</div>`;
 }
-
-function renderHistorico() { /* histórico agora é um dos painéis acima */ }
+function renderFila() {
+  const wrap = document.getElementById("paineis-fornecedor");
+  const tela = telaAtual();
+  document.querySelectorAll(".fornecedor-tela-btn").forEach(b => b.classList.toggle("active", b.dataset.tela === telaFornecedor));
+  wrap.innerHTML = `<div class="fornecedor-telas">${TELAS_FORNECEDOR.map(t => `<button class="fornecedor-tela-btn ${t.id === telaFornecedor ? "active" : ""}" data-tela="${t.id}" onclick="setTelaFornecedor('${t.id}')"><span class="fornecedor-tela-btn__num">${TELAS_FORNECEDOR.indexOf(t)+1}</span><span><strong>${t.titulo}</strong><small>${t.subtitulo}</small></span><b>${t.tipo === "lista" ? todosCache.length : ativosCache.filter(c => (t.colunas||[]).some(col => col.status.includes(c.status))).length}</b></button>`).join("")}</div><div class="tela-header"><div><div class="tela-header__eyebrow">VISÃO ${TELAS_FORNECEDOR.indexOf(tela)+1} DE ${TELAS_FORNECEDOR.length}</div><h2>${tela.titulo}</h2><p>${tela.subtitulo}</p></div></div>${tela.tipo === "lista" ? renderListaTodos() : renderKanbanTela(tela)}`;
+}
+function renderHistorico() {}
 
 // ---------- Programar atendimento ----------
 function abrirProgramar(id) { document.getElementById("pg-id").value = id; abrirFechar("overlay-programar", true); }
