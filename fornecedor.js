@@ -29,7 +29,7 @@ function configurarNav() {
       document.querySelectorAll(".navitem[data-view]").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
-      ["fila", "historico", "perfil"].forEach((v) => (document.getElementById(`view-${v}`).style.display = v === view ? "block" : "none"));
+      ["fila", "perfil"].forEach((v) => { const el = document.getElementById(`view-${v}`); if (el) el.style.display = v === view ? "block" : "none"; });
     });
   });
 }
@@ -59,14 +59,14 @@ function escutarChamados() {
 }
 
 function renderStats() {
-  const naoProgramados = ativosCache.filter((c) => c.status === "fornecedor_acionado").length;
-  const emExecucao = ativosCache.filter((c) => ["em_teste", "liberado", "aguardando_ordem_compra", "aguardando_nf"].includes(c.status)).length;
-  const aguardandoTerceiros = ativosCache.filter((c) => ["aguardando_validacao", "aguardando_aprovacao", "aguardando_autorizacao"].includes(c.status)).length;
+  const suaVez = ativosCache.filter(minhaVez).length;
+  const terceiros = ativosCache.length - suaVez;
+  const atrasados = ativosCache.filter((c) => c.status === "atendimento_programado" && c.dataAtendimentoPrevista && new Date(c.dataAtendimentoPrevista).getTime() < Date.now()).length;
   document.getElementById("stats-grid").innerHTML = `
-    <div class="stat-card"><div class="stat-card__value">${naoProgramados}</div><div class="stat-card__label">Novos a programar</div></div>
+    <div class="stat-card stat-card--acao"><div class="stat-card__value">${suaVez}</div><div class="stat-card__label">Sua vez de agir</div></div>
+    <div class="stat-card"><div class="stat-card__value">${terceiros}</div><div class="stat-card__label">Aguardando terceiros</div></div>
+    <div class="stat-card ${atrasados ? "stat-card--alerta" : ""}"><div class="stat-card__value">${atrasados}</div><div class="stat-card__label">Atendimentos atrasados</div></div>
     <div class="stat-card"><div class="stat-card__value">${ativosCache.length}</div><div class="stat-card__label">Ativos no total</div></div>
-    <div class="stat-card"><div class="stat-card__value">${aguardandoTerceiros}</div><div class="stat-card__label">Aguardando terceiros</div></div>
-    <div class="stat-card"><div class="stat-card__value">${emExecucao}</div><div class="stat-card__label">Em execução / encerrando</div></div>
   `;
 }
 
@@ -79,113 +79,6 @@ const ACOES_POR_STATUS = {
   em_teste: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirLiberar('${c.id}')">Liberar máquina</button>`,
   aguardando_nf: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirNf('${c.id}')">Anexar NF de cobrança</button>`
 };
-
-// ============================================================
-// Painéis: cada um mostra só os chamados daquele estágio, na
-// ordem que faz sentido pra quem trabalha naquele estágio.
-// ============================================================
-const PAINEIS_FORNECEDOR = [
-  {
-    id: "novos",
-    titulo: "Novos — a programar",
-    descricao: "Chamados que você recebeu e ainda não têm data de atendimento.",
-    cor: "amber",
-    icone: "alerta",
-    status: ["fornecedor_acionado"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhum chamado novo aguardando programação."
-  },
-  {
-    id: "programados",
-    titulo: "Programados — aguardando início",
-    descricao: "Atendimentos agendados, em ordem de data.",
-    cor: "blue",
-    icone: "calendario",
-    status: ["atendimento_programado"],
-    // Ordem por data do atendimento (o mais próximo primeiro)
-    ordenar: (a, b) => new Date(a.dataAtendimentoPrevista || 0) - new Date(b.dataAtendimentoPrevista || 0),
-    vazio: "Nenhum atendimento programado."
-  },
-  {
-    id: "avaliacao",
-    titulo: "Em avaliação técnica",
-    descricao: "Você já iniciou a avaliação — o tempo de manutenção está contando.",
-    cor: "blue",
-    icone: "lupa",
-    status: ["em_avaliacao_tecnica"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhuma avaliação em andamento."
-  },
-  {
-    id: "aguardando-manutencao",
-    titulo: "Diagnóstico enviado — aguardando Manutenção",
-    descricao: "Você já deu o diagnóstico; aguardando resposta da Manutenção Magius.",
-    cor: "muted",
-    icone: "escudo",
-    status: ["aguardando_validacao"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nada aguardando a Manutenção."
-  },
-  {
-    id: "contestados",
-    titulo: "Contestados — precisam da sua resposta",
-    descricao: "A Manutenção não confirmou o mau uso (ou foi inconclusivo). Registre um novo diagnóstico.",
-    cor: "red",
-    icone: "alerta",
-    status: ["diagnostico_contestado"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhum diagnóstico contestado."
-  },
-  {
-    id: "aprovados",
-    titulo: "Aprovados — aguardando autorização",
-    descricao: "Mau uso confirmado e com ciência do aprovador; aguardando a Gestão de Frota liberar a execução.",
-    cor: "amber",
-    icone: "aprovacao",
-    status: ["aguardando_aprovacao", "aguardando_autorizacao"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhum chamado aguardando autorização."
-  },
-  {
-    id: "executando",
-    titulo: "Liberados para execução",
-    descricao: "Autorizados — você já pode executar o serviço na máquina.",
-    cor: "green",
-    icone: "chave",
-    status: ["em_teste"],
-    ordenar: (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0),
-    vazio: "Nenhum serviço em execução."
-  },
-  {
-    id: "documentacao",
-    titulo: "Executados — aguardando documentação",
-    descricao: "Máquina já liberada; falta concluir a papelada (ordem de compra e NF).",
-    cor: "amber",
-    icone: "clip",
-    status: ["liberado", "aguardando_ordem_compra", "aguardando_nf"],
-    ordenar: (a, b) => (tsToMs(a.liberadoEm) || 0) - (tsToMs(b.liberadoEm) || 0),
-    vazio: "Nenhuma documentação pendente."
-  },
-  {
-    id: "historico",
-    titulo: "Histórico — concluídos",
-    descricao: "Chamados já finalizados.",
-    cor: "muted",
-    icone: "checkCirculo",
-    historico: true,
-    ordenar: (a, b) => (tsToMs(b.concluidoEm) || 0) - (tsToMs(a.concluidoEm) || 0),
-    vazio: "Nenhum chamado concluído ainda."
-  }
-];
-
-// Painéis começam abertos, menos o histórico (que tende a crescer muito)
-const painelAberto = {};
-PAINEIS_FORNECEDOR.forEach((p) => { painelAberto[p.id] = p.id !== "historico"; });
-
-function alternarPainel(id) {
-  painelAberto[id] = !painelAberto[id];
-  renderFila();
-}
 
 function cardDataAgendada(c) {
   if (!c.dataAtendimentoPrevista) return "";
@@ -201,51 +94,113 @@ function seloMauUso(c) {
   return `<span class="selo-mauuso ${confirmado ? "selo-mauuso--confirmado" : ""}">${icone("alerta", 13)} ${confirmado ? "Mau uso confirmado" : "Mau uso alegado"}</span>`;
 }
 
-function cardChamado(c) {
+// Chamado depende de uma ação do fornecedor agora?
+function minhaVez(c) { return !!ACOES_POR_STATUS[c.status]; }
+
+// ============================================================
+// Quadro kanban (gestão à vista). Uma coluna por etapa do fluxo;
+// quando o fornecedor conclui a etapa, o card muda de coluna sozinho
+// (o Firestore atualiza o status e o quadro é redesenhado).
+// ============================================================
+const COLUNAS_KANBAN = [
+  { id: "programar",  n: 1, titulo: "A programar",           sub: "Definir data do atendimento", cor: "amber", status: ["fornecedor_acionado"], ordenar: porRegistro },
+  { id: "iniciar",    n: 2, titulo: "Programados",           sub: "Iniciar avaliação técnica",   cor: "blue",  status: ["atendimento_programado"], ordenar: (a, b) => new Date(a.dataAtendimentoPrevista || 0) - new Date(b.dataAtendimentoPrevista || 0) },
+  { id: "avaliacao",  n: 3, titulo: "Em avaliação",          sub: "Registrar diagnóstico",       cor: "blue",  status: ["em_avaliacao_tecnica"], ordenar: porRegistro },
+  { id: "manutencao", n: 4, titulo: "Aguardando Manutenção", sub: "Validação de mau uso",        cor: "muted", status: ["aguardando_validacao"], ordenar: porRegistro },
+  { id: "contestado", n: 5, titulo: "Contestados",           sub: "Novo diagnóstico necessário", cor: "red",   status: ["diagnostico_contestado"], ordenar: porRegistro },
+  { id: "aprovacao",  n: 6, titulo: "Aprovação / Autorização", sub: "Aprovador e Gestão de Frota", cor: "muted", status: ["aguardando_aprovacao", "aguardando_autorizacao"], ordenar: porRegistro },
+  { id: "execucao",   n: 7, titulo: "Execução",              sub: "Executar e liberar a máquina", cor: "green", status: ["em_teste"], ordenar: porRegistro },
+  { id: "documentos", n: 8, titulo: "Documentação",          sub: "Ordem de compra e NF",        cor: "amber", status: ["liberado", "aguardando_ordem_compra", "aguardando_nf"], ordenar: (a, b) => (tsToMs(a.liberadoEm) || 0) - (tsToMs(b.liberadoEm) || 0) }
+];
+function porRegistro(a, b) { return (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0); }
+
+let filtroKanban = "todos";   // todos | minha_vez | mau_uso
+let buscaKanban = "";
+let historicoAberto = false;
+
+function setFiltroKanban(f) { filtroKanban = f; renderFila(); }
+function setBuscaKanban(v) { buscaKanban = v.trim().toLowerCase(); renderFila(); document.getElementById("kb-busca").focus(); }
+function alternarHistorico() { historicoAberto = !historicoAberto; renderFila(); }
+
+// Há quanto tempo o chamado está na etapa atual (último evento do histórico)
+function tempoNaEtapa(c) {
+  const hist = c.historico || [];
+  const ult = hist.length ? Math.max(...hist.map((h) => h.timestamp || 0)) : (tsToMs(c.registradoEm) || 0);
+  if (!ult) return "";
+  const min = Math.max(0, Math.round((Date.now() - ult) / 60000));
+  if (min < 60) return `${min} min`;
+  if (min < 1440) return `${Math.floor(min / 60)} h`;
+  return `${Math.floor(min / 1440)} d`;
+}
+function tagAguardando(c) {
+  const quem = { aguardando_validacao: "Manutenção Magius", aguardando_aprovacao: "Aprovador", aguardando_autorizacao: "Gestão de Frota", aguardando_ordem_compra: "Gestão de Frota (OC)", liberado: "Gestão de Frota (OC)" }[c.status];
+  return quem ? `<div class="kcard__espera">${icone("relogio", 12)} Aguardando ${quem}</div>` : "";
+}
+
+function cardChamado(c, opts = {}) {
   const acaoFn = ACOES_POR_STATUS[c.status];
   const acao = acaoFn ? acaoFn(c) : "";
+  const tempo = opts.historico ? "" : tempoNaEtapa(c);
   return `
-    <div class="ticket-card">
-      <div class="ticket-card__top">
-        <div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>
-        ${badgeHtml(c.status)}
-      </div>
-      <div class="pill-group" style="margin:6px 0;">
+    <div class="kcard ${acao ? "kcard--acao" : ""}">
+      <div class="kcard__top">
+        <a class="kcard__num" href="chamado.html?id=${c.id}">${escapeHtml(c.numeroFrota || "—")}</a>
         ${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}
-        ${seloMauUso(c)}
       </div>
-      <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 90))}</div>
-      <div class="ticket-card__meta"><span>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")}</span></div>
+      <div class="kcard__id">${escapeHtml(c.numero || "")}${tempo ? ` · <span title="Tempo na etapa atual">${tempo} na etapa</span>` : ""}</div>
+      ${seloMauUso(c)}
+      <div class="kcard__desc">${escapeHtml((c.descricao || "").slice(0, 70))}</div>
+      <div class="kcard__local">${escapeHtml(c.plantaNome || "")}${c.setorNome ? " / " + escapeHtml(c.setorNome) : ""}</div>
       ${cardDataAgendada(c)}
-      ${stepperHtml(c.status)}
-      <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver detalhes</a>${acao}</div>
+      ${tagAguardando(c)}
+      <div class="kcard__acoes">${acao}<a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Detalhes</a></div>
     </div>`;
+}
+
+function passaFiltro(c) {
+  if (filtroKanban === "minha_vez" && !minhaVez(c)) return false;
+  if (filtroKanban === "mau_uso" && c.fluxo !== "mau_uso") return false;
+  if (buscaKanban && !`${c.numeroFrota || ""} ${c.numero || ""}`.toLowerCase().includes(buscaKanban)) return false;
+  return true;
 }
 
 function renderFila() {
   const wrap = document.getElementById("paineis-fornecedor");
-  wrap.innerHTML = PAINEIS_FORNECEDOR.map((p) => {
-    const base = p.historico ? historicoCache : ativosCache;
-    const lista = (p.historico ? base : base.filter((c) => p.status.includes(c.status))).slice().sort(p.ordenar);
-    const aberto = painelAberto[p.id];
+  const qtdMinha = ativosCache.filter(minhaVez).length;
+  const qtdMau = ativosCache.filter((c) => c.fluxo === "mau_uso").length;
+  const btn = (id, txt, n) => `<button class="kb-filtro ${filtroKanban === id ? "kb-filtro--on" : ""}" onclick="setFiltroKanban('${id}')">${txt} <b>${n}</b></button>`;
+
+  const colunas = COLUNAS_KANBAN.map((col) => {
+    const todos = ativosCache.filter((c) => col.status.includes(c.status));
+    const lista = todos.filter(passaFiltro).sort(col.ordenar);
+    const nMinha = todos.filter(minhaVez).length;
     return `
-      <section class="painel ${aberto ? "painel--aberto" : ""}">
-        <button class="painel__head" onclick="alternarPainel('${p.id}')">
-          <span class="icon-tile icon-tile--${p.cor} icon-tile--sm">${icone(p.icone, 16)}</span>
-          <span class="painel__titulo">
-            <span class="painel__nome">${p.titulo}</span>
-            <span class="painel__desc">${p.descricao}</span>
-          </span>
-          <span class="painel__contador ${lista.length > 0 ? "painel__contador--ativo" : ""}">${lista.length}</span>
-          <span class="painel__seta">${icone("seta", 16)}</span>
-        </button>
-        ${aberto ? `<div class="painel__corpo">${
-          lista.length === 0
-            ? `<div class="empty"><div class="empty__text">${p.vazio}</div></div>`
-            : `<div class="card-list">${lista.map(cardChamado).join("")}</div>`
-        }</div>` : ""}
+      <section class="kcol kcol--${col.cor} ${todos.length === 0 ? "kcol--vazia" : ""}">
+        <header class="kcol__head">
+          <div class="kcol__n">${col.n}</div>
+          <div class="kcol__tit"><div class="kcol__nome">${col.titulo}</div><div class="kcol__sub">${col.sub}</div></div>
+          <div class="kcol__cont ${nMinha > 0 ? "kcol__cont--acao" : ""}">${todos.length}</div>
+        </header>
+        ${nMinha > 0 ? `<div class="kcol__faixa">${nMinha} para você agir</div>` : ""}
+        <div class="kcol__corpo">${lista.length ? lista.map((c) => cardChamado(c)).join("") : `<div class="kcol__vazio">—</div>`}</div>
       </section>`;
   }).join("");
+
+  const hist = historicoCache.filter(passaFiltro).slice(0, 50);
+  wrap.innerHTML = `
+    <div class="kb-barra">
+      <div class="kb-filtros">
+        ${btn("todos", "Todos", ativosCache.length)}
+        ${btn("minha_vez", "Sua vez", qtdMinha)}
+        ${btn("mau_uso", "Mau uso", qtdMau)}
+      </div>
+      <input id="kb-busca" class="kb-busca" type="search" placeholder="Buscar nº da frota ou chamado" value="${escapeHtml(buscaKanban)}" oninput="setBuscaKanban(this.value)" />
+    </div>
+    <div class="kanban">${colunas}</div>
+    <div class="kb-hist">
+      <button class="kb-hist__toggle" onclick="alternarHistorico()">${icone("checkCirculo", 16)} Histórico de encerrados <b>${historicoCache.length}</b> <span class="kb-hist__seta ${historicoAberto ? "kb-hist__seta--on" : ""}">${icone("seta", 14)}</span></button>
+      ${historicoAberto ? `<div class="kb-hist__lista">${hist.length ? hist.map((c) => cardChamado(c, { historico: true })).join("") : `<div class="kcol__vazio">Nenhum chamado concluído.</div>`}</div>` : ""}
+    </div>`;
 }
 
 function renderHistorico() { /* histórico agora é um dos painéis acima */ }
