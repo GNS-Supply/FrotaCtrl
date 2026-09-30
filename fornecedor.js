@@ -50,26 +50,18 @@ function abrirFechar(id, abrir) { document.getElementById(id).classList.toggle("
 function escutarChamados() {
   db.collection("chamados").where("fornecedorId", "==", usuarioAtual.uid).onSnapshot((snap) => {
     const todos = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // A tela "Todos os chamados" precisa de TODOS (abertos e encerrados)
+    todosCache = todos;
     ativosCache = todos.filter((c) => STATUS_ATIVOS.includes(c.status));
     historicoCache = todos.filter((c) => c.status === "concluido");
     ativosCache.sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
     historicoCache.sort((a, b) => (tsToMs(b.concluidoEm) || 0) - (tsToMs(a.concluidoEm) || 0));
     renderFila();
-    renderHistorico();
-    renderStats();
+  }, (err) => {
+    console.error("Erro ao carregar chamados:", err);
+    const wrap = document.getElementById("paineis-fornecedor");
+    if (wrap) wrap.innerHTML = `<div class="kcol__vazio">Não foi possível carregar os chamados: ${escapeHtml(err.message || "erro desconhecido")}</div>`;
   });
-}
-
-function renderStats() {
-  const suaVez = ativosCache.filter(minhaVez).length;
-  const terceiros = ativosCache.length - suaVez;
-  const atrasados = ativosCache.filter((c) => c.status === "atendimento_programado" && c.dataAtendimentoPrevista && new Date(c.dataAtendimentoPrevista).getTime() < Date.now()).length;
-  document.getElementById("stats-grid").innerHTML = `
-    <div class="stat-card stat-card--acao"><div class="stat-card__value">${suaVez}</div><div class="stat-card__label">Sua vez de agir</div></div>
-    <div class="stat-card"><div class="stat-card__value">${terceiros}</div><div class="stat-card__label">Aguardando terceiros</div></div>
-    <div class="stat-card ${atrasados ? "stat-card--alerta" : ""}"><div class="stat-card__value">${atrasados}</div><div class="stat-card__label">Atendimentos atrasados</div></div>
-    <div class="stat-card"><div class="stat-card__value">${ativosCache.length}</div><div class="stat-card__label">Ativos no total</div></div>
-  `;
 }
 
 // Ações do fornecedor por status (bate com o fluxograma)
@@ -116,9 +108,11 @@ const COLUNAS_KANBAN = [
 ];
 function porRegistro(a, b) { return (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0); }
 
-let filtroKanban = "todos";
 let buscaKanban = "";
-let filtroLista = { busca: "", status: "todos", criticidade: "todos", fluxo: "todos", minhaVez: false };
+// Filtros da tela "Todos os chamados": conjuntos vazios = sem restrição
+let filtroLista = { busca: "", status: new Set(), criticidade: new Set(), fluxo: new Set() };
+let painelFiltroAberto = false;
+const STATUS_ENCERRADOS = ["concluido", "cancelado"];
 
 const TELAS_FORNECEDOR = [
   { id: "todos", titulo: "Todos os chamados", subtitulo: "Consulta geral e filtros", tipo: "lista" },
@@ -143,11 +137,23 @@ const TELAS_FORNECEDOR = [
 ];
 
 function telaAtual() { return TELAS_FORNECEDOR.find(t => t.id === telaFornecedor) || TELAS_FORNECEDOR[0]; }
-function setTelaFornecedor(id) { telaFornecedor = id; renderFila(); }
-function setBuscaLista(v) { filtroLista.busca = v.trim().toLowerCase(); renderFila(); }
-function setFiltroLista(campo, valor) { filtroLista[campo] = valor; renderFila(); }
-function setFiltroKanban(f) { filtroKanban = f; renderFila(); }
-function setBuscaKanban(v) { buscaKanban = v.trim().toLowerCase(); renderFila(); }
+function setTelaFornecedor(id) { telaFornecedor = id; buscaKanban = ""; renderFila(); }
+function setBuscaKanban(v) { buscaKanban = v.trim().toLowerCase(); atualizarKanban(); }
+function setBuscaLista(v) { filtroLista.busca = v.trim().toLowerCase(); atualizarResultadoLista(); }
+function toggleFiltroLista(campo, valor, marcado) {
+  if (marcado) filtroLista[campo].add(valor); else filtroLista[campo].delete(valor);
+  atualizarResultadoLista();
+}
+function limparFiltrosLista() {
+  filtroLista.status.clear(); filtroLista.criticidade.clear(); filtroLista.fluxo.clear();
+  document.querySelectorAll("#painel-filtro-lista input[type=checkbox]").forEach((i) => { i.checked = false; });
+  atualizarResultadoLista();
+}
+function togglePainelFiltro() {
+  painelFiltroAberto = !painelFiltroAberto;
+  document.getElementById("painel-filtro-lista")?.classList.toggle("hidden", !painelFiltroAberto);
+  document.getElementById("btn-filtro-lista")?.classList.toggle("kb-filtro--on", painelFiltroAberto);
+}
 
 function tempoNaEtapa(c) {
   const hist = c.historico || [];
@@ -177,58 +183,97 @@ function cardChamado(c, opts = {}) {
   </div>`;
 }
 function passaFiltro(c) {
-  if (filtroKanban === "minha_vez" && !minhaVez(c)) return false;
-  if (filtroKanban === "mau_uso" && c.fluxo !== "mau_uso") return false;
   if (buscaKanban && !`${c.numeroFrota || ""} ${c.numero || ""}`.toLowerCase().includes(buscaKanban)) return false;
   return true;
 }
 function passaFiltroLista(c) {
   const f = filtroLista;
   if (f.busca && !`${c.numeroFrota || ""} ${c.numero || ""} ${c.descricao || ""} ${c.plantaNome || ""} ${c.setorNome || ""}`.toLowerCase().includes(f.busca)) return false;
-  if (f.status !== "todos" && c.status !== f.status) return false;
-  if (f.criticidade !== "todos" && c.criticidade !== f.criticidade) return false;
-  if (f.fluxo !== "todos" && (c.fluxo || "contratual") !== f.fluxo) return false;
-  if (f.minhaVez && !minhaVez(c)) return false;
+  if (f.status.size && !f.status.has(c.status)) return false;
+  if (f.criticidade.size && !f.criticidade.has(c.criticidade)) return false;
+  if (f.fluxo.size && !f.fluxo.has(c.fluxo || "contratual")) return false;
   return true;
 }
-function selectStatusLista() {
-  const ordem = ["fornecedor_acionado","atendimento_programado","em_avaliacao_tecnica","diagnostico_contestado","aguardando_validacao","aguardando_aprovacao","aguardando_autorizacao","em_teste","testes_concluidos","liberado","aguardando_ordem_compra","aguardando_nf","concluido"];
-  const nomes = { fornecedor_acionado:"A programar", atendimento_programado:"Atendimento programado", em_avaliacao_tecnica:"Em avaliação", diagnostico_contestado:"Mau uso contestado", aguardando_validacao:"Aguardando validação", aguardando_aprovacao:"Aguardando aprovação", aguardando_autorizacao:"Aguardando autorização", em_teste:"Em testes", testes_concluidos:"Testes concluídos", liberado:"Liberado / aguardando OC", aguardando_ordem_compra:"Aguardando OC", aguardando_nf:"Aguardando NF", concluido:"Concluído" };
-  return ordem.filter(st => todosCache.some(c => c.status === st)).map(st => `<option value="${st}">${nomes[st] || st}</option>`).join("");
+function nomeStatus(st) {
+  const nomes = { fornecedor_acionado:"A programar", atendimento_programado:"Atendimento programado", em_avaliacao_tecnica:"Em avaliação técnica", diagnostico_contestado:"Mau uso contestado", aguardando_validacao:"Aguardando validação", aguardando_aprovacao:"Aguardando aprovação", aguardando_autorizacao:"Aguardando autorização", em_teste:"Em testes", testes_concluidos:"Testes concluídos", liberado:"Aguardando OC", aguardando_ordem_compra:"Aguardando OC", aguardando_nf:"Aguardando NF", concluido:"Concluído", cancelado:"Cancelado" };
+  return nomes[st] || (typeof STATUS_LABELS !== "undefined" && STATUS_LABELS[st]) || st || "—";
+}
+const ICONE_FILTRO = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="16" cy="6" r="2.6" fill="currentColor"/><circle cx="8" cy="12" r="2.6" fill="currentColor"/><circle cx="13" cy="18" r="2.6" fill="currentColor"/></svg>`;
+
+// Abertos primeiro (do mais antigo para o mais recente); encerrados depois (mais recentes primeiro)
+function ordenarListaTodos(a, b) {
+  const aEnc = STATUS_ENCERRADOS.includes(a.status), bEnc = STATUS_ENCERRADOS.includes(b.status);
+  if (aEnc !== bEnc) return aEnc ? 1 : -1;
+  if (!aEnc) return (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0);
+  return (tsToMs(b.concluidoEm) || tsToMs(b.registradoEm) || 0) - (tsToMs(a.concluidoEm) || tsToMs(a.registradoEm) || 0);
+}
+function totalFiltrosAtivos() { return filtroLista.status.size + filtroLista.criticidade.size + filtroLista.fluxo.size; }
+
+function htmlResultadoLista() {
+  const lista = todosCache.filter(passaFiltroLista).sort(ordenarListaTodos);
+  const abertos = lista.filter((c) => !STATUS_ENCERRADOS.includes(c.status)).length;
+  return `<div class="lista-total"><strong>${lista.length}</strong> chamados encontrados · <strong>${abertos}</strong> abertos · <strong>${lista.length - abertos}</strong> encerrados</div>
+  <div class="chamados-lista">${lista.length ? lista.map((c) => {
+    const encerrado = STATUS_ENCERRADOS.includes(c.status);
+    return `<a class="chamado-lista-row ${encerrado ? "chamado-lista-row--encerrado" : ""}" href="chamado.html?id=${c.id}">
+    <div class="chamado-lista-row__main"><div class="chamado-lista-row__top"><strong>${escapeHtml(c.numeroFrota || "—")}</strong>${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}${c.fluxo === "mau_uso" ? seloMauUso(c) : ""}</div><div class="chamado-lista-row__id">${escapeHtml(c.numero || "—")}</div><div class="chamado-lista-row__desc">${escapeHtml(c.descricao || "Sem descrição")}</div></div>
+    <div class="chamado-lista-row__status"><span class="badge badge--${c.status === "concluido" ? "green" : c.status === "cancelado" ? "red" : minhaVez(c) ? "amber" : "muted"}">${nomeStatus(c.status)}</span><span>${escapeHtml(c.plantaNome || "—")}${c.setorNome ? " · " + escapeHtml(c.setorNome) : ""}</span></div>
+  </a>`;
+  }).join("") : `<div class="kcol__vazio">Nenhum chamado encontrado com os filtros atuais.</div>`}</div>`;
+}
+// Atualiza só o resultado (não recria o campo de busca, senão ele perde o foco a cada tecla)
+function atualizarResultadoLista() {
+  const el = document.getElementById("lista-resultado");
+  if (el) el.innerHTML = htmlResultadoLista();
+  const n = totalFiltrosAtivos();
+  const badge = document.getElementById("filtro-lista-badge");
+  if (badge) { badge.textContent = n; badge.style.display = n ? "inline-flex" : "none"; }
+}
+function grupoFiltro(titulo, campo, opcoes) {
+  return `<div class="filtro-grupo"><div class="filtro-grupo__tit">${titulo}</div>${opcoes.map(([v, nome]) =>
+    `<label class="filtro-op"><input type="checkbox" ${filtroLista[campo].has(v) ? "checked" : ""} onchange="toggleFiltroLista('${campo}','${v}',this.checked)"><span>${nome}</span></label>`).join("")}</div>`;
 }
 function renderListaTodos() {
-  const lista = [...todosCache].filter(passaFiltroLista).sort((a,b) => (tsToMs(b.registradoEm)||0) - (tsToMs(a.registradoEm)||0));
-  const statusNome = { fornecedor_acionado:"A programar", atendimento_programado:"Atendimento programado", em_avaliacao_tecnica:"Em avaliação técnica", diagnostico_contestado:"Mau uso contestado", aguardando_validacao:"Aguardando validação", aguardando_aprovacao:"Aguardando aprovação", aguardando_autorizacao:"Aguardando autorização", em_teste:"Em testes", testes_concluidos:"Testes concluídos", liberado:"Aguardando OC", aguardando_ordem_compra:"Aguardando OC", aguardando_nf:"Aguardando NF", concluido:"Concluído" };
-  return `<div class="lista-filtros">
-    <div class="lista-filtros__busca"><input type="search" placeholder="Buscar frota, chamado, descrição ou planta" value="${escapeHtml(filtroLista.busca)}" oninput="setBuscaLista(this.value)"></div>
-    <select onchange="setFiltroLista('status',this.value)"><option value="todos">Todos os status</option>${selectStatusLista()}</select>
-    <select onchange="setFiltroLista('criticidade',this.value)"><option value="todos">Todas as prioridades</option><option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option></select>
-    <select onchange="setFiltroLista('fluxo',this.value)"><option value="todos">Todos os fluxos</option><option value="contratual">Contratual</option><option value="mau_uso">Mau uso</option></select>
-    <button class="kb-filtro ${filtroLista.minhaVez ? "kb-filtro--on" : ""}" onclick="setFiltroLista('minhaVez',!filtroLista.minhaVez)">Sua vez <b>${todosCache.filter(minhaVez).length}</b></button>
+  const ordem = ["fornecedor_acionado","atendimento_programado","em_avaliacao_tecnica","diagnostico_contestado","aguardando_validacao","aguardando_aprovacao","aguardando_autorizacao","em_teste","testes_concluidos","liberado","aguardando_ordem_compra","aguardando_nf","concluido","cancelado"];
+  const statusOpcoes = ordem.filter((st) => todosCache.some((c) => c.status === st)).map((st) => [st, nomeStatus(st)]);
+  const n = totalFiltrosAtivos();
+  return `<div class="lista-barra">
+    <input class="kb-busca lista-barra__busca" type="search" placeholder="Buscar frota, chamado, descrição ou planta" value="${escapeHtml(filtroLista.busca)}" oninput="setBuscaLista(this.value)">
+    <button type="button" id="btn-filtro-lista" class="btn-filtro ${painelFiltroAberto ? "kb-filtro--on" : ""}" onclick="togglePainelFiltro()" aria-label="Filtrar chamados" title="Filtrar chamados">${ICONE_FILTRO}<span id="filtro-lista-badge" class="btn-filtro__badge" style="display:${n ? "inline-flex" : "none"};">${n}</span></button>
   </div>
-  <div class="lista-total"><strong>${lista.length}</strong> chamados encontrados</div>
-  <div class="chamados-lista">${lista.length ? lista.map(c => `<a class="chamado-lista-row" href="chamado.html?id=${c.id}">
-    <div class="chamado-lista-row__main"><div class="chamado-lista-row__top"><strong>${escapeHtml(c.numeroFrota || "—")}</strong>${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}${c.fluxo === "mau_uso" ? seloMauUso(c) : ""}</div><div class="chamado-lista-row__id">${escapeHtml(c.numero || "—")}</div><div class="chamado-lista-row__desc">${escapeHtml(c.descricao || "Sem descrição")}</div></div>
-    <div class="chamado-lista-row__status"><span class="badge badge--${c.status === "concluido" ? "green" : minhaVez(c) ? "amber" : "muted"}">${statusNome[c.status] || c.status || "—"}</span><span>${escapeHtml(c.plantaNome || "—")}${c.setorNome ? " · " + escapeHtml(c.setorNome) : ""}</span></div>
-  </a>`).join("") : `<div class="kcol__vazio">Nenhum chamado encontrado com os filtros atuais.</div>`}</div>`;
+  <div id="painel-filtro-lista" class="painel-filtro ${painelFiltroAberto ? "" : "hidden"}">
+    <div class="painel-filtro__grid">
+      ${grupoFiltro("Status", "status", statusOpcoes)}
+      ${grupoFiltro("Prioridade", "criticidade", [["P1","P1"],["P2","P2"],["P3","P3"]])}
+      ${grupoFiltro("Fluxo", "fluxo", [["contratual","Contratual"],["mau_uso","Mau uso"]])}
+    </div>
+    <div class="painel-filtro__rodape"><button type="button" class="btn btn--secondary btn--sm" onclick="limparFiltrosLista()">Limpar filtros</button></div>
+  </div>
+  <div id="lista-resultado">${htmlResultadoLista()}</div>`;
 }
-function renderKanbanTela(tela) {
-  const qtdMinha = ativosCache.filter(minhaVez).length;
-  const colunas = tela.colunas.map(col => {
-    const todos = ativosCache.filter(c => col.status.includes(c.status));
+function htmlColunasKanban(tela) {
+  return tela.colunas.map((col) => {
+    const todos = ativosCache.filter((c) => col.status.includes(c.status));
     const lista = todos.filter(passaFiltro).sort(col.ordenar);
     const nMinha = todos.filter(minhaVez).length;
-    return `<section class="kcol kcol--${col.cor} ${todos.length === 0 ? "kcol--vazia" : ""}"><header class="kcol__head"><div class="kcol__n">${col.n}</div><div class="kcol__tit"><div class="kcol__nome">${col.titulo}</div><div class="kcol__sub">${col.sub}</div></div><div class="kcol__cont ${nMinha > 0 ? "kcol__cont--acao" : ""}">${todos.length}</div></header>${nMinha > 0 ? `<div class="kcol__faixa">${nMinha} para você agir</div>` : ""}<div class="kcol__corpo">${lista.length ? lista.map(c => cardChamado(c)).join("") : `<div class="kcol__vazio">Nenhum chamado</div>`}</div></section>`;
+    return `<section class="kcol kcol--${col.cor} ${todos.length === 0 ? "kcol--vazia" : ""}"><header class="kcol__head"><div class="kcol__n">${col.n}</div><div class="kcol__tit"><div class="kcol__nome">${col.titulo}</div><div class="kcol__sub">${col.sub}</div></div><div class="kcol__cont ${nMinha > 0 ? "kcol__cont--acao" : ""}">${todos.length}</div></header>${nMinha > 0 ? `<div class="kcol__faixa">${nMinha} para você agir</div>` : ""}<div class="kcol__corpo">${lista.length ? lista.map((c) => cardChamado(c)).join("") : `<div class="kcol__vazio">Nenhum chamado</div>`}</div></section>`;
   }).join("");
-  return `<div class="kb-barra"><div class="kb-filtros"><button class="kb-filtro ${filtroKanban === "todos" ? "kb-filtro--on" : ""}" onclick="setFiltroKanban('todos')">Todos <b>${ativosCache.length}</b></button><button class="kb-filtro ${filtroKanban === "minha_vez" ? "kb-filtro--on" : ""}" onclick="setFiltroKanban('minha_vez')">Sua vez <b>${qtdMinha}</b></button>${tela.id === "mauuso" ? `<button class="kb-filtro ${filtroKanban === "mau_uso" ? "kb-filtro--on" : ""}" onclick="setFiltroKanban('mau_uso')">Mau uso</button>` : ""}</div><input class="kb-busca" type="search" placeholder="Buscar nº da frota ou chamado" value="${escapeHtml(buscaKanban)}" oninput="setBuscaKanban(this.value)"></div><div class="kanban kanban--${tela.colunas.length}">${colunas}</div>`;
+}
+function atualizarKanban() {
+  const el = document.getElementById("kanban-colunas");
+  if (el) el.innerHTML = htmlColunasKanban(telaAtual());
+}
+function renderKanbanTela(tela) {
+  return `<div class="kb-barra"><input class="kb-busca" type="search" placeholder="Buscar nº da frota ou chamado" value="${escapeHtml(buscaKanban)}" oninput="setBuscaKanban(this.value)"></div><div id="kanban-colunas" class="kanban kanban--${tela.colunas.length}">${htmlColunasKanban(tela)}</div>`;
+}
+function contagemTela(t) {
+  return t.tipo === "lista" ? todosCache.length : ativosCache.filter((c) => (t.colunas || []).some((col) => col.status.includes(c.status))).length;
 }
 function renderFila() {
   const wrap = document.getElementById("paineis-fornecedor");
   const tela = telaAtual();
-  document.querySelectorAll(".fornecedor-tela-btn").forEach(b => b.classList.toggle("active", b.dataset.tela === telaFornecedor));
-  wrap.innerHTML = `<div class="fornecedor-telas">${TELAS_FORNECEDOR.map(t => `<button class="fornecedor-tela-btn ${t.id === telaFornecedor ? "active" : ""}" data-tela="${t.id}" onclick="setTelaFornecedor('${t.id}')"><span class="fornecedor-tela-btn__num">${TELAS_FORNECEDOR.indexOf(t)+1}</span><span><strong>${t.titulo}</strong><small>${t.subtitulo}</small></span><b>${t.tipo === "lista" ? todosCache.length : ativosCache.filter(c => (t.colunas||[]).some(col => col.status.includes(c.status))).length}</b></button>`).join("")}</div><div class="tela-header"><div><div class="tela-header__eyebrow">VISÃO ${TELAS_FORNECEDOR.indexOf(tela)+1} DE ${TELAS_FORNECEDOR.length}</div><h2>${tela.titulo}</h2><p>${tela.subtitulo}</p></div></div>${tela.tipo === "lista" ? renderListaTodos() : renderKanbanTela(tela)}`;
+  wrap.innerHTML = `<div class="fornecedor-telas">${TELAS_FORNECEDOR.map((t) => `<button class="fornecedor-tela-btn ${t.id === telaFornecedor ? "active" : ""}" data-tela="${t.id}" onclick="setTelaFornecedor('${t.id}')"><span class="fornecedor-tela-btn__txt"><strong>${t.titulo}</strong><small>${t.subtitulo}</small></span><b class="fornecedor-tela-btn__qtd">${contagemTela(t)}</b></button>`).join("")}</div><div class="tela-header"><div><h2>${tela.titulo}</h2><p>${tela.subtitulo}</p></div></div>${tela.tipo === "lista" ? renderListaTodos() : renderKanbanTela(tela)}`;
 }
-function renderHistorico() {}
 
 // ---------- Programar atendimento ----------
 function abrirProgramar(id) { document.getElementById("pg-id").value = id; abrirFechar("overlay-programar", true); }
