@@ -72,7 +72,7 @@ const ACOES_POR_STATUS = {
   diagnostico_contestado: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirDiagnostico('${c.id}', true)">Novo diagnóstico</button>`,
   em_teste: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirLiberar('${c.id}')">Liberar máquina</button>`,
   aguardando_nf: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirNf('${c.id}')">Anexar NF de cobrança</button>`,
-  contestacao_fornecedor: (c) => `<a class="btn btn--primary btn--sm" href="chamado.html?id=${c.id}&acao=responder-contestacao">Responder contestação</a>`
+  contestacao_fornecedor: (c) => `<a class="btn btn--primary btn--sm" href="chamado.html?id=${c.id}&acao=responder-contestacao">Responder renegociação</a>`
 };
 
 function cardDataAgendada(c) {
@@ -105,7 +105,7 @@ const COLUNAS_KANBAN = [
   { id: "contestado", n: 5, titulo: "Contestados",           sub: "Novo diagnóstico necessário", cor: "red",   status: ["diagnostico_contestado"], ordenar: porRegistro },
   { id: "aprovacao",  n: 6, titulo: "Aprovação / Autorização", sub: "Aprovador e Gestão de Frota", cor: "muted", status: ["aguardando_aprovacao", "aguardando_autorizacao"], ordenar: porRegistro },
   { id: "execucao",   n: 7, titulo: "Execução",              sub: "Executar e liberar a máquina", cor: "green", status: ["em_teste"], ordenar: porRegistro },
-  { id: "documentos", n: 8, titulo: "Documentação",          sub: "Ordem de compra e NF",        cor: "amber", status: ["liberado", "aguardando_ordem_compra", "aguardando_nf"], ordenar: (a, b) => (tsToMs(a.liberadoEm) || 0) - (tsToMs(b.liberadoEm) || 0) }
+  { id: "documentos", n: 8, titulo: "Documentação",          sub: "Ordem de compra e NF",        cor: "amber", status: ["liberado", "aguardando_ordem_compra", "aguardando_nf", "aguardando_conclusao"], ordenar: (a, b) => (tsToMs(a.liberadoEm) || 0) - (tsToMs(b.liberadoEm) || 0) }
 ];
 function porRegistro(a, b) { return (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0); }
 
@@ -122,11 +122,10 @@ const TELAS_FORNECEDOR = [
     { id: "iniciar", n: 2, titulo: "Iniciar avaliação técnica", sub: "Atendimento programado", cor: "blue", status: ["atendimento_programado"], ordenar: (a,b) => new Date(a.dataAtendimentoPrevista || 0) - new Date(b.dataAtendimentoPrevista || 0) },
     { id: "diagnostico", n: 3, titulo: "Registrar diagnóstico", sub: "Avaliação técnica em andamento", cor: "blue", status: ["em_avaliacao_tecnica"], ordenar: porRegistro }
   ]},
-  { id: "mauuso", titulo: "Mau uso", subtitulo: "Validação e contestação", tipo: "kanban", colunas: [
+  { id: "mauuso", titulo: "Mau uso", subtitulo: "Contestação, avaliação e renegociação", tipo: "kanban", colunas: [
     { id: "contestado", n: 1, titulo: "Mau uso contestado", sub: "Dar novo diagnóstico", cor: "red", status: ["diagnostico_contestado"], ordenar: porRegistro },
-    { id: "validacao", n: 2, titulo: "Aguardando avaliação do mau uso", sub: "Status — Manutenção Magius", cor: "muted", status: ["aguardando_validacao"], ordenar: porRegistro },
-    { id: "contestacao_resp", n: 3, titulo: "Contestação para responder", sub: "A Gestão de Frota aguarda sua resposta", cor: "red", status: ["contestacao_fornecedor"], ordenar: porRegistro },
-    { id: "contestacao_gestao", n: 4, titulo: "Contestação com a Gestão", sub: "Status — Gestão de Frota", cor: "muted", status: ["contestacao_gestao"], ordenar: porRegistro }
+    { id: "validacao", n: 2, titulo: "Aguardando resposta da Manutenção", sub: "Status — Manutenção Magius", cor: "muted", status: ["aguardando_validacao"], ordenar: porRegistro },
+    { id: "renegociacao", n: 3, titulo: "Renegociação", sub: "Contestado pelo aprovador — responda à Gestão de Frota", cor: "amber", status: ["contestacao_fornecedor"], ordenar: porRegistro }
   ]},
   { id: "execucao", titulo: "Liberados para execução", subtitulo: "Execução, testes e liberação", tipo: "kanban", colunas: [
     { id: "liberado_execucao", n: 1, titulo: "Liberados para execução", sub: "A iniciar testes", cor: "green", status: ["aguardando_aprovacao", "aguardando_autorizacao"], ordenar: porRegistro },
@@ -135,7 +134,8 @@ const TELAS_FORNECEDOR = [
   ]},
   { id: "documentacao", titulo: "Aguardando documentação", subtitulo: "Etapas administrativas após a execução", tipo: "kanban", colunas: [
     { id: "oc", n: 1, titulo: "Aguardando Ordem de compra", sub: "Status — Gestão de Frota", cor: "amber", status: ["liberado", "aguardando_ordem_compra"], ordenar: porRegistro },
-    { id: "nf", n: 2, titulo: "Aguardando anexar NF", sub: "Anexar NF para concluir", cor: "amber", status: ["aguardando_nf"], ordenar: porRegistro }
+    { id: "nf", n: 2, titulo: "Anexar Nota Fiscal (PDF)", sub: "Ordem de compra já anexada", cor: "amber", status: ["aguardando_nf"], ordenar: porRegistro },
+    { id: "conclusao", n: 3, titulo: "NF enviada — Gestão conclui", sub: "Status — Gestão de Frota", cor: "muted", status: ["aguardando_conclusao"], ordenar: porRegistro }
   ]}
 ];
 
@@ -168,7 +168,7 @@ function tempoNaEtapa(c) {
   return `${Math.floor(min / 1440)} d`;
 }
 function tagAguardando(c) {
-  const quem = { aguardando_validacao: "Manutenção Magius", aguardando_aprovacao: "Aprovador", aguardando_autorizacao: "Gestão de Frota", aguardando_ordem_compra: "Gestão de Frota (OC)", liberado: "Gestão de Frota (OC)" }[c.status];
+  const quem = { aguardando_validacao: "Manutenção Magius", aguardando_aprovacao: "Aprovador", aguardando_autorizacao: "Gestão de Frota", aguardando_ordem_compra: "Gestão de Frota (OC)", liberado: "Gestão de Frota (OC)", aguardando_conclusao: "Gestão de Frota (conclusão)" }[c.status];
   return quem ? `<div class="kcard__espera">${icone("relogio", 12)} Aguardando ${quem}</div>` : "";
 }
 function cardChamado(c, opts = {}) {
@@ -198,7 +198,7 @@ function passaFiltroLista(c) {
   return true;
 }
 function nomeStatus(st) {
-  const nomes = { fornecedor_acionado:"A programar", atendimento_programado:"Atendimento programado", em_avaliacao_tecnica:"Em avaliação técnica", diagnostico_contestado:"Mau uso contestado", aguardando_validacao:"Aguardando validação", aguardando_aprovacao:"Aguardando aprovação", contestacao_gestao:"Contestação — Gestão de Frota", contestacao_fornecedor:"Contestação — responder", aguardando_autorizacao:"Aguardando autorização", em_teste:"Em testes", testes_concluidos:"Testes concluídos", liberado:"Aguardando OC", aguardando_ordem_compra:"Aguardando OC", aguardando_nf:"Aguardando NF", concluido:"Concluído", cancelado:"Cancelado" };
+  const nomes = { fornecedor_acionado:"A programar", atendimento_programado:"Atendimento programado", em_avaliacao_tecnica:"Em avaliação técnica", diagnostico_contestado:"Mau uso contestado", aguardando_validacao:"Aguardando validação", aguardando_aprovacao:"Aguardando aprovação", contestacao_gestao:"Contestação — Gestão de Frota", contestacao_fornecedor:"Renegociação — responder", aguardando_autorizacao:"Aguardando autorização", em_teste:"Em testes", testes_concluidos:"Testes concluídos", liberado:"Aguardando OC", aguardando_ordem_compra:"Aguardando OC", aguardando_nf:"Aguardando NF", aguardando_conclusao:"NF enviada — Gestão conclui", concluido:"Concluído", cancelado:"Cancelado" };
   return nomes[st] || (typeof STATUS_LABELS !== "undefined" && STATUS_LABELS[st]) || st || "—";
 }
 const ICONE_FILTRO = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="16" cy="6" r="2.6" fill="currentColor"/><circle cx="8" cy="12" r="2.6" fill="currentColor"/><circle cx="13" cy="18" r="2.6" fill="currentColor"/></svg>`;
@@ -237,7 +237,7 @@ function grupoFiltro(titulo, campo, opcoes) {
     `<label class="filtro-op"><input type="checkbox" ${filtroLista[campo].has(v) ? "checked" : ""} onchange="toggleFiltroLista('${campo}','${v}',this.checked)"><span>${nome}</span></label>`).join("")}</div>`;
 }
 function renderListaTodos() {
-  const ordem = ["fornecedor_acionado","atendimento_programado","em_avaliacao_tecnica","diagnostico_contestado","aguardando_validacao","aguardando_aprovacao","aguardando_autorizacao","em_teste","testes_concluidos","liberado","aguardando_ordem_compra","aguardando_nf","concluido","cancelado"];
+  const ordem = ["fornecedor_acionado","atendimento_programado","em_avaliacao_tecnica","diagnostico_contestado","aguardando_validacao","aguardando_aprovacao","aguardando_autorizacao","em_teste","testes_concluidos","liberado","aguardando_ordem_compra","aguardando_nf","aguardando_conclusao","concluido","cancelado"];
   const statusOpcoes = ordem.filter((st) => todosCache.some((c) => c.status === st)).map((st) => [st, nomeStatus(st)]);
   const n = totalFiltrosAtivos();
   return `<div class="lista-barra">
@@ -434,7 +434,7 @@ async function salvarLiberacao(e) {
       extra["financeiro.valorFinal"] = valorFinal;
       if (orcamentoUrl) extra["financeiro.orcamentoFinalUrl"] = orcamentoUrl;
       // Próximo passo: mau uso confirmado precisa de ordem de compra + NF
-      await transicionarChamado(id, "liberado", "Máquina liberada — aguardando ordem de compra", usuarioAtual.nome, "fornecedor", extra, dadosEtapa);
+      await transicionarChamado(id, "aguardando_ordem_compra", "Máquina liberada pelo fornecedor — aguardando ordem de compra da Gestão de Frota", usuarioAtual.nome, "fornecedor", extra, dadosEtapa);
     } else {
       // Fluxo contratual: liberar já encerra o chamado, sem papelada extra
       extra.concluidoEm = firebase.firestore.FieldValue.serverTimestamp();
@@ -474,23 +474,22 @@ async function salvarNf(e) {
   } catch (err) {
     alert("Não foi possível anexar a nota fiscal: " + err.message);
     btn.disabled = false;
-    btn.textContent = "Enviar NF e concluir chamado";
+    btn.textContent = "Enviar NF";
     return;
   }
 
   try {
-    await transicionarChamado(id, "concluido", "NF de cobrança anexada — chamado concluído", usuarioAtual.nome, "fornecedor", {
+    await transicionarChamado(id, "aguardando_conclusao", "NF de cobrança anexada pelo fornecedor — aguardando conclusão da Gestão de Frota", usuarioAtual.nome, "fornecedor", {
       "financeiro.notaFiscalUrl": notaFiscalUrl,
-      "financeiro.dataFaturamento": firebase.firestore.FieldValue.serverTimestamp(),
-      concluidoEm: firebase.firestore.FieldValue.serverTimestamp()
+      "financeiro.dataFaturamento": firebase.firestore.FieldValue.serverTimestamp()
     }, { tipo: "nf", notaFiscalUrl });
     e.target.reset();
     abrirFechar("overlay-nf", false);
-    mostrarToast("Chamado concluído.");
+    mostrarToast("NF enviada. A Gestão de Frota fará a conclusão do chamado.");
   } catch (err) {
-    alert("Erro ao concluir: " + err.message);
+    alert("Erro ao enviar a NF: " + err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = "Enviar NF e concluir chamado";
+    btn.textContent = "Enviar NF";
   }
 }

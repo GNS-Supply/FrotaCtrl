@@ -24,6 +24,7 @@ let fornecedoresCacheDetalhe = null;
   configurarOverlays();
   aplicarMascaraMoeda(document.getElementById("dg-valor"));
   aplicarMascaraMoeda(document.getElementById("lb-valor-final"));
+  aplicarMascaraMoeda(document.getElementById("rf-valor"));
   document.getElementById("dg-mauuso").addEventListener("change", atualizarCamposDiagnostico);
 
   const toastPendente = sessionStorage.getItem("toastPendente");
@@ -109,15 +110,17 @@ function render(c) {
 
   const registradoMs = tsToMs(c.registradoEm);
   const acionadoMs = tsToMs(c.historico?.find((h) => h.status === "fornecedor_acionado")?.timestamp);
-  const avaliacaoMs = tsToMs(c.historico?.find((h) => h.status === "em_avaliacao_tecnica")?.timestamp);
-  const liberadoMs = tsToMs(c.liberadoEm);
   const tempoAteAcionamento = acionadoMs && registradoMs ? acionadoMs - registradoMs : null;
-  const tempoManutencao = avaliacaoMs ? (liberadoMs || Date.now()) - avaliacaoMs : null;
-  const tempoTotalParada = registradoMs ? (liberadoMs || Date.now()) - registradoMs : null;
+  const concluidoMs = tsToMs(c.concluidoEm);
+  const tempoTotalChamado = registradoMs ? (concluidoMs || Date.now()) - registradoMs : null;
+  const parada = paradaInfo(c);
   document.getElementById("tempos-grid").innerHTML = `
     <div class="tempo-item"><span class="tempo-item__valor">${msParaDuracao(tempoAteAcionamento)}</span><span class="tempo-item__label">até acionar</span></div>
-    <div class="tempo-item"><span class="tempo-item__valor">${msParaDuracao(tempoManutencao)}</span><span class="tempo-item__label">manutenção</span></div>
-    <div class="tempo-item tempo-item--destaque"><span class="tempo-item__valor">${msParaDuracao(tempoTotalParada)}</span><span class="tempo-item__label">parado ${liberadoMs ? "(total)" : "(até agora)"}</span></div>
+    <div class="tempo-item"><span class="tempo-item__valor">${msParaDuracao(tempoTotalChamado)}</span><span class="tempo-item__label">chamado ${concluidoMs ? "(total)" : "aberto"}</span></div>
+    <div class="tempo-item tempo-item--destaque" title="Conta a partir da confirmação do P1 ou do início da avaliação técnica (P2/P3) até o fornecedor liberar a máquina">
+      <span class="tempo-item__valor" ${parada.emAndamento ? `data-desde="${parada.inicio}"` : ""}>${parada.inicio == null ? "—" : msParaHMS(parada.ms)}</span>
+      <span class="tempo-item__label">${parada.inicio == null ? "máquina ainda não parou" : parada.emAndamento ? "máquina parada (agora)" : "máquina parada (total)"}</span>
+    </div>
   `;
 
   renderAcoes(c);
@@ -148,9 +151,51 @@ function render(c) {
     document.getElementById("bloco-financeiro").style.display = "none";
   }
 
-  // ---------- Etapas (coluna única, cada uma completa) ----------
-  const historico = (c.historico || []).filter(etapaVisivel).sort((a, b) => a.timestamp - b.timestamp);
-  document.getElementById("etapas-lista").innerHTML = historico.map((h, i) => etapaCardHtml(h, i, souManutencao)).join("");
+  // ---------- Linha do tempo linear (todas as idas e voltas, em ordem cronológica) ----------
+  document.getElementById("etapas-lista").innerHTML = linhaDoTempoHtml(c, souManutencao);
+}
+
+// Linha do tempo cronológica do chamado. Cada passagem do chamado por uma
+// etapa vira um item (mesmo que a etapa se repita), com quem agiu, data/hora
+// exatas, tudo o que foi preenchido (comentários, valores, anexos) e quanto
+// tempo o CHAMADO ficou naquela etapa (h/min/s). Esse tempo é diferente do
+// "tempo de máquina parada", mostrado à parte (veja paradaInfo em app.js).
+function linhaDoTempoHtml(c, souManutencao) {
+  const completo = (c.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
+  if (!completo.length) return `<div class="empty"><div class="empty__text">Sem registros.</div></div>`;
+  const parada = paradaInfo(c);
+  const encerrado = ["concluido", "cancelado"].includes(c.status);
+  const itens = [];
+  completo.forEach((h, i) => {
+    if (!etapaVisivel(h)) return; // mantém o cálculo de tempo com o histórico completo
+    const proximo = completo[i + 1];
+    const ehUltimo = !proximo;
+    let duracao;
+    if (proximo) duracao = `<span class="lt-item__tempo-valor">${msParaHMS(proximo.timestamp - h.timestamp)}</span>`;
+    else if (encerrado) duracao = `<span class="lt-item__tempo-valor">—</span>`;
+    else duracao = `<span class="lt-item__tempo-valor lt-item__tempo-valor--vivo" data-desde="${h.timestamp}">${msParaHMS(Date.now() - h.timestamp)}</span>`;
+    const rotuloTempo = ehUltimo && !encerrado ? "nesta etapa até agora" : ehUltimo ? "etapa final" : "tempo nesta etapa";
+    const marcas = [];
+    if (parada.inicio != null && h.timestamp === parada.inicio) marcas.push(`<span class="lt-marca lt-marca--parou">${icone("alerta", 12)} Máquina parou aqui</span>`);
+    if (parada.fim != null && h.timestamp === parada.fim && h.dados?.tipo === "liberacao") marcas.push(`<span class="lt-marca lt-marca--liberou">${icone("check", 12)} Máquina liberada · parada por ${msParaHMS(parada.ms)}</span>`);
+    itens.push(`
+      <div class="lt-item ${ehUltimo && !encerrado ? "lt-item--atual" : ""} lt-item--${STATUS_COLORS[h.status] || "muted"}">
+        <div class="lt-item__marcador">${itens.length + 1}</div>
+        <div class="lt-item__corpo">
+          <div class="lt-item__topo">
+            <div>
+              <div class="lt-item__titulo">${escapeHtml(h.obs || STATUS_LABELS[h.status] || h.status)}</div>
+              <div class="lt-item__sub"><span class="lt-item__etapa">${MACRO_ETAPAS[STATUS_PARA_ETAPA[h.status] ?? 0]}</span> · ${badgeHtml(h.status)}</div>
+            </div>
+            <div class="lt-item__tempo">${duracao}<span class="lt-item__tempo-label">${rotuloTempo}</span></div>
+          </div>
+          <div class="lt-item__quem"><span class="etapa-card__avatar">${iniciais(h.autor)}</span><span><strong>${escapeHtml(h.autor || "—")}</strong>${h.perfil ? ` · ${escapeHtml(h.perfil)}` : ""}</span><span class="lt-item__data">${formatarDataCompleta(h.timestamp)}</span></div>
+          ${marcas.length ? `<div class="lt-marcas">${marcas.join("")}</div>` : ""}
+          ${renderDadosEtapa(h.dados, souManutencao)}
+        </div>
+      </div>`);
+  });
+  return `<div class="lt">${itens.join("")}</div>`;
 }
 
 // A contestação do aprovador e a resposta da Gestão ao aprovador são
@@ -272,6 +317,11 @@ function renderDadosEtapa(dados, souManutencao) {
   } else if (TIPOS_CONTESTACAO.includes(dados.tipo)) {
     if (dados.tipo === "contestacao") linhas.push(["Motivo", ASSUNTO_CONTESTACAO[dados.assunto] || dados.assunto || "—"]);
     if (dados.tipo === "resposta_gestao") linhas.push(["Encaminhado para", dados.destino === "fornecedor" ? "Fornecedor" : "Aprovador"]);
+    if (dados.tipo === "resposta_fornecedor") {
+      if (dados.decisao) linhas.push(["Resposta", dados.decisao === "aceito" ? "Aceito" : "Negado"]);
+      linhas.push(["Classificação", dados.mantemMauUso === false ? "Reclassificado: NÃO é mau uso" : "Mantido como mau uso"]);
+      if (dados.novoValor && !souManutencao) linhas.push(["Novo valor", `${formatarMoeda(dados.novoValor)}${dados.valorAnterior ? ` (antes ${formatarMoeda(dados.valorAnterior)})` : ""}`]);
+    }
     const msg = dados.mensagem ? `<div class="destaque-texto" style="margin-top:8px;">${escapeHtml(dados.mensagem)}</div>` : "";
     return linhaEtapaHtml(linhas) + msg + anexosHtml(dados.anexos);
   } else if (dados.tipo === "parecer") {
@@ -322,7 +372,8 @@ function renderAcoes(c) {
     if (c.status === "registrado") html += `<button class="btn btn--primary btn--sm" onclick="abrirTriagemDetalhe()">Iniciar triagem</button>`;
     if (c.status === "em_triagem") html += `<button class="btn btn--primary btn--sm" onclick="abrirAcionarDetalhe()">Acionar fornecedor</button>`;
     if (c.status === "aguardando_autorizacao") html += `<button class="btn btn--primary btn--sm" onclick="autorizarExecucaoDetalhe()">Autorizar execução</button>`;
-    if (c.status === "aguardando_ordem_compra") html += `<button class="btn btn--primary btn--sm" onclick="abrirOrdemCompraDetalhe()">Anexar ordem de compra</button>`;
+    if (["aguardando_ordem_compra", "liberado"].includes(c.status)) html += `<button class="btn btn--primary btn--sm" onclick="abrirOrdemCompraDetalhe()">Anexar ordem de compra (PDF)</button>`;
+    if (c.status === "aguardando_conclusao") html += `<button class="btn btn--primary btn--sm" onclick="concluirDetalhe()">Concluir chamado</button>`;
     if (c.status === "contestacao_gestao") html += `<button class="btn btn--primary btn--sm" onclick="abrirRespostaGestao()">Avaliar contestação</button>`;
     if (!["concluido", "cancelado"].includes(c.status)) {
       if (chamadoDestacado(c)) html += `<button class="btn btn--secondary btn--sm" onclick="abrirDestaque()">Alterar destaque</button><button class="btn btn--secondary btn--sm" onclick="removerDestaque()">Remover destaque</button>`;
@@ -617,7 +668,7 @@ async function salvarLiberacao(e) {
     if (ehMauUso) {
       extra["financeiro.valorFinal"] = valorFinal;
       if (orcamentoUrl) extra["financeiro.orcamentoFinalUrl"] = orcamentoUrl;
-      await transicionarChamado(chamadoId, "liberado", "Máquina liberada — aguardando ordem de compra", usuarioAtual.nome, "fornecedor", extra, dadosEtapa);
+      await transicionarChamado(chamadoId, "aguardando_ordem_compra", "Máquina liberada pelo fornecedor — aguardando ordem de compra da Gestão de Frota", usuarioAtual.nome, "fornecedor", extra, dadosEtapa);
     } else {
       extra.concluidoEm = firebase.firestore.FieldValue.serverTimestamp();
       await transicionarChamado(chamadoId, "concluido", "Máquina liberada — chamado contratual concluído", usuarioAtual.nome, "fornecedor", extra, dadosEtapa);
@@ -653,23 +704,22 @@ async function salvarNf(e) {
   } catch (err) {
     alert("Não foi possível anexar a nota fiscal: " + err.message);
     btn.disabled = false;
-    btn.textContent = "Enviar NF e concluir chamado";
+    btn.textContent = "Enviar NF";
     return;
   }
   try {
-    await transicionarChamado(chamadoId, "concluido", "NF de cobrança anexada — chamado concluído", usuarioAtual.nome, "fornecedor", {
+    await transicionarChamado(chamadoId, "aguardando_conclusao", "NF de cobrança anexada pelo fornecedor — aguardando conclusão da Gestão de Frota", usuarioAtual.nome, "fornecedor", {
       "financeiro.notaFiscalUrl": notaFiscalUrl,
-      "financeiro.dataFaturamento": firebase.firestore.FieldValue.serverTimestamp(),
-      concluidoEm: firebase.firestore.FieldValue.serverTimestamp()
+      "financeiro.dataFaturamento": firebase.firestore.FieldValue.serverTimestamp()
     }, { tipo: "nf", notaFiscalUrl });
     e.target.reset();
     abrirFechar("overlay-nf", false);
-    mostrarToast("Chamado concluído.");
+    mostrarToast("NF enviada. A Gestão de Frota fará a conclusão do chamado.");
   } catch (err) {
-    alert("Erro ao concluir: " + err.message);
+    alert("Erro ao enviar a NF: " + err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = "Enviar NF e concluir chamado";
+    btn.textContent = "Enviar NF";
   }
 }
 
@@ -734,8 +784,13 @@ function atualizarCamposRespostaGestao() {
 function abrirRespostaGestao() {
   document.getElementById("form-resp-gestao").reset();
   const ult = ultimoRegistro(["contestacao", "resposta_fornecedor"]);
+  let aviso = "";
+  if (ult?.dados?.tipo === "resposta_fornecedor") {
+    const d = ult.dados;
+    aviso = `<br/><br/><strong>Resposta:</strong> ${d.decisao === "aceito" ? "Aceito" : "Negado"} · ${d.mantemMauUso === false ? "fornecedor reclassificou como NÃO mau uso" : "mantido como mau uso"}${d.novoValor ? ` · novo valor ${formatarMoeda(d.novoValor)}` : ""}`;
+  }
   document.getElementById("rg-ultima").innerHTML = ult
-    ? resumoMensagem(ult, ult.dados.tipo === "contestacao" ? "Contestação do aprovador" : "Resposta do fornecedor")
+    ? resumoMensagem(ult, ult.dados.tipo === "contestacao" ? "Contestação do aprovador" : "Resposta do fornecedor") + aviso
     : "Chamado em contestação.";
   atualizarCamposRespostaGestao();
   abrirFechar("overlay-resp-gestao", true);
@@ -767,18 +822,30 @@ async function salvarRespostaGestao(e) {
 
 function abrirRespostaFornecedor() {
   document.getElementById("form-resp-fornecedor").reset();
+  marcarObrigatorios(document.getElementById("form-resp-fornecedor"));
   const ult = ultimoRegistro(["resposta_gestao"], (h) => h.dados.destino === "fornecedor");
   document.getElementById("rf-ultima").innerHTML = ult ? resumoMensagem(ult, "Mensagem da Gestão de Frota") : "A Gestão de Frota solicitou sua resposta sobre este chamado.";
   abrirFechar("overlay-resp-fornecedor", true);
 }
 async function salvarRespostaFornecedor(e) {
   e.preventDefault();
+  const decisao = document.getElementById("rf-decisao").value;
+  const classificacao = document.getElementById("rf-classificacao").value;
+  const mantemMauUso = classificacao === "mantem";
   const mensagem = document.getElementById("rf-mensagem").value.trim();
+  const novoValor = valorMoedaParaNumero(document.getElementById("rf-valor"));
+  if (!decisao) { alert("Informe se a proposta foi Aceita ou Negada."); return; }
+  const valorAnterior = chamadoAtual.financeiro?.valorApresentado ?? null;
   const btn = document.getElementById("btn-resp-fornecedor");
   btn.disabled = true;
   try {
     const anexos = await anexosOpcionais("rf-anexos", `chamados/${chamadoId}/contestacao`, btn, "Enviar resposta");
-    await transicionarChamado(chamadoId, "contestacao_gestao", "Fornecedor respondeu — devolvido à Gestão de Frota", usuarioAtual.nome, "fornecedor", {}, { tipo: "resposta_fornecedor", mensagem, anexos });
+    const extra = {};
+    if (novoValor && novoValor > 0) extra["financeiro.valorApresentado"] = novoValor;
+    if (!mantemMauUso) extra.fluxo = "contratual"; // fornecedor reclassificou: deixa de ser mau uso
+    const resumo = `${decisao === "aceito" ? "Aceito" : "Negado"}${mantemMauUso ? "" : " · reclassificado como NÃO mau uso"}${novoValor > 0 ? ` · novo valor ${formatarMoeda(novoValor)}` : ""}`;
+    await transicionarChamado(chamadoId, "contestacao_gestao", `Fornecedor respondeu à renegociação (${resumo}) — devolvido à Gestão de Frota`, usuarioAtual.nome, "fornecedor", extra,
+      { tipo: "resposta_fornecedor", decisao, mantemMauUso, novoValor: novoValor > 0 ? novoValor : null, valorAnterior, mensagem, anexos });
     e.target.reset();
     abrirFechar("overlay-resp-fornecedor", false);
     mostrarToast("Resposta enviada à Gestão de Frota.");
@@ -825,5 +892,16 @@ async function removerDestaque() {
     mostrarToast("Destaque removido.");
   } catch (err) {
     alert("Erro ao remover destaque: " + err.message);
+  }
+}
+
+
+async function concluirDetalhe() {
+  if (!confirm("Concluir este chamado? A ordem de compra e a nota fiscal já estão anexadas.")) return;
+  try {
+    await concluirChamadoGestao(chamadoId, usuarioAtual);
+    mostrarToast("Chamado concluído.");
+  } catch (err) {
+    alert("Erro ao concluir: " + err.message);
   }
 }

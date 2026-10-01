@@ -18,31 +18,16 @@
   </div>
 
   <div class="page" id="view-fila">
-    <div class="page-header"><h1>Painel da Gestão de Frota</h1><p>Pendências que aguardam sua ação, visão geral da frota e dos chamados.</p></div>
+    <div class="page-header"><h1>Painel da Gestão de Frota</h1><p>Situação da frota agora e fila de chamados por etapa.</p></div>
     <div class="stats-grid" id="stats-grid"></div>
-    <div class="section-title"><span>Pendências da Gestão de Frota</span><button class="btn btn--primary btn--sm" id="btn-novo-chamado-fila">+ Novo chamado</button></div>
-    <div id="lista-fila" class="card-list"></div>
+    <div class="section-title"><span>Fila de chamados</span><button class="btn btn--primary btn--sm" id="btn-novo-chamado-fila">+ Novo chamado</button></div>
+    <div id="paineis-gestao"></div>
   </div>
 
   <div class="page" id="view-equipamentos" style="display:none;">
     <div class="section-title"><span>Equipamentos</span><button class="btn btn--ghost btn--sm" id="btn-novo-equip">+ Equipamento</button></div>
     <p class="dash-block__nota" style="margin:-4px 0 12px;">Toque numa máquina para ver o histórico dos últimos chamados dela.</p>
     <div id="lista-equipamentos" class="lista-linhas"></div>
-  </div>
-
-  <div class="page" id="view-chamados" style="display:none;">
-    <div class="section-title"><span>Fila de chamados</span><button class="btn btn--primary btn--sm" id="btn-novo-chamado">+ Novo chamado</button></div>
-    <div class="pill-group" id="filtro-status-chamados">
-      <button class="pill active" data-filtro="todos">Todos</button>
-      <button class="pill" data-filtro="registrado">Registrado</button>
-      <button class="pill" data-filtro="atendimento">Atendimento</button>
-      <button class="pill" data-filtro="diagnostico">Diagnóstico</button>
-      <button class="pill" data-filtro="aprovacao">Aprovação</button>
-      <button class="pill" data-filtro="execucao">Execução</button>
-      <button class="pill" data-filtro="concluido">Concluído</button>
-      <button class="pill" data-filtro="encerrado">Reprovado/Cancelado</button>
-    </div>
-    <div id="lista-todos-chamados" class="lista-linhas"></div>
   </div>
 
   <div class="page" id="view-cadastros" style="display:none;">
@@ -132,10 +117,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h4l3-8 4 16 3-8h4"/></svg>
       Frota
     </button>
-    <button class="navitem" data-view="chamados">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 14l2 2 4-4"/></svg>
-      Chamados
-    </button>
     <button class="navitem" data-view="cadastros">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       Cadastros
@@ -188,7 +169,7 @@
     <form id="form-ordem-compra">
       <input type="hidden" id="oc-chamado-id" />
       <div class="field"><label>Número da ordem de compra</label><input type="text" id="oc-numero" placeholder="Ex: OC-2026-0042" /></div>
-      <div class="field"><label>Anexo (opcional)</label><input type="file" id="oc-arquivo" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" /></div>
+      <div class="field"><label>Ordem de compra (PDF)</label><input type="file" id="oc-arquivo" accept=".pdf,application/pdf" required /></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar</button>
     </form>
   </div>
@@ -255,6 +236,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
+<script src="telas-kanban.js"></script>
 <script src="novo-chamado.js"></script>
 <script src="gestao-frota.js"></script>
 </body>

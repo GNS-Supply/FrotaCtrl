@@ -62,7 +62,7 @@
       </div>
     </div>
 
-    <div class="section-title"><span>Etapas do chamado</span></div>
+    <div class="section-title"><span>Linha do tempo do chamado</span></div>
     <div id="etapas-lista"></div>
   </div>
 </div>
@@ -96,7 +96,7 @@
     <div class="sheet__header"><h3>Anexar ordem de compra</h3><button class="close-x" data-close="overlay-ordem-compra"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-ordem-compra">
       <div class="field"><label>Número da ordem de compra</label><input type="text" id="oc-numero" placeholder="Ex: OC-2026-0042" /></div>
-      <div class="field"><label>Anexo (opcional)</label><input type="file" id="oc-arquivo" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" /></div>
+      <div class="field"><label>Ordem de compra (PDF)</label><input type="file" id="oc-arquivo" accept=".pdf,application/pdf" required /></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar</button>
     </form>
   </div>
@@ -204,11 +204,18 @@
 <!-- SHEET: FORNECEDOR RESPONDE À GESTÃO -->
 <div class="overlay hidden" id="overlay-resp-fornecedor">
   <div class="sheet"><div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Responder à Gestão de Frota</h3><button class="close-x" data-close="overlay-resp-fornecedor"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="sheet__header"><h3>Renegociação — responder à Gestão de Frota</h3><button class="close-x" data-close="overlay-resp-fornecedor"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div id="rf-ultima" class="callout"></div>
     <form id="form-resp-fornecedor">
-      <div class="field"><label>Comentário (opcional)</label><textarea id="rf-mensagem" placeholder="Sua resposta sobre a contestação"></textarea></div>
-      <div class="field"><label>Anexos (opcional)</label><input type="file" id="rf-anexos" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" multiple /></div>
+      <div class="field"><label>Sua resposta</label>
+        <select id="rf-decisao" required><option value="">Selecione…</option><option value="aceito">Aceito</option><option value="negado">Negado</option></select>
+      </div>
+      <div class="field"><label>Classificação do mau uso</label>
+        <select id="rf-classificacao" required><option value="mantem">Mantenho como mau uso</option><option value="reclassifica">Reclassifico: NÃO é mau uso</option></select>
+      </div>
+      <div class="field"><label>Valor atualizado do serviço</label><input type="text" id="rf-valor" inputmode="numeric" placeholder="R$ 0,00" /></div>
+      <div class="field"><label>Novo documento (opcional)</label><input type="file" id="rf-anexos" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" multiple /></div>
+      <div class="field"><label>Comentário (opcional)</label><textarea id="rf-mensagem" placeholder="Justifique sua resposta"></textarea></div>
       <button type="submit" class="btn btn--primary" id="btn-resp-fornecedor" style="margin-top:20px;">Enviar resposta</button>
     </form>
   </div>
@@ -256,8 +263,8 @@
   <div class="sheet"><div class="sheet__handle"></div>
     <div class="sheet__header"><h3>Anexar NF de cobrança</h3><button class="close-x" data-close="overlay-nf"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-nf">
-      <div class="field"><label>Nota fiscal</label><input type="file" id="nf-arquivo" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" required /></div>
-      <button type="submit" class="btn btn--primary" id="btn-nf" style="margin-top:20px;">Enviar NF e concluir chamado</button>
+      <div class="field"><label>Nota fiscal (PDF)</label><input type="file" id="nf-arquivo" accept=".pdf,application/pdf" required /></div>
+      <button type="submit" class="btn btn--primary" id="btn-nf" style="margin-top:20px;">Enviar NF</button>
     </form>
   </div>
 </div>

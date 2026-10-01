@@ -32,12 +32,10 @@ let parametrosRecorrencia = { atencaoQtd: 2, atencaoDias: 90, altaQtd: 3, altaDi
   configurarSubTabsCadastros();
   configurarOverlays();
   configurarFormsCadastros();
-  configurarFiltroChamados();
   aplicarMascaraTelefone(document.getElementById("nu-telefone"));
   aplicarMascaraTelefone(document.getElementById("fd-telefone"));
   document.getElementById("nu-tipo").addEventListener("change", ajustarCamposFornecedor);
   ajustarCamposFornecedor();
-  document.getElementById("btn-novo-chamado").addEventListener("click", () => abrirNovoChamado(usuarioAtual));
   document.getElementById("btn-novo-chamado-fila").addEventListener("click", () => abrirNovoChamado(usuarioAtual));
   document.getElementById("form-fornecedor-dados").addEventListener("submit", salvarDadosFornecedor);
   adicionarAtalhoMaster(usuarioAtual);
@@ -64,7 +62,7 @@ function configurarNav() {
       document.querySelectorAll(".navitem[data-view]").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
-      ["fila", "equipamentos", "chamados", "cadastros", "perfil"].forEach((v) => (document.getElementById(`view-${v}`).style.display = v === view ? "block" : "none"));
+      ["fila", "equipamentos", "cadastros", "perfil"].forEach((v) => (document.getElementById(`view-${v}`).style.display = v === view ? "block" : "none"));
     });
   });
 }
@@ -401,98 +399,77 @@ function escutarChamados() {
     chamadosCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     chamadosCache.sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
     renderFila();
-    renderTodosChamados();
     renderStats();
     renderEquipamentos();
   });
 }
 
-const STATUS_FILA_GESTAO = ["registrado", "em_triagem", "contestacao_gestao", "aguardando_autorizacao", "aguardando_ordem_compra"];
+// ============================================================
+// Fila de chamados da Gestão de Frota — 6 telas (botões) com kanbans
+// ============================================================
+const recentesPrimeiro = (a, b) => (tsToMs(b.concluidoEm) || tsToMs(b.registradoEm) || 0) - (tsToMs(a.concluidoEm) || tsToMs(a.registradoEm) || 0);
+const TELAS_GESTAO = [
+  { id: "todos", titulo: "Todos os chamados", subtitulo: "Consulta geral e filtros", tipo: "lista" },
+  { id: "triagem", titulo: "Triagem e acionamento", subtitulo: "Triar e acionar fornecedor", tipo: "kanban", colunas: [
+    { id: "triar", titulo: "Realizar triagem", sub: "Confirmar criticidade", cor: "amber", status: ["registrado"] },
+    { id: "acionar", titulo: "Acionar fornecedor", sub: "Triagem concluída", cor: "blue", status: ["em_triagem"] }
+  ]},
+  { id: "mauuso", titulo: "Mau uso", subtitulo: "Acompanhamento até a ciência do aprovador", tipo: "kanban", colunas: [
+    { id: "mu_fornecedor", titulo: "Com o fornecedor", sub: "Mau uso contestado — novo diagnóstico", cor: "red", status: ["diagnostico_contestado"] },
+    { id: "mu_manutencao", titulo: "Com a Manutenção", sub: "Validação de mau uso", cor: "muted", status: ["aguardando_validacao"] },
+    { id: "mu_aprovador", titulo: "Com o aprovador", sub: "Aguardando ciência", cor: "muted", status: ["aguardando_aprovacao"] }
+  ]},
+  { id: "contestacoes", titulo: "Contestações", subtitulo: "Contestadas pelo aprovador", tipo: "kanban", colunas: [
+    { id: "ct_gestao", titulo: "Contestados pelo aprovador", sub: "Responder o aprovador ou enviar ao fornecedor", cor: "red", filtro: (c) => c.status === "contestacao_gestao" && origemContestacaoGestao(c) === "aprovador" },
+    { id: "ct_fornecedor", titulo: "Fornecedor notificado", sub: "Aguardando resposta do fornecedor", cor: "muted", status: ["contestacao_fornecedor"] },
+    { id: "ct_resposta", titulo: "Resposta do fornecedor", sub: "Devolver ao fornecedor ou ao aprovador", cor: "amber", filtro: (c) => c.status === "contestacao_gestao" && origemContestacaoGestao(c) === "fornecedor" }
+  ]},
+  { id: "execucao", titulo: "Execução", subtitulo: "Autorizar, acompanhar e ordem de compra", tipo: "kanban", colunas: [
+    { id: "ex_autorizar", titulo: "Autorizar execução", sub: "Aprovados — liberar o fornecedor", cor: "green", status: ["aguardando_autorizacao"] },
+    { id: "ex_execucao", titulo: "Em execução", sub: "Fornecedor executando o serviço", cor: "blue", status: ["em_teste"] },
+    { id: "ex_oc", titulo: "Máquinas liberadas", sub: "Anexar ordem de compra (PDF)", cor: "amber", status: ["aguardando_ordem_compra", "liberado"] }
+  ]},
+  { id: "encerramento", titulo: "Notas fiscais e concluídos", subtitulo: "NF do fornecedor e conclusão", tipo: "kanban", colunas: [
+    { id: "en_nf", titulo: "Aguardando NF", sub: "Ordem de compra enviada ao fornecedor", cor: "muted", status: ["aguardando_nf"] },
+    { id: "en_concluir", titulo: "NF recebida", sub: "Conferir e concluir o chamado", cor: "amber", status: ["aguardando_conclusao"] },
+    { id: "en_concluidos", titulo: "Concluídos", sub: "Com ordem de compra e nota fiscal", cor: "green", status: ["concluido"], ordenar: recentesPrimeiro, limite: 40 }
+  ]}
+];
 
-function renderStats() {
-  const fila = chamadosCache.filter((c) => STATUS_FILA_GESTAO.includes(c.status)).length;
-  const emAndamento = chamadosCache.filter((c) => STATUS_ATIVOS.includes(c.status)).length;
-  const parados = equipamentosCache.filter((e) => ["parado", "indisponivel"].includes(e.statusOperacional)).length;
-  const concluidosMes = chamadosCache.filter((c) => {
-    const ms = tsToMs(c.concluidoEm);
-    if (!ms) return false;
-    const d = new Date(ms), a = new Date();
-    return d.getMonth() === a.getMonth() && d.getFullYear() === a.getFullYear();
-  }).length;
-  document.getElementById("stats-grid").innerHTML = `
-    <div class="stat-card"><div class="stat-card__value">${fila}</div><div class="stat-card__label">Pendentes comigo</div></div>
-    <div class="stat-card"><div class="stat-card__value">${emAndamento}</div><div class="stat-card__label">Chamados ativos</div></div>
-    <div class="stat-card"><div class="stat-card__value">${parados}</div><div class="stat-card__label">Equipamentos parados</div></div>
-    <div class="stat-card"><div class="stat-card__value">${concluidosMes}</div><div class="stat-card__label">Concluídos no mês</div></div>
-  `;
-}
-
-function renderFila() {
-  const el = document.getElementById("lista-fila");
-  const fila = chamadosCache.filter((c) => STATUS_FILA_GESTAO.includes(c.status)).sort(comDestaque());
-  if (fila.length === 0) {
-    el.innerHTML = `<div class="empty">${icone("checkCirculo", 34)}<div class="empty__title">Nenhuma pendência</div></div>`;
-    return;
+function acoesGestao(c, col) {
+  switch (c.status) {
+    case "registrado": return `<button class="btn btn--primary btn--sm" onclick="abrirTriagem('${c.id}')">Iniciar triagem</button>`;
+    case "em_triagem": return `<button class="btn btn--primary btn--sm" onclick="abrirAcionar('${c.id}')">Acionar fornecedor</button>`;
+    case "contestacao_gestao": return `<a class="btn btn--primary btn--sm" href="chamado.html?id=${c.id}&acao=avaliar-contestacao">${origemContestacaoGestao(c) === "fornecedor" ? "Avaliar resposta" : "Avaliar contestação"}</a>`;
+    case "aguardando_autorizacao": return `<button class="btn btn--primary btn--sm" onclick="autorizarExecucao('${c.id}')">Autorizar execução</button>`;
+    case "liberado":
+    case "aguardando_ordem_compra": return `<button class="btn btn--primary btn--sm" onclick="abrirOrdemCompra('${c.id}')">Anexar ordem de compra</button>`;
+    case "aguardando_conclusao": return `<button class="btn btn--primary btn--sm" onclick="concluirChamado('${c.id}')">Concluir chamado</button>`;
+    default: return "";
   }
-  el.innerHTML = fila.map((c) => {
-    let acoes = "";
-    if (c.status === "registrado") {
-      acoes = `<button class="btn btn--primary btn--sm" onclick="abrirTriagem('${c.id}')">Iniciar triagem</button>`;
-    } else if (c.status === "em_triagem") {
-      acoes = `<button class="btn btn--primary btn--sm" onclick="abrirAcionar('${c.id}')">Acionar fornecedor</button>`;
-    } else if (c.status === "contestacao_gestao") {
-      acoes = `<a class="btn btn--primary btn--sm" href="chamado.html?id=${c.id}&acao=avaliar-contestacao">Avaliar contestação</a>`;
-    } else if (c.status === "aguardando_autorizacao") {
-      acoes = `<button class="btn btn--primary btn--sm" onclick="autorizarExecucao('${c.id}')">Autorizar execução</button>`;
-    } else if (c.status === "aguardando_ordem_compra") {
-      acoes = `<button class="btn btn--primary btn--sm" onclick="abrirOrdemCompra('${c.id}')">Anexar ordem de compra</button>`;
-    }
-    return `
-    <div class="ticket-card ${classeDestaque(c)}">
-      <div class="ticket-card__top">
-        <div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)} ${seloDestaque(c)}</div>
-        ${badgeHtml(c.status)}
-      </div>
-      <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 80))}</div>
-      <div class="ticket-card__meta"><span>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")}</span><span class="chip chip--${c.criticidade}">${c.criticidade || ""}</span></div>
-      ${stepperHtml(c.status)}
-      <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver detalhes</a>${acoes}</div>
-    </div>`;
-  }).join("");
+}
+// Links dos documentos (ordem de compra / nota fiscal) nos cards
+function extraGestao(c) {
+  const f = c.financeiro || {};
+  const links = [];
+  if (f.ordemCompraUrl) links.push(`<a class="kcard__link" href="${escapeHtml(f.ordemCompraUrl)}" target="_blank" rel="noopener">OC${f.ordemCompraNumero ? " " + escapeHtml(f.ordemCompraNumero) : ""}</a>`);
+  if (f.notaFiscalUrl) links.push(`<a class="kcard__link" href="${escapeHtml(f.notaFiscalUrl)}" target="_blank" rel="noopener">Nota fiscal</a>`);
+  return links.length ? `<div class="kcard__links">${links.join("")}</div>` : "";
 }
 
-let filtroChamadoAtual = "todos";
+const painelGestao = TelasKanban.criar({
+  id: "gestao",
+  container: "paineis-gestao",
+  telas: TELAS_GESTAO,
+  obter: () => chamadosCache,
+  acoes: acoesGestao,
+  extra: extraGestao
+});
+function renderFila() { painelGestao.render(); }
 
-function configurarFiltroChamados() {
-  montarFiltroStatus("filtro-status-chamados", (chave) => { filtroChamadoAtual = chave; renderTodosChamados(); });
-}
-
-function renderTodosChamados() {
-  const el = document.getElementById("lista-todos-chamados");
-  // Fila de verdade: ordem cronológica, do mais antigo (quem está esperando
-  // há mais tempo) para o mais novo — não o contrário.
-  // Destacados pela Gestão sempre no topo; o resto segue a ordem cronológica.
-  const lista = aplicarFiltroStatus(chamadosCache, filtroChamadoAtual).slice().sort(comDestaque((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0)));
-
-  if (lista.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__text">Nenhum chamado nesse filtro.</div></div>`; return; }
-  el.innerHTML = lista.map((c, i) => `
-    <a class="chamado-row ${classeDestaque(c)}" href="chamado.html?id=${c.id}">
-      <div class="chamado-row__principal">
-        <div class="chamado-row__topo">
-          <span class="chamado-row__numero"><span style="color:var(--text-dim); font-weight:400;">#${i + 1}</span> ${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)} ${seloDestaque(c)}</span>
-          ${badgeHtml(c.status)}
-        </div>
-        <div class="chamado-row__meta">
-          <span>${formatarData(c.registradoEm)}</span>
-          <span>${escapeHtml(c.categoria || "")}</span>
-          <span>${escapeHtml(c.plantaNome || "")} / ${escapeHtml(c.setorNome || "")}</span>
-        </div>
-      </div>
-      <div class="chamado-row__progresso">
-        ${stepperHtml(c.status)}
-        ${STATUS_ATIVOS.includes(c.status) ? responsavelAtualHtml(c.status) : ""}
-      </div>
-    </a>`).join("");
+// Indicadores da frota: total / paradas / operando com restrição / % em funcionamento
+function renderStats() {
+  document.getElementById("stats-grid").innerHTML = indicadoresFrotaHtml(indicadoresFrota(equipamentosCache, chamadosCache));
 }
 
 function abrirTriagem(id) {
@@ -597,10 +574,21 @@ async function salvarOrdemCompra(e) {
   }
 }
 
+async function concluirChamado(id) {
+  if (!confirm("Concluir este chamado? A ordem de compra e a nota fiscal já estão anexadas.")) return;
+  try {
+    await concluirChamadoGestao(id, usuarioAtual);
+    mostrarToast("Chamado concluído.");
+  } catch (err) {
+    alert("Erro ao concluir: " + err.message);
+  }
+}
+
 // ---------- Equipamentos ----------
 function escutarEquipamentos() {
   db.collection("equipamentos").orderBy("numeroFrota").onSnapshot((snap) => {
     equipamentosCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderStats();
     renderEquipamentos();
   });
 }

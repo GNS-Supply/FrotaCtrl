@@ -286,10 +286,13 @@ function renderOperacional() {
   const equipamentos = equipamentosFiltrados("operacional");
 
   const abertos = chamados.filter((c) => STATUS_ATIVOS.includes(c.status)).length;
-  const parados = equipamentos.filter((e) => ["parado", "indisponivel"].includes(e.statusOperacional)).length;
-  const restricao = equipamentos.filter((e) => e.statusOperacional === "operacional_restricao").length;
-  const concluidos = chamados.filter((c) => c.status === "concluido");
-  const temposParada = concluidos.map((c) => (tsToMs(c.liberadoEm) || 0) - (tsToMs(c.registradoEm) || 0)).filter((v) => v > 0);
+  // Máquinas paradas / com restrição seguem a regra do tempo de máquina parada:
+  // P1 confirmado na triagem, ou avaliação técnica iniciada, até o fornecedor liberar.
+  const ind = indicadoresFrota(equipamentos, chamados);
+  const temposParada = chamados
+    .map((c) => paradaInfo(c))
+    .filter((p) => p.inicio != null && p.fim != null)
+    .map((p) => p.ms);
   const mediaParada = temposParada.length ? temposParada.reduce((a, b) => a + b, 0) / temposParada.length : null;
   const acionamentos = chamados
     .map((c) => {
@@ -302,11 +305,12 @@ function renderOperacional() {
 
   document.getElementById("kpi-operacional").innerHTML = kpiGrid([
     { valor: abertos, label: "Chamados abertos" },
-    { valor: parados, label: "Equipamentos parados" },
-    { valor: restricao, label: "Com restrição" },
-    { valor: mediaParada != null ? msParaDuracao(mediaParada) : "—", label: "Tempo médio parado" },
+    { valor: ind.paradas, label: "Máquinas paradas" },
+    { valor: ind.restricao, label: "Operando com restrição" },
+    { valor: `${ind.pctFuncionando.toLocaleString("pt-BR")}%`, label: `Em funcionamento (${ind.funcionando}/${ind.total})` },
+    { valor: mediaParada != null ? msParaDuracao(mediaParada) : "—", label: "Tempo médio de máquina parada" },
     { valor: `${dentroSla}/${acionamentos.length || 0}`, label: "SLA acionamento ≤24h" },
-    { valor: equipamentos.length, label: "Equipamentos na frota" }
+    { valor: ind.total, label: "Total de máquinas" }
   ]);
 
   // Tendência: registrados x concluídos por mês (barras — em um gráfico de

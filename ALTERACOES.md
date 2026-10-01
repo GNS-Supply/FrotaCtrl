@@ -16,3 +16,17 @@
 - **Perfil**: botão "Alterar minha senha" (pede a senha atual).
 - **Login**: "Esqueci minha senha" envia e-mail de recuperação do Firebase.
 - **`firestore.rules`**: Gestão de Frota autorizada a criar chamados — **publique as regras no Firebase**.
+
+# Rodada 2
+
+- **Fluxo pós-liberação (mau uso)**: fornecedor libera → `aguardando_ordem_compra` (Gestão anexa OC em PDF) → `aguardando_nf`
+  (fornecedor anexa NF em PDF) → novo status `aguardando_conclusao` (Gestão conclui). Chamados antigos parados em `liberado` também aparecem na fila da Gestão.
+  Chamados contratuais continuam concluindo direto na liberação.
+- **Tempo de máquina parada** (`paradaInfo` em `app.js`): P1 confirmado na triagem começa na confirmação; P2/P3 começa no início da avaliação técnica;
+  termina quando o fornecedor libera. Separado do tempo por etapa.
+- **Indicadores** (`indicadoresFrota`): total / paradas / operando com restrição / % em funcionamento — painel da Gestão e Dashboard.
+- **Linha do tempo linear** no chamado: cada passagem (inclusive idas e voltas) com usuário, data/hora com segundos, comentários, anexos e tempo (h/min/s) na etapa.
+- **Fila da Gestão**: 6 telas (`telas-kanban.js`): Todos (filtro) · Triagem e acionamento · Mau uso · Contestações · Execução · Notas fiscais e concluídos.
+- **Fornecedor**: tela Mau uso com 3 kanbans (contestado / aguardando Manutenção / Renegociação). Resposta da renegociação: Aceito/Negado,
+  manter ou reclassificar o mau uso, novo valor e novo documento.
+- **PDF com erro 401 (Cloudinary)**: configuração da conta — Settings → Security → "Restricted media types": liberar PDF.

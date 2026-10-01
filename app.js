@@ -37,6 +37,7 @@ const STATUS_LABELS = {
   liberado: "Liberado — aguardando documentação",
   aguardando_ordem_compra: "Aguardando ordem de compra",
   aguardando_nf: "Aguardando nota fiscal",
+  aguardando_conclusao: "Aguardando conclusão (Gestão de Frota)",
   concluido: "Concluído",
   cancelado: "Cancelado"
 };
@@ -56,6 +57,7 @@ const STATUS_COLORS = {
   liberado: "blue",
   aguardando_ordem_compra: "amber",
   aguardando_nf: "amber",
+  aguardando_conclusao: "amber",
   concluido: "green",
   cancelado: "red"
 };
@@ -145,6 +147,11 @@ function formatarData(timestamp) {
   const d = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
+function formatarDataCompleta(timestamp) {
+  if (!timestamp) return "—";
+  const d = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
 function msParaDuracao(ms) {
   if (ms == null || ms < 0) return "—";
   const min = Math.floor(ms / 60000);
@@ -156,6 +163,22 @@ function msParaDuracao(ms) {
   if (h > 0) return `${h}h ${minRest}min`;
   return `${minRest}min`;
 }
+// Duração completa: horas, minutos e segundos (ex.: "26h 05min 09s")
+function msParaHMS(ms) {
+  if (ms == null || isNaN(ms) || ms < 0) return "—";
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  return `${h}h ${String(m).padStart(2, "0")}min ${String(sec).padStart(2, "0")}s`;
+}
+// Atualiza a cada segundo os contadores "ao vivo" (elementos com data-desde="<ms>")
+setInterval(() => {
+  document.querySelectorAll("[data-desde]").forEach((el) => {
+    const desde = Number(el.dataset.desde);
+    if (desde) el.textContent = msParaHMS(Date.now() - desde);
+  });
+}, 1000);
 function tsToMs(ts) {
   if (!ts) return null;
   return ts.toDate ? ts.toDate().getTime() : ts;
@@ -267,6 +290,7 @@ const PROXIMO_RESPONSAVEL = {
   liberado: "gestao_frota",
   aguardando_ordem_compra: "gestao_frota",
   aguardando_nf: "fornecedor",
+  aguardando_conclusao: "gestao_frota",
   concluido: null,
   cancelado: null
 };
@@ -357,7 +381,7 @@ const ETAPAS_PROCESSO = [
   { titulo: "Autorização de execução", responsavel: "gestao_frota" },
   { titulo: "Execução até liberar a máquina", responsavel: "fornecedor" },
   { titulo: "Ordem de compra", responsavel: "gestao_frota" },
-  { titulo: "Nota fiscal", responsavel: "fornecedor" }
+  { titulo: "Nota fiscal e conclusão", responsavel: "fornecedor" }
 ];
 // Mantido por compatibilidade com trechos que só precisam do título da etapa.
 const MACRO_ETAPAS = ETAPAS_PROCESSO.map((e) => e.titulo);
@@ -372,7 +396,7 @@ const STATUS_PARA_ETAPA = {
   aguardando_autorizacao: 5,
   em_teste: 6, liberado: 6,
   aguardando_ordem_compra: 7,
-  aguardando_nf: 8, concluido: 8,
+  aguardando_nf: 8, aguardando_conclusao: 8, concluido: 8,
   cancelado: 0
 };
 const STATUS_ENCERRADO_SEM_SUCESSO = ["cancelado"];
@@ -497,7 +521,7 @@ const GRUPOS_FILTRO_STATUS = {
   validacao: ["aguardando_validacao", "aguardando_aprovacao", "contestacao_gestao", "contestacao_fornecedor"],
   autorizacao: ["aguardando_autorizacao"],
   execucao: ["em_teste", "liberado"],
-  encerramento: ["aguardando_ordem_compra", "aguardando_nf"],
+  encerramento: ["liberado", "aguardando_ordem_compra", "aguardando_nf", "aguardando_conclusao"],
   concluido: ["concluido"],
   cancelado: ["cancelado"]
 };
@@ -806,3 +830,100 @@ function injetarAlterarSenha() {
   });
 }
 document.addEventListener("DOMContentLoaded", () => marcarObrigatorios());
+
+
+// ============================================================
+// TEMPO DE MÁQUINA PARADA  (≠ tempo do chamado em cada etapa)
+// ------------------------------------------------------------
+//  Começa:  - chamado P1: quando a Gestão de Frota confirma a criticidade P1 (triagem)
+//           - chamado P2/P3: quando o fornecedor inicia a avaliação técnica
+//  Termina: quando o fornecedor libera a máquina (ou se o chamado é cancelado)
+// ============================================================
+function paradaInfo(c) {
+  const hist = (c.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
+  let inicio = null;
+  const triagem = hist.find((h) => h.dados?.tipo === "triagem") || hist.find((h) => h.status === "em_triagem");
+  if (triagem) {
+    const crit = triagem.dados?.criticidadeNova ?? c.criticidade;
+    if (crit === "P1") inicio = triagem.timestamp;
+  }
+  if (inicio == null) {
+    const aval = hist.find((h) => h.status === "em_avaliacao_tecnica");
+    if (aval) inicio = aval.timestamp;
+  }
+  let fim = null;
+  const lib = hist.find((h) => h.dados?.tipo === "liberacao");
+  if (lib) fim = lib.timestamp;
+  else if (tsToMs(c.liberadoEm)) fim = tsToMs(c.liberadoEm);
+  else if (c.status === "cancelado") {
+    const canc = hist.slice().reverse().find((h) => h.status === "cancelado");
+    fim = canc ? canc.timestamp : null;
+  }
+  if (inicio != null && fim != null && fim < inicio) fim = inicio;
+  const emAndamento = inicio != null && fim == null;
+  const ms = inicio == null ? null : (fim ?? Date.now()) - inicio;
+  return { inicio, fim, emAndamento, ms };
+}
+// A máquina deste chamado está parada agora?
+function chamadoParandoMaquina(c) {
+  return paradaInfo(c).emAndamento && !["concluido", "cancelado"].includes(c.status);
+}
+// Chamado aberto, mas a máquina ainda não parou (aguarda confirmação/avaliação) ou ainda não foi liberada
+function chamadoComRestricao(c) {
+  if (["concluido", "cancelado"].includes(c.status)) return false;
+  const p = paradaInfo(c);
+  return p.fim == null && !p.emAndamento;
+}
+
+// Indicadores da frota: total / paradas / operando com restrição / % em funcionamento
+function indicadoresFrota(equipamentos, chamados) {
+  const frota = (equipamentos || []).filter((e) => e.statusOperacional !== "desativado");
+  const parados = new Set();
+  const restritos = new Set();
+  (chamados || []).forEach((c) => {
+    if (!c.equipamentoId) return;
+    if (chamadoParandoMaquina(c)) parados.add(c.equipamentoId);
+  });
+  (chamados || []).forEach((c) => {
+    if (!c.equipamentoId || parados.has(c.equipamentoId)) return;
+    if (chamadoComRestricao(c)) restritos.add(c.equipamentoId);
+  });
+  // Máquina liberada com restrição também conta como "operando com restrição"
+  frota.forEach((e) => {
+    if (!parados.has(e.id) && e.statusOperacional === "operacional_restricao") restritos.add(e.id);
+  });
+  const ids = new Set(frota.map((e) => e.id));
+  const total = frota.length;
+  const nParadas = [...parados].filter((id) => ids.has(id)).length;
+  const nRestricao = [...restritos].filter((id) => ids.has(id)).length;
+  const nFuncionando = total - nParadas;
+  return {
+    total, paradas: nParadas, restricao: nRestricao,
+    normais: Math.max(0, total - nParadas - nRestricao),
+    funcionando: nFuncionando,
+    pctFuncionando: total ? Math.round((nFuncionando / total) * 1000) / 10 : 100
+  };
+}
+function indicadoresFrotaHtml(ind) {
+  return `
+    <div class="stat-card"><div class="stat-card__value">${ind.total}</div><div class="stat-card__label">Total de máquinas</div></div>
+    <div class="stat-card stat-card--alerta"><div class="stat-card__value">${ind.paradas}</div><div class="stat-card__label">Máquinas paradas</div></div>
+    <div class="stat-card stat-card--atencao"><div class="stat-card__value">${ind.restricao}</div><div class="stat-card__label">Operando com restrição</div></div>
+    <div class="stat-card stat-card--ok"><div class="stat-card__value">${ind.pctFuncionando.toLocaleString("pt-BR")}%</div><div class="stat-card__label">Em funcionamento (${ind.funcionando}/${ind.total})</div></div>`;
+}
+
+// Gestão de Frota conclui o chamado depois de receber a NF
+async function concluirChamadoGestao(chamadoId, usuario, comentario) {
+  await transicionarChamado(chamadoId, "concluido", "Chamado concluído pela Gestão de Frota", usuario.nome, "gestao_frota", {
+    concluidoEm: firebase.firestore.FieldValue.serverTimestamp()
+  }, { tipo: "conclusao", comentario: comentario || "" });
+}
+
+
+// Um chamado em "contestacao_gestao" pode ter chegado de dois lugares:
+// da contestação do aprovador ou da resposta do fornecedor.
+function origemContestacaoGestao(c) {
+  const hist = (c.historico || []).slice().sort((a, b) => b.timestamp - a.timestamp);
+  const ult = hist.find((h) => h.status === "contestacao_gestao");
+  return ult?.dados?.tipo === "resposta_fornecedor" ? "fornecedor" : "aprovador";
+}
