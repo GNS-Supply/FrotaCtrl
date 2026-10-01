@@ -582,7 +582,7 @@ a.ticket-card:hover::after { color: var(--accent-dark); }
 .overlay.hidden { display: none; }
 .sheet {
   width: 100%;
-  max-width: 480px;
+  max-width: none; /* em telas pequenas a folha ocupa toda a largura */
   max-height: 88vh;
   overflow-y: auto;
   background: var(--surface);
@@ -950,14 +950,27 @@ button:focus-visible,
   .card-list > .machine-plate { margin-bottom: 0; }
 
   .overlay { align-items: center; padding: 24px; background: rgba(16, 25, 34, 0.6); }
+  /* Telas em sobreposição (cadastros, novo chamado, etc.) ocupam no
+     mínimo 70% da largura do monitor. */
   .sheet {
-    max-width: 640px;
-    width: 90vw;
+    width: 70vw;
+    min-width: 70vw;
+    max-width: 96vw;
     border-radius: 14px;
-    max-height: 85vh;
+    max-height: 90vh;
+    padding: 24px 32px 28px;
     border-top: 4px solid var(--accent);
   }
-  #overlay-equip .sheet { max-width: 760px; }
+  .sheet__handle { display: none; }
+  .sheet__header h3 { font-size: 19px; }
+  /* Formulários largos em duas colunas; textos longos, avisos e botões usam a linha toda */
+  .sheet form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; align-items: start; }
+  .sheet form > .callout, .sheet form > .error-msg, .sheet form > .grid-2, .sheet form > button,
+  .sheet form > .small-btn-row, .sheet form > div:not(.field),
+  .sheet form > .field:has(textarea), .sheet form > .field:has(input[type="file"]) { grid-column: 1 / -1; }
+  .sheet form > .field { margin-top: 14px; }
+  .sheet form > .field:nth-child(-n+2) { margin-top: 0; }
+  .sheet form > button[type="submit"] { justify-self: start; width: auto; min-width: 220px; }
 
   .auth-wrap {
     max-width: 420px;
@@ -2002,3 +2015,45 @@ a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visib
 .filtro-op input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .painel-filtro__rodape { display: flex; justify-content: flex-end; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .chamado-lista-row--encerrado { opacity: .72; }
+
+
+/* ============================================================
+   Campos obrigatórios (*), destaque de prioridade, anexos, etc.
+   ============================================================ */
+label.req::after, .req-ast { content: " *"; color: var(--red); font-weight: 700; }
+.req-ast::after { content: none; }
+.form-legenda { font-size: 12px; color: var(--text-dim); margin: 2px 0 10px; }
+.sheet form > .field:has(textarea) textarea { min-height: 88px; }
+
+/* Chamado destacado pela Gestão de Frota */
+.destacado { border-color: var(--red) !important; box-shadow: 0 0 0 2px var(--red-tint), var(--sombra-sm); }
+.selo-destaque {
+  display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
+  background: var(--red); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; padding: 2px 8px; border-radius: 999px; line-height: 1.5; white-space: nowrap;
+}
+.ch-destaque {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 12px 16px;
+  background: var(--red-tint); border: 1px solid var(--red); border-left-width: 5px; border-radius: var(--radius-sm); color: #7a2727;
+}
+.ch-destaque strong { display: block; font-size: 13.5px; }
+.ch-destaque span { font-size: 12.5px; }
+
+/* Anexos que não são imagem (PDF, Word, Excel, texto) */
+.anexo-lista { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.anexo-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); text-decoration: none; font-size: 13px;
+}
+.anexo-item:hover { border-color: var(--accent); }
+.anexo-item__ext {
+  flex: none; min-width: 44px; text-align: center; padding: 4px 6px; border-radius: 6px;
+  background: var(--accent-tint); color: var(--accent-tint-ink); font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+}
+.anexo-item__nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anexo-item__abrir { flex: none; font-size: 12px; font-weight: 700; color: var(--accent-dark); }
+
+/* Login: link de recuperação e alterar senha no perfil */
+.link-btn { display: block; margin: 14px auto 0; background: none; border: 0; color: var(--accent-dark); font-size: 13px; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.senha-card { margin-top: 18px; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); max-width: 420px; }
+.senha-card form { display: block; }

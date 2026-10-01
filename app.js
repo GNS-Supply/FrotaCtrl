@@ -30,6 +30,8 @@ const STATUS_LABELS = {
   diagnostico_contestado: "Diagnóstico contestado — aguardando fornecedor",
   aguardando_validacao: "Aguardando validação (Manutenção Magius)",
   aguardando_aprovacao: "Aguardando ciência do aprovador",
+  contestacao_gestao: "Contestação do aprovador — avaliação da Gestão de Frota",
+  contestacao_fornecedor: "Contestação — aguardando resposta do fornecedor",
   aguardando_autorizacao: "Aguardando autorização (Gestão de Frota)",
   em_teste: "Em execução / teste",
   liberado: "Liberado — aguardando documentação",
@@ -47,6 +49,8 @@ const STATUS_COLORS = {
   diagnostico_contestado: "red",
   aguardando_validacao: "amber",
   aguardando_aprovacao: "amber",
+  contestacao_gestao: "red",
+  contestacao_fornecedor: "red",
   aguardando_autorizacao: "amber",
   em_teste: "blue",
   liberado: "blue",
@@ -174,6 +178,8 @@ function iniciais(nome) {
 // largas — ver .topbar__meta no CSS). Evita ter que editar o HTML de cada
 // uma das 6 páginas de perfil.
 function popularTopbarMeta(usuario) {
+  injetarAlterarSenha();
+  marcarObrigatorios();
   const avatar = document.getElementById("user-avatar");
   if (!avatar) return;
   avatar.textContent = iniciais(usuario.nome);
@@ -254,6 +260,8 @@ const PROXIMO_RESPONSAVEL = {
   diagnostico_contestado: "fornecedor",
   aguardando_validacao: "manutencao",
   aguardando_aprovacao: "aprovador",
+  contestacao_gestao: "gestao_frota",
+  contestacao_fornecedor: "fornecedor",
   aguardando_autorizacao: "gestao_frota",
   em_teste: "fornecedor",
   liberado: "gestao_frota",
@@ -360,7 +368,7 @@ const STATUS_PARA_ETAPA = {
   em_triagem: 1, fornecedor_acionado: 1,
   atendimento_programado: 2, em_avaliacao_tecnica: 2, diagnostico_contestado: 2,
   aguardando_validacao: 3,
-  aguardando_aprovacao: 4,
+  aguardando_aprovacao: 4, contestacao_gestao: 4, contestacao_fornecedor: 4,
   aguardando_autorizacao: 5,
   em_teste: 6, liberado: 6,
   aguardando_ordem_compra: 7,
@@ -486,7 +494,7 @@ const GRUPOS_FILTRO_STATUS = {
   ativos: STATUS_ATIVOS,
   registrado: ["registrado"],
   atendimento: ["em_triagem", "fornecedor_acionado", "atendimento_programado", "em_avaliacao_tecnica", "diagnostico_contestado"],
-  validacao: ["aguardando_validacao", "aguardando_aprovacao"],
+  validacao: ["aguardando_validacao", "aguardando_aprovacao", "contestacao_gestao", "contestacao_fornecedor"],
   autorizacao: ["aguardando_autorizacao"],
   execucao: ["em_teste", "liberado"],
   encerramento: ["aguardando_ordem_compra", "aguardando_nf"],
@@ -542,7 +550,8 @@ const ICONES_SVG = {
   mapa: '<path d="M9 3v15M15 6v15"/><path d="M4 5l5-2 6 3 5-2v15l-5 2-6-3-5 2z"/>',
   ajustes: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M21 18h0"/><circle cx="15" cy="6" r="2.2"/><circle cx="7" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>',
   relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
-  x: '<path d="M6 6l12 12M18 6L6 18"/>'
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  estrela: '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9 6.6 19.8l1.1-6.1L3.2 9.4l6.1-.8z"/>'
 };
 function icone(nome, tamanho) {
   const t = tamanho || 18;
@@ -569,17 +578,45 @@ function traduzErroUpload(status, corpoResposta) {
   return `Falha ao enviar o arquivo${status ? ` (erro ${status})` : ""}.${detalhe ? " " + detalhe : ""}`;
 }
 
-// Envia UM arquivo ao Cloudinary e devolve a URL pública. `onProgresso(pct)` é opcional.
-function enviarArquivo(caminho, file, onProgresso) {
+// ---------- Tipos de anexo aceitos ----------
+// Imagens, vídeos, PDF, texto, planilhas (Excel/CSV) e Word.
+const ACCEPT_ANEXOS = "image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm";
+const EXT_IMAGEM = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif", "svg"];
+const EXT_VIDEO = ["mp4", "mov", "webm", "avi", "mkv", "m4v"];
+function extensaoDe(nome) {
+  const m = String(nome || "").split("?")[0].match(/\.([a-zA-Z0-9]+)$/);
+  return m ? m[1].toLowerCase() : "";
+}
+// "imagem" | "video" | "documento" — decide como enviar e como exibir
+function tipoDeArquivo(nomeOuUrl, mime) {
+  if (mime) {
+    if (mime.startsWith("image/")) return "imagem";
+    if (mime.startsWith("video/")) return "video";
+  }
+  const ext = extensaoDe(nomeOuUrl);
+  if (EXT_IMAGEM.includes(ext)) return "imagem";
+  if (EXT_VIDEO.includes(ext)) return "video";
+  return "documento";
+}
+
+// Envia UM arquivo ao Cloudinary e devolve { url, nome, tipo, mime }.
+// Imagens e vídeos vão como "image"/"video"; todo o resto (PDF, Word,
+// Excel, texto) vai como "raw", mantendo a extensão no endereço — sem
+// isso o navegador baixava o arquivo sem extensão ou não conseguia
+// exibir o PDF.
+function enviarArquivoComMeta(caminho, file, onProgresso) {
   return new Promise((resolve, reject) => {
     let finalizado = false;
     const xhr = new XMLHttpRequest();
-    const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`;
+    const tipo = tipoDeArquivo(file.name, file.type);
+    const recurso = tipo === "imagem" ? "image" : tipo === "video" ? "video" : "raw";
+    const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/${recurso}/upload`;
 
-    // Mantém o "caminho" (ex: chamados/abc123/diagnostico/169...-foto.jpg)
-    // como identificador do arquivo no Cloudinary, só sem barras (o preset
-    // já define a pasta fixa "frotactrl" no painel).
-    const publicId = caminho.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9/_-]/g, "_").replace(/\//g, "__");
+    // Mantém o "caminho" como identificador do arquivo no Cloudinary, só
+    // sem barras (o preset já define a pasta fixa "frotactrl" no painel).
+    const ext = extensaoDe(file.name);
+    const semExt = caminho.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9/_-]/g, "_").replace(/\//g, "__");
+    const publicId = recurso === "raw" && ext ? `${semExt}.${ext}` : semExt;
 
     const formData = new FormData();
     formData.append("file", file);
@@ -603,7 +640,7 @@ function enviarArquivo(caminho, file, onProgresso) {
       clearTimeout(timer);
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
-          resolve(JSON.parse(xhr.responseText).secure_url);
+          resolve({ url: JSON.parse(xhr.responseText).secure_url, nome: file.name, tipo, mime: file.type || "" });
         } catch (err) {
           reject(new Error("Resposta inesperada do Cloudinary ao enviar o arquivo."));
         }
@@ -623,19 +660,149 @@ function enviarArquivo(caminho, file, onProgresso) {
     xhr.send(formData);
   });
 }
+// Versão que devolve só a URL (usada pelos campos de arquivo único: OC, orçamento, NF)
+async function enviarArquivo(caminho, file, onProgresso) {
+  return (await enviarArquivoComMeta(caminho, file, onProgresso)).url;
+}
 
-// Envia vários arquivos em sequência, atualizando o texto do botão com o
-// progresso. Lança erro se qualquer um falhar (quem chama decide o que fazer).
+// Envia vários arquivos em sequência (devolve uma lista de { url, nome, tipo }),
+// atualizando o texto do botão com o progresso. Lança erro se qualquer um falhar (quem chama decide o que fazer).
 async function enviarArquivos(prefixo, fileList, botao, textoBase) {
   const urls = [];
   const arquivos = Array.from(fileList || []);
   for (let i = 0; i < arquivos.length; i++) {
     const file = arquivos[i];
-    const url = await enviarArquivo(`${prefixo}/${Date.now()}-${file.name}`, file, (pct) => {
+    const anexo = await enviarArquivoComMeta(`${prefixo}/${Date.now()}-${file.name}`, file, (pct) => {
       if (botao) botao.textContent = `Enviando anexo ${i + 1}/${arquivos.length}… ${pct}%`;
     });
-    urls.push(url);
+    urls.push(anexo);
   }
   if (botao && textoBase) botao.textContent = textoBase;
   return urls;
 }
+
+
+// ---------- Exibição de anexos ----------
+// Aceita tanto o formato antigo (só a URL) quanto o novo ({ url, nome, tipo }).
+// Imagem aparece como miniatura; PDF, Word, Excel e texto aparecem como
+// um cartão com ícone, nome e link para abrir/baixar.
+function anexosHtml(lista) {
+  const itens = (lista || []).filter(Boolean).map((a) => (typeof a === "string" ? { url: a } : a));
+  if (!itens.length) return "";
+  const imagens = itens.filter((a) => tipoDeArquivo(a.nome || a.url, a.mime) === "imagem" || a.tipo === "imagem");
+  const outros = itens.filter((a) => !imagens.includes(a));
+  let html = "";
+  if (imagens.length) {
+    html += `<div class="photo-grid">${imagens.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener"><img src="${escapeHtml(a.url)}" alt="${escapeHtml(a.nome || "anexo")}" loading="lazy" /></a>`).join("")}</div>`;
+  }
+  if (outros.length) {
+    html += `<div class="anexo-lista">${outros.map((a) => {
+      const nome = a.nome || decodeURIComponent(String(a.url).split("/").pop().split("?")[0]) || "arquivo";
+      const ext = (extensaoDe(nome) || "arq").toUpperCase().slice(0, 4);
+      return `<a class="anexo-item" href="${escapeHtml(a.url)}" target="_blank" rel="noopener"><span class="anexo-item__ext">${escapeHtml(ext)}</span><span class="anexo-item__nome">${escapeHtml(nome)}</span><span class="anexo-item__abrir">Abrir</span></a>`;
+    }).join("")}</div>`;
+  }
+  return html;
+}
+
+// ---------- Campos obrigatórios marcados com * ----------
+// Qualquer label cujo campo (input/select/textarea) é "required" ganha o
+// asterisco automaticamente — em todos os formulários, inclusive os
+// criados depois. Chame de novo após mudar o atributo required.
+function marcarObrigatorios(raiz) {
+  const base = raiz || document;
+  base.querySelectorAll("input[required], select[required], textarea[required]").forEach((campo) => {
+    if (campo.type === "hidden") return;
+    const field = campo.closest(".field");
+    const label = field ? field.querySelector("label") : null;
+    if (label) label.classList.add("req");
+  });
+  base.querySelectorAll(".field label.req").forEach((label) => {
+    const campo = label.closest(".field").querySelector("input[required], select[required], textarea[required]");
+    if (!campo) label.classList.remove("req");
+  });
+}
+
+// ---------- Chamados destacados pela Gestão de Frota ----------
+// chamado.destaque = { ativo, escopo: "etapa" | "final", etapaOrigem, motivo, porNome, em }
+function chamadoDestacado(c) {
+  const d = c && c.destaque;
+  if (!d || !d.ativo) return false;
+  if (["concluido", "cancelado"].includes(c.status)) return false;
+  if (d.escopo === "final") return true;
+  return etapaDoChamado(c) === d.etapaOrigem;
+}
+// Embrulha um comparador para jogar os destacados sempre para o topo
+function comDestaque(cmp) {
+  return (a, b) => {
+    const da = chamadoDestacado(a), dbb = chamadoDestacado(b);
+    if (da !== dbb) return da ? -1 : 1;
+    return cmp ? cmp(a, b) : 0;
+  };
+}
+function classeDestaque(c) { return chamadoDestacado(c) ? "destacado" : ""; }
+function seloDestaque(c) {
+  if (!chamadoDestacado(c)) return "";
+  return `<span class="selo-destaque" title="${escapeHtml(c.destaque.motivo || "Prioridade definida pela Gestão de Frota")}">${icone("estrela", 11)} Prioridade</span>`;
+}
+
+// ---------- Alterar a própria senha (perfil de qualquer usuário) ----------
+function injetarAlterarSenha() {
+  if (document.getElementById("card-senha")) return;
+  const sair = document.querySelector('button[onclick="logout()"]');
+  if (!sair) return;
+  const card = document.createElement("div");
+  card.id = "card-senha";
+  card.className = "senha-card";
+  card.innerHTML = `
+    <button type="button" class="btn btn--secondary" id="btn-abrir-senha">Alterar minha senha</button>
+    <form id="form-senha" style="display:none;">
+      <div class="field"><label>Senha atual</label><input type="password" id="sn-atual" required autocomplete="current-password" /></div>
+      <div class="field"><label>Nova senha</label><input type="password" id="sn-nova" required minlength="6" autocomplete="new-password" /></div>
+      <div class="field"><label>Confirmar nova senha</label><input type="password" id="sn-confirma" required minlength="6" autocomplete="new-password" /></div>
+      <div class="error-msg" id="sn-erro"></div>
+      <div class="small-btn-row" style="margin-top:14px;">
+        <button type="submit" class="btn btn--primary btn--sm" id="btn-salvar-senha">Salvar nova senha</button>
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-cancelar-senha">Cancelar</button>
+      </div>
+    </form>`;
+  sair.parentNode.insertBefore(card, sair);
+  const form = card.querySelector("#form-senha");
+  const abrir = card.querySelector("#btn-abrir-senha");
+  const erro = card.querySelector("#sn-erro");
+  const fechar = () => { form.style.display = "none"; abrir.style.display = ""; form.reset(); erro.classList.remove("show"); };
+  abrir.addEventListener("click", () => { form.style.display = "block"; abrir.style.display = "none"; marcarObrigatorios(card); });
+  card.querySelector("#btn-cancelar-senha").addEventListener("click", fechar);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    erro.classList.remove("show");
+    const atual = card.querySelector("#sn-atual").value;
+    const nova = card.querySelector("#sn-nova").value;
+    const confirma = card.querySelector("#sn-confirma").value;
+    const mostrar = (m) => { erro.textContent = m; erro.classList.add("show"); };
+    if (nova !== confirma) { mostrar("A confirmação não confere com a nova senha."); return; }
+    if (nova === atual) { mostrar("A nova senha precisa ser diferente da atual."); return; }
+    const user = auth.currentUser;
+    if (!user || !user.email) { mostrar("Sessão expirada. Entre novamente."); return; }
+    const btn = card.querySelector("#btn-salvar-senha");
+    btn.disabled = true;
+    try {
+      await user.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(user.email, atual));
+      await user.updatePassword(nova);
+      fechar();
+      mostrarToast("Senha alterada com sucesso.");
+    } catch (err) {
+      const map = {
+        "auth/wrong-password": "A senha atual está incorreta.",
+        "auth/invalid-credential": "A senha atual está incorreta.",
+        "auth/weak-password": "A nova senha precisa ter pelo menos 6 caracteres.",
+        "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
+        "auth/requires-recent-login": "Por segurança, saia e entre novamente antes de trocar a senha."
+      };
+      mostrar(map[err.code] || "Não foi possível alterar a senha. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+document.addEventListener("DOMContentLoaded", () => marcarObrigatorios());

@@ -66,7 +66,8 @@ service cloud.firestore {
 
     match /chamados/{id} {
       allow read: if logado();
-      allow create: if souSolicitante() && request.resource.data.solicitanteId == request.auth.uid;
+      // Solicitante e Gestão de Frota podem abrir chamados
+      allow create: if (souSolicitante() || souGestao()) && request.resource.data.solicitanteId == request.auth.uid;
       // atores internos sempre podem atuar; o próprio solicitante também
       // pode editar o chamado que abriu enquanto ele ainda estiver
       // "registrado" (ninguém começou a tratar ainda) — cobre casos como

@@ -49,37 +49,12 @@
   </div>
 </div>
 
-<!-- SHEET: NOVO CHAMADO -->
-<div class="overlay hidden" id="overlay-chamado">
-  <div class="sheet">
-    <div class="sheet__handle"></div>
-    <div class="sheet__header"><h3>Abrir chamado</h3><button class="close-x" data-close="overlay-chamado"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <form id="form-chamado">
-      <div class="field"><label>Equipamento (planta → setor → frota)</label>
-        <select id="ch-equipamento" required></select>
-      </div>
-      <div class="callout" id="ch-equip-info">Selecione um equipamento para ver planta e setor.</div>
-      <div class="grid-2">
-        <div class="field" style="margin-top:0;"><label>Turno</label>
-          <select id="ch-turno"><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="noite">Noite</option></select>
-        </div>
-        <div class="field" style="margin-top:0;"><label>Horímetro atual</label><input type="text" id="ch-horimetro" required inputmode="numeric" placeholder="0,00" /></div>
-      </div>
-      <div class="field"><label>Categoria da ocorrência</label><select id="ch-categoria"></select></div>
-      <div class="field"><label>Criticidade</label><select id="ch-criticidade"></select></div>
-      <div class="field"><label>Descrição da ocorrência</label><textarea id="ch-problema" required placeholder="Descreva sintoma, contexto e impacto"></textarea></div>
-      <div class="field"><label>Impacto e segurança</label><textarea id="ch-impacto" placeholder="Parado? Risco? Pode operar?"></textarea></div>
-      <div class="field"><label>Fotos / vídeos (opcional)</label><input type="file" id="ch-fotos" accept="image/*" multiple capture="environment" /></div>
-      <button type="submit" class="btn btn--primary" id="btn-enviar-chamado" style="margin-top:20px;">Enviar chamado</button>
-    </form>
-  </div>
-</div>
-
 <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
+<script src="novo-chamado.js"></script>
 <script src="solicitante.js"></script>
 </body>
 </html>

@@ -68,7 +68,7 @@
         <select id="dg-mauuso"><option value="nao">Não — manutenção contratual normal</option><option value="sim">Sim — abrir fluxo de validação de mau uso</option></select>
       </div>
       <div class="field"><label>Valor apresentado / orçamento (R$)</label><input type="text" id="dg-valor" inputmode="numeric" placeholder="R$ 0,00" disabled /></div>
-      <div class="field"><label>Evidências (OS, relatório técnico, fotos, vídeos) — pode anexar vários</label><input type="file" id="dg-anexos" accept="image/*,video/*,.pdf" multiple /></div>
+      <div class="field"><label>Evidências (OS, relatório técnico, fotos, vídeos) — pode anexar vários</label><input type="file" id="dg-anexos" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" multiple /></div>
       <div class="callout" id="dg-aviso-obrigatorio" style="display:none;">Como é um caso de mau uso, o valor apresentado é obrigatório. O anexo de evidências é opcional, mas recomendado.</div>
       <button type="submit" class="btn btn--primary" id="btn-diagnostico" style="margin-top:20px;">Enviar diagnóstico</button>
     </form>
@@ -88,7 +88,7 @@
       <div id="lb-bloco-mauuso" style="display:none;">
         <div class="callout">Mau uso confirmado — anexe o orçamento com o valor final antes de liberar.</div>
         <div class="field"><label>Valor final (R$)</label><input type="text" id="lb-valor-final" inputmode="numeric" placeholder="R$ 0,00" /></div>
-        <div class="field"><label>Orçamento final (anexo)</label><input type="file" id="lb-orcamento" accept="image/*,.pdf" /></div>
+        <div class="field"><label>Orçamento final (anexo)</label><input type="file" id="lb-orcamento" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" /></div>
       </div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar liberação</button>
     </form>
@@ -101,7 +101,7 @@
     <div class="sheet__header"><h3>Anexar NF de cobrança</h3><button class="close-x" data-close="overlay-nf"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-nf">
       <input type="hidden" id="nf-id" />
-      <div class="field"><label>Nota fiscal</label><input type="file" id="nf-arquivo" accept=".pdf,image/*" required /></div>
+      <div class="field"><label>Nota fiscal</label><input type="file" id="nf-arquivo" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" required /></div>
       <button type="submit" class="btn btn--primary" id="btn-nf" style="margin-top:20px;">Enviar NF e concluir chamado</button>
     </form>
   </div>

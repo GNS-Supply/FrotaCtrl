@@ -32,10 +32,19 @@ let fornecedoresCacheDetalhe = null;
     mostrarToast(toastPendente);
   }
 
+  const acaoUrl = params.get("acao");
+  let acaoUrlTratada = false;
   db.collection("chamados").doc(chamadoId).onSnapshot((doc) => {
     if (!doc.exists) return;
     chamadoAtual = { id: doc.id, ...doc.data() };
     render(chamadoAtual);
+    // Atalho vindo das listas (ex.: "Contestar" no painel do aprovador)
+    if (acaoUrl && !acaoUrlTratada) {
+      acaoUrlTratada = true;
+      if (acaoUrl === "contestar" && chamadoAtual.status === "aguardando_aprovacao") abrirContestar();
+      else if (acaoUrl === "avaliar-contestacao" && chamadoAtual.status === "contestacao_gestao") abrirRespostaGestao();
+      else if (acaoUrl === "responder-contestacao" && chamadoAtual.status === "contestacao_fornecedor") abrirRespostaFornecedor();
+    }
   });
 })();
 
@@ -55,6 +64,11 @@ function configurarOverlays() {
   document.getElementById("form-decisao").addEventListener("submit", salvarDecisao);
   document.getElementById("form-liberar").addEventListener("submit", salvarLiberacao);
   document.getElementById("form-nf").addEventListener("submit", salvarNf);
+  document.getElementById("form-contestar").addEventListener("submit", salvarContestacao);
+  document.getElementById("form-resp-gestao").addEventListener("submit", salvarRespostaGestao);
+  document.getElementById("form-resp-fornecedor").addEventListener("submit", salvarRespostaFornecedor);
+  document.getElementById("form-destaque").addEventListener("submit", salvarDestaque);
+  document.getElementById("rg-destino").addEventListener("change", atualizarCamposRespostaGestao);
 }
 function abrirFechar(id, abrir) { document.getElementById(id).classList.toggle("hidden", !abrir); }
 
@@ -63,12 +77,16 @@ function render(c) {
 
   // ---------- Cabeçalho: identificação em blocos claros ----------
   const dataAtend = c.dataAtendimentoPrevista ? new Date(c.dataAtendimentoPrevista) : null;
+  const d = c.destaque;
+  const bannerDestaque = chamadoDestacado(c) ? `
+    <div class="ch-destaque">${icone("estrela", 18)}<div><strong>Chamado em destaque — prioridade da Gestão de Frota</strong><span>Destacado por ${escapeHtml(d.porNome || "—")} em ${formatarData(d.em)} · ${d.escopo === "final" ? "até o final do chamado" : "somente nesta etapa"}${d.motivo ? ` · ${escapeHtml(d.motivo)}` : ""}</span></div></div>` : "";
   document.getElementById("cabecalho").innerHTML = `
+    ${bannerDestaque}
     <div class="ch-header">
       <div class="ch-header__topo">
         <div class="ch-header__id">
           <div class="ch-header__numero">${escapeHtml(c.numero || "")}</div>
-          <div class="ch-header__equip">${escapeHtml(c.numeroFrota || "")} · ${escapeHtml(c.tipoModeloEquip || "—")}</div>
+          <div class="ch-header__equip">${escapeHtml(c.numeroFrota || "")} · ${escapeHtml(c.tipoModeloEquip || "—")}${c.numeroSerie ? ` · S/N ${escapeHtml(c.numeroSerie)}` : ""}</div>
         </div>
         <div class="ch-header__status">
           ${badgeHtml(c.status)}
@@ -113,7 +131,7 @@ function render(c) {
     document.getElementById("c-impacto-wrap").style.display = "block";
     document.getElementById("c-impacto").textContent = c.impactoSeguranca;
   }
-  document.getElementById("fotos-grid").innerHTML = (c.fotos || []).map((u) => `<a href="${u}" target="_blank"><img src="${u}" /></a>`).join("");
+  document.getElementById("fotos-grid").innerHTML = anexosHtml(c.fotos);
 
   // Financeiro — nunca mostrado pra Manutenção Magius.
   if (!souManutencao && (c.financeiro?.valorApresentado || c.financeiro?.valorFinal)) {
@@ -131,9 +149,23 @@ function render(c) {
   }
 
   // ---------- Etapas (coluna única, cada uma completa) ----------
-  const historico = (c.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
+  const historico = (c.historico || []).filter(etapaVisivel).sort((a, b) => a.timestamp - b.timestamp);
   document.getElementById("etapas-lista").innerHTML = historico.map((h, i) => etapaCardHtml(h, i, souManutencao)).join("");
 }
+
+// A contestação do aprovador e a resposta da Gestão ao aprovador são
+// conversas internas: o fornecedor só vê o que a Gestão encaminhou a ele
+// (e o que ele mesmo respondeu); a Manutenção Magius não participa.
+const TIPOS_CONTESTACAO = ["contestacao", "resposta_gestao", "resposta_fornecedor"];
+function etapaVisivel(h) {
+  const t = h.dados?.tipo;
+  if (!TIPOS_CONTESTACAO.includes(t)) return true;
+  const perfil = usuarioAtual.tipo;
+  if (perfil === "manutencao") return false;
+  if (perfil === "fornecedor") return (t === "resposta_gestao" && h.dados.destino === "fornecedor") || t === "resposta_fornecedor";
+  return true;
+}
+const ASSUNTO_CONTESTACAO = { desconto: "Solicitação de desconto", mau_uso: "Contestação do mau uso", outro: "Outro" };
 
 // Cartão completo de uma etapa: quem deu sequência, quando, o que
 // registrou e todos os anexos/observações daquela etapa.
@@ -204,7 +236,7 @@ function timelineItemHtml(e) {
 // registradas dentro daquela macro-etapa.
 function mostrarEtapasMacro(indiceMacro) {
   const souManutencao = usuarioAtual.tipo === "manutencao";
-  const historico = (chamadoAtual.historico || []).slice().sort((a, b) => a.timestamp - b.timestamp);
+  const historico = (chamadoAtual.historico || []).filter(etapaVisivel).sort((a, b) => a.timestamp - b.timestamp);
   const doGrupo = historico.filter((h) => (STATUS_PARA_ETAPA[h.status] ?? 0) === indiceMacro);
   const wrap = document.getElementById("detalhe-etapa-selecionada");
   if (doGrupo.length === 0) { wrap.innerHTML = ""; return; }
@@ -235,8 +267,13 @@ function renderDadosEtapa(dados, souManutencao) {
     linhas.push(["Mau uso?", dados.indicaMauUso ? "Sim" : "Não"]);
     if (dados.indicaMauUso && !souManutencao) linhas.push(["Valor apresentado", formatarMoeda(dados.valor)]);
     let extra = `<div class="destaque-texto" style="margin-top:8px;">${escapeHtml(dados.texto || "")}</div>`;
-    if ((dados.anexos || []).length) extra += `<div class="photo-grid">${dados.anexos.map((u) => `<a href="${u}" target="_blank"><img src="${u}" /></a>`).join("")}</div>`;
+    extra += anexosHtml(dados.anexos);
     return linhaEtapaHtml(linhas) + extra;
+  } else if (TIPOS_CONTESTACAO.includes(dados.tipo)) {
+    if (dados.tipo === "contestacao") linhas.push(["Motivo", ASSUNTO_CONTESTACAO[dados.assunto] || dados.assunto || "—"]);
+    if (dados.tipo === "resposta_gestao") linhas.push(["Encaminhado para", dados.destino === "fornecedor" ? "Fornecedor" : "Aprovador"]);
+    const msg = dados.mensagem ? `<div class="destaque-texto" style="margin-top:8px;">${escapeHtml(dados.mensagem)}</div>` : "";
+    return linhaEtapaHtml(linhas) + msg + anexosHtml(dados.anexos);
   } else if (dados.tipo === "parecer") {
     linhas.push(["Modalidade", dados.modalidade === "presencial" ? "Presencial" : "Documental"]);
     linhas.push(["Resultado", PARECER_LABELS[dados.resultado] || dados.resultado]);
@@ -286,6 +323,11 @@ function renderAcoes(c) {
     if (c.status === "em_triagem") html += `<button class="btn btn--primary btn--sm" onclick="abrirAcionarDetalhe()">Acionar fornecedor</button>`;
     if (c.status === "aguardando_autorizacao") html += `<button class="btn btn--primary btn--sm" onclick="autorizarExecucaoDetalhe()">Autorizar execução</button>`;
     if (c.status === "aguardando_ordem_compra") html += `<button class="btn btn--primary btn--sm" onclick="abrirOrdemCompraDetalhe()">Anexar ordem de compra</button>`;
+    if (c.status === "contestacao_gestao") html += `<button class="btn btn--primary btn--sm" onclick="abrirRespostaGestao()">Avaliar contestação</button>`;
+    if (!["concluido", "cancelado"].includes(c.status)) {
+      if (chamadoDestacado(c)) html += `<button class="btn btn--secondary btn--sm" onclick="abrirDestaque()">Alterar destaque</button><button class="btn btn--secondary btn--sm" onclick="removerDestaque()">Remover destaque</button>`;
+      else html += `<button class="btn btn--secondary btn--sm" onclick="abrirDestaque()">${icone("estrela", 14)} Destacar chamado</button>`;
+    }
   }
   if (souFornecedorDoChamado) {
     if (c.status === "fornecedor_acionado") html += `<button class="btn btn--primary btn--sm" onclick="abrirProgramarDetalhe()">Programar atendimento</button>`;
@@ -294,12 +336,13 @@ function renderAcoes(c) {
     if (c.status === "diagnostico_contestado") html += `<button class="btn btn--primary btn--sm" onclick="abrirDiagnosticoDetalhe(true)">Novo diagnóstico</button>`;
     if (c.status === "em_teste") html += `<button class="btn btn--primary btn--sm" onclick="abrirLiberarDetalhe()">Liberar máquina</button>`;
     if (c.status === "aguardando_nf") html += `<button class="btn btn--primary btn--sm" onclick="abrirNfDetalhe()">Anexar NF de cobrança</button>`;
+    if (c.status === "contestacao_fornecedor") html += `<button class="btn btn--primary btn--sm" onclick="abrirRespostaFornecedor()">Responder contestação</button>`;
   }
   if (souManutencao && c.status === "aguardando_validacao") {
     html += `<button class="btn btn--primary btn--sm" onclick="abrirParecerDetalhe()">Emitir parecer</button>`;
   }
   if (souAprovador && c.status === "aguardando_aprovacao") {
-    html += `<button class="btn btn--primary btn--sm" onclick="abrirDecisaoDetalhe()">Dar ciência</button>`;
+    html += `<button class="btn btn--primary btn--sm" onclick="abrirDecisaoDetalhe()">Dar ciência</button><button class="btn btn--secondary btn--sm" onclick="abrirContestar()">Contestar</button>`;
   }
 
   if (html) {
@@ -430,7 +473,9 @@ function atualizarCamposDiagnostico() {
   const mauUso = document.getElementById("dg-mauuso").value === "sim";
   const campoValor = document.getElementById("dg-valor");
   campoValor.disabled = !mauUso;
+  campoValor.required = mauUso;
   if (!mauUso) campoValor.value = "";
+  marcarObrigatorios(document.getElementById("form-diagnostico"));
   document.getElementById("dg-aviso-obrigatorio").style.display = mauUso ? "block" : "none";
 }
 function abrirDiagnosticoDetalhe(contestado) {
@@ -541,6 +586,8 @@ async function salvarDecisao(e) {
 function abrirLiberarDetalhe() {
   document.getElementById("form-liberar").reset();
   document.getElementById("lb-bloco-mauuso").style.display = chamadoAtual?.fluxo === "mau_uso" ? "block" : "none";
+  document.getElementById("lb-valor-final").required = chamadoAtual?.fluxo === "mau_uso";
+  marcarObrigatorios(document.getElementById("form-liberar"));
   abrirFechar("overlay-liberar", true);
 }
 async function salvarLiberacao(e) {
@@ -623,5 +670,160 @@ async function salvarNf(e) {
   } finally {
     btn.disabled = false;
     btn.textContent = "Enviar NF e concluir chamado";
+  }
+}
+
+
+// ============================================================
+// Contestação do aprovador  →  Gestão de Frota  ⇄  Fornecedor
+// ============================================================
+// Aprovador contesta (desconto ou mau uso) → cai na Gestão de Frota.
+// A Gestão responde direto ao aprovador (volta p/ "aguardando ciência")
+// ou encaminha ao fornecedor; a resposta do fornecedor volta para a
+// Gestão, que decide de novo — quantas vezes forem necessárias.
+
+function ultimoRegistro(tipos, filtro) {
+  const hist = (chamadoAtual.historico || []).slice().sort((a, b) => b.timestamp - a.timestamp);
+  return hist.find((h) => tipos.includes(h.dados?.tipo) && (!filtro || filtro(h)));
+}
+function resumoMensagem(h, titulo) {
+  if (!h) return "";
+  return `<strong>${titulo}</strong> (${escapeHtml(h.autor || "—")}, ${formatarData(h.timestamp)})<br/>${escapeHtml(h.dados?.mensagem || "sem mensagem")}`;
+}
+async function anexosOpcionais(inputId, prefixo, btn, textoBase) {
+  const arquivos = document.getElementById(inputId).files;
+  if (!arquivos.length) return [];
+  return enviarArquivos(prefixo, arquivos, btn, textoBase);
+}
+
+function abrirContestar() {
+  document.getElementById("form-contestar").reset();
+  marcarObrigatorios(document.getElementById("form-contestar"));
+  abrirFechar("overlay-contestar", true);
+}
+async function salvarContestacao(e) {
+  e.preventDefault();
+  const assunto = document.getElementById("ct-assunto").value;
+  const mensagem = document.getElementById("ct-mensagem").value.trim();
+  if (!mensagem) { alert("Escreva a mensagem da contestação."); return; }
+  const btn = document.getElementById("btn-contestar");
+  btn.disabled = true;
+  try {
+    const anexos = await anexosOpcionais("ct-anexos", `chamados/${chamadoId}/contestacao`, btn, "Enviar contestação");
+    await transicionarChamado(chamadoId, "contestacao_gestao", `${ASSUNTO_CONTESTACAO[assunto]} — encaminhada à Gestão de Frota`, usuarioAtual.nome, "aprovador", {},
+      { tipo: "contestacao", assunto, mensagem, anexos });
+    e.target.reset();
+    abrirFechar("overlay-contestar", false);
+    mostrarToast("Contestação enviada à Gestão de Frota.");
+  } catch (err) {
+    alert("Erro ao enviar contestação: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Enviar contestação";
+  }
+}
+
+function atualizarCamposRespostaGestao() {
+  const paraAprovador = document.getElementById("rg-destino").value === "aprovador";
+  const msg = document.getElementById("rg-mensagem");
+  msg.required = paraAprovador;
+  msg.placeholder = paraAprovador ? "Resposta ao aprovador (obrigatória)" : "Comentário para o fornecedor (opcional)";
+  document.getElementById("rg-mensagem-label").textContent = paraAprovador ? "Mensagem ao aprovador" : "Comentário para o fornecedor";
+  marcarObrigatorios(document.getElementById("form-resp-gestao"));
+}
+function abrirRespostaGestao() {
+  document.getElementById("form-resp-gestao").reset();
+  const ult = ultimoRegistro(["contestacao", "resposta_fornecedor"]);
+  document.getElementById("rg-ultima").innerHTML = ult
+    ? resumoMensagem(ult, ult.dados.tipo === "contestacao" ? "Contestação do aprovador" : "Resposta do fornecedor")
+    : "Chamado em contestação.";
+  atualizarCamposRespostaGestao();
+  abrirFechar("overlay-resp-gestao", true);
+}
+async function salvarRespostaGestao(e) {
+  e.preventDefault();
+  const destino = document.getElementById("rg-destino").value;
+  const mensagem = document.getElementById("rg-mensagem").value.trim();
+  if (destino === "aprovador" && !mensagem) { alert("Escreva a resposta ao aprovador."); return; }
+  const btn = document.getElementById("btn-resp-gestao");
+  btn.disabled = true;
+  try {
+    const anexos = await anexosOpcionais("rg-anexos", `chamados/${chamadoId}/contestacao`, btn, "Enviar");
+    const status = destino === "aprovador" ? "aguardando_aprovacao" : "contestacao_fornecedor";
+    const obs = destino === "aprovador"
+      ? "Gestão de Frota respondeu à contestação — devolvido ao aprovador"
+      : "Gestão de Frota encaminhou a contestação ao fornecedor";
+    await transicionarChamado(chamadoId, status, obs, usuarioAtual.nome, "gestao_frota", {}, { tipo: "resposta_gestao", destino, mensagem, anexos });
+    e.target.reset();
+    abrirFechar("overlay-resp-gestao", false);
+    mostrarToast(destino === "aprovador" ? "Resposta enviada ao aprovador." : "Contestação enviada ao fornecedor.");
+  } catch (err) {
+    alert("Erro ao enviar: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Enviar";
+  }
+}
+
+function abrirRespostaFornecedor() {
+  document.getElementById("form-resp-fornecedor").reset();
+  const ult = ultimoRegistro(["resposta_gestao"], (h) => h.dados.destino === "fornecedor");
+  document.getElementById("rf-ultima").innerHTML = ult ? resumoMensagem(ult, "Mensagem da Gestão de Frota") : "A Gestão de Frota solicitou sua resposta sobre este chamado.";
+  abrirFechar("overlay-resp-fornecedor", true);
+}
+async function salvarRespostaFornecedor(e) {
+  e.preventDefault();
+  const mensagem = document.getElementById("rf-mensagem").value.trim();
+  const btn = document.getElementById("btn-resp-fornecedor");
+  btn.disabled = true;
+  try {
+    const anexos = await anexosOpcionais("rf-anexos", `chamados/${chamadoId}/contestacao`, btn, "Enviar resposta");
+    await transicionarChamado(chamadoId, "contestacao_gestao", "Fornecedor respondeu — devolvido à Gestão de Frota", usuarioAtual.nome, "fornecedor", {}, { tipo: "resposta_fornecedor", mensagem, anexos });
+    e.target.reset();
+    abrirFechar("overlay-resp-fornecedor", false);
+    mostrarToast("Resposta enviada à Gestão de Frota.");
+  } catch (err) {
+    alert("Erro ao enviar resposta: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Enviar resposta";
+  }
+}
+
+// ============================================================
+// Destaque (prioridade) — só a Gestão de Frota
+// ============================================================
+function abrirDestaque() {
+  const form = document.getElementById("form-destaque");
+  form.reset();
+  const d = chamadoAtual.destaque;
+  if (d && chamadoDestacado(chamadoAtual)) {
+    document.getElementById("ds-escopo").value = d.escopo || "etapa";
+    document.getElementById("ds-motivo").value = d.motivo || "";
+  }
+  marcarObrigatorios(form);
+  abrirFechar("overlay-destaque", true);
+}
+async function salvarDestaque(e) {
+  e.preventDefault();
+  const escopo = document.getElementById("ds-escopo").value;
+  const motivo = document.getElementById("ds-motivo").value.trim();
+  try {
+    await db.collection("chamados").doc(chamadoId).update({
+      destaque: { ativo: true, escopo, etapaOrigem: etapaDoChamado(chamadoAtual), motivo, porNome: usuarioAtual.nome, porUid: usuarioAtual.uid, em: Date.now() }
+    });
+    abrirFechar("overlay-destaque", false);
+    mostrarToast("Chamado destacado.");
+  } catch (err) {
+    alert("Erro ao destacar chamado: " + err.message);
+  }
+}
+async function removerDestaque() {
+  if (!confirm("Remover o destaque deste chamado?")) return;
+  try {
+    await db.collection("chamados").doc(chamadoId).update({ destaque: firebase.firestore.FieldValue.delete() });
+    mostrarToast("Destaque removido.");
+  } catch (err) {
+    alert("Erro ao remover destaque: " + err.message);
   }
 }

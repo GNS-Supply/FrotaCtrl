@@ -71,7 +71,8 @@ const ACOES_POR_STATUS = {
   em_avaliacao_tecnica: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirDiagnostico('${c.id}', false)">Registrar diagnóstico</button>`,
   diagnostico_contestado: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirDiagnostico('${c.id}', true)">Novo diagnóstico</button>`,
   em_teste: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirLiberar('${c.id}')">Liberar máquina</button>`,
-  aguardando_nf: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirNf('${c.id}')">Anexar NF de cobrança</button>`
+  aguardando_nf: (c) => `<button class="btn btn--primary btn--sm" onclick="abrirNf('${c.id}')">Anexar NF de cobrança</button>`,
+  contestacao_fornecedor: (c) => `<a class="btn btn--primary btn--sm" href="chamado.html?id=${c.id}&acao=responder-contestacao">Responder contestação</a>`
 };
 
 function cardDataAgendada(c) {
@@ -123,7 +124,9 @@ const TELAS_FORNECEDOR = [
   ]},
   { id: "mauuso", titulo: "Mau uso", subtitulo: "Validação e contestação", tipo: "kanban", colunas: [
     { id: "contestado", n: 1, titulo: "Mau uso contestado", sub: "Dar novo diagnóstico", cor: "red", status: ["diagnostico_contestado"], ordenar: porRegistro },
-    { id: "validacao", n: 2, titulo: "Aguardando avaliação do mau uso", sub: "Status — Manutenção Magius", cor: "muted", status: ["aguardando_validacao"], ordenar: porRegistro }
+    { id: "validacao", n: 2, titulo: "Aguardando avaliação do mau uso", sub: "Status — Manutenção Magius", cor: "muted", status: ["aguardando_validacao"], ordenar: porRegistro },
+    { id: "contestacao_resp", n: 3, titulo: "Contestação para responder", sub: "A Gestão de Frota aguarda sua resposta", cor: "red", status: ["contestacao_fornecedor"], ordenar: porRegistro },
+    { id: "contestacao_gestao", n: 4, titulo: "Contestação com a Gestão", sub: "Status — Gestão de Frota", cor: "muted", status: ["contestacao_gestao"], ordenar: porRegistro }
   ]},
   { id: "execucao", titulo: "Liberados para execução", subtitulo: "Execução, testes e liberação", tipo: "kanban", colunas: [
     { id: "liberado_execucao", n: 1, titulo: "Liberados para execução", sub: "A iniciar testes", cor: "green", status: ["aguardando_aprovacao", "aguardando_autorizacao"], ordenar: porRegistro },
@@ -172,9 +175,9 @@ function cardChamado(c, opts = {}) {
   const acaoFn = ACOES_POR_STATUS[c.status];
   const acao = acaoFn ? acaoFn(c) : "";
   const tempo = opts.historico ? "" : tempoNaEtapa(c);
-  return `<div class="kcard ${acao ? "kcard--acao" : ""}">
+  return `<div class="kcard ${acao ? "kcard--acao" : ""} ${classeDestaque(c)}">
     <div class="kcard__top"><a class="kcard__num" href="chamado.html?id=${c.id}">${escapeHtml(c.numeroFrota || "—")}</a>${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}</div>
-    <div class="kcard__id">${escapeHtml(c.numero || "")}${tempo ? ` · <span title="Tempo na etapa atual">${tempo} na etapa</span>` : ""}</div>
+    ${seloDestaque(c) ? `<div style="margin-bottom:4px;">${seloDestaque(c)}</div>` : ""}<div class="kcard__id">${escapeHtml(c.numero || "")}${tempo ? ` · <span title="Tempo na etapa atual">${tempo} na etapa</span>` : ""}</div>
     ${seloMauUso(c)}
     <div class="kcard__desc">${escapeHtml((c.descricao || "").slice(0, 90))}</div>
     <div class="kcard__local">${escapeHtml(c.plantaNome || "")}${c.setorNome ? " / " + escapeHtml(c.setorNome) : ""}</div>
@@ -195,7 +198,7 @@ function passaFiltroLista(c) {
   return true;
 }
 function nomeStatus(st) {
-  const nomes = { fornecedor_acionado:"A programar", atendimento_programado:"Atendimento programado", em_avaliacao_tecnica:"Em avaliação técnica", diagnostico_contestado:"Mau uso contestado", aguardando_validacao:"Aguardando validação", aguardando_aprovacao:"Aguardando aprovação", aguardando_autorizacao:"Aguardando autorização", em_teste:"Em testes", testes_concluidos:"Testes concluídos", liberado:"Aguardando OC", aguardando_ordem_compra:"Aguardando OC", aguardando_nf:"Aguardando NF", concluido:"Concluído", cancelado:"Cancelado" };
+  const nomes = { fornecedor_acionado:"A programar", atendimento_programado:"Atendimento programado", em_avaliacao_tecnica:"Em avaliação técnica", diagnostico_contestado:"Mau uso contestado", aguardando_validacao:"Aguardando validação", aguardando_aprovacao:"Aguardando aprovação", contestacao_gestao:"Contestação — Gestão de Frota", contestacao_fornecedor:"Contestação — responder", aguardando_autorizacao:"Aguardando autorização", em_teste:"Em testes", testes_concluidos:"Testes concluídos", liberado:"Aguardando OC", aguardando_ordem_compra:"Aguardando OC", aguardando_nf:"Aguardando NF", concluido:"Concluído", cancelado:"Cancelado" };
   return nomes[st] || (typeof STATUS_LABELS !== "undefined" && STATUS_LABELS[st]) || st || "—";
 }
 const ICONE_FILTRO = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="16" cy="6" r="2.6" fill="currentColor"/><circle cx="8" cy="12" r="2.6" fill="currentColor"/><circle cx="13" cy="18" r="2.6" fill="currentColor"/></svg>`;
@@ -210,13 +213,13 @@ function ordenarListaTodos(a, b) {
 function totalFiltrosAtivos() { return filtroLista.status.size + filtroLista.criticidade.size + filtroLista.fluxo.size; }
 
 function htmlResultadoLista() {
-  const lista = todosCache.filter(passaFiltroLista).sort(ordenarListaTodos);
+  const lista = todosCache.filter(passaFiltroLista).sort(comDestaque(ordenarListaTodos));
   const abertos = lista.filter((c) => !STATUS_ENCERRADOS.includes(c.status)).length;
   return `<div class="lista-total"><strong>${lista.length}</strong> chamados encontrados · <strong>${abertos}</strong> abertos · <strong>${lista.length - abertos}</strong> encerrados</div>
   <div class="chamados-lista">${lista.length ? lista.map((c) => {
     const encerrado = STATUS_ENCERRADOS.includes(c.status);
-    return `<a class="chamado-lista-row ${encerrado ? "chamado-lista-row--encerrado" : ""}" href="chamado.html?id=${c.id}">
-    <div class="chamado-lista-row__main"><div class="chamado-lista-row__top"><strong>${escapeHtml(c.numeroFrota || "—")}</strong>${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}${c.fluxo === "mau_uso" ? seloMauUso(c) : ""}</div><div class="chamado-lista-row__id">${escapeHtml(c.numero || "—")}</div><div class="chamado-lista-row__desc">${escapeHtml(c.descricao || "Sem descrição")}</div></div>
+    return `<a class="chamado-lista-row ${encerrado ? "chamado-lista-row--encerrado" : ""} ${classeDestaque(c)}" href="chamado.html?id=${c.id}">
+    <div class="chamado-lista-row__main"><div class="chamado-lista-row__top"><strong>${escapeHtml(c.numeroFrota || "—")}</strong>${seloDestaque(c)}${c.criticidade ? `<span class="chip chip--${c.criticidade}">${c.criticidade}</span>` : ""}${c.fluxo === "mau_uso" ? seloMauUso(c) : ""}</div><div class="chamado-lista-row__id">${escapeHtml(c.numero || "—")}</div><div class="chamado-lista-row__desc">${escapeHtml(c.descricao || "Sem descrição")}</div></div>
     <div class="chamado-lista-row__status"><span class="badge badge--${c.status === "concluido" ? "green" : c.status === "cancelado" ? "red" : minhaVez(c) ? "amber" : "muted"}">${nomeStatus(c.status)}</span><span>${escapeHtml(c.plantaNome || "—")}${c.setorNome ? " · " + escapeHtml(c.setorNome) : ""}</span></div>
   </a>`;
   }).join("") : `<div class="kcol__vazio">Nenhum chamado encontrado com os filtros atuais.</div>`}</div>`;
@@ -254,7 +257,7 @@ function renderListaTodos() {
 function htmlColunasKanban(tela) {
   return tela.colunas.map((col) => {
     const todos = ativosCache.filter((c) => col.status.includes(c.status));
-    const lista = todos.filter(passaFiltro).sort(col.ordenar);
+    const lista = todos.filter(passaFiltro).sort(comDestaque(col.ordenar));
     const nMinha = todos.filter(minhaVez).length;
     return `<section class="kcol kcol--${col.cor} ${todos.length === 0 ? "kcol--vazia" : ""}"><header class="kcol__head"><div class="kcol__n">${col.n}</div><div class="kcol__tit"><div class="kcol__nome">${col.titulo}</div><div class="kcol__sub">${col.sub}</div></div><div class="kcol__cont ${nMinha > 0 ? "kcol__cont--acao" : ""}">${todos.length}</div></header>${nMinha > 0 ? `<div class="kcol__faixa">${nMinha} para você agir</div>` : ""}<div class="kcol__corpo">${lista.length ? lista.map((c) => cardChamado(c)).join("") : `<div class="kcol__vazio">Nenhum chamado</div>`}</div></section>`;
   }).join("");
@@ -310,7 +313,9 @@ function atualizarCamposDiagnostico() {
   const mauUso = document.getElementById("dg-mauuso").value === "sim";
   const campoValor = document.getElementById("dg-valor");
   campoValor.disabled = !mauUso;
+  campoValor.required = mauUso;
   if (!mauUso) campoValor.value = "";
+  marcarObrigatorios(document.getElementById("form-diagnostico"));
   document.getElementById("dg-aviso-obrigatorio").style.display = mauUso ? "block" : "none";
 }
 
@@ -393,6 +398,8 @@ function abrirLiberar(id) {
   document.getElementById("form-liberar").reset();
   document.getElementById("lb-id").value = id;
   document.getElementById("lb-bloco-mauuso").style.display = c?.fluxo === "mau_uso" ? "block" : "none";
+  document.getElementById("lb-valor-final").required = c?.fluxo === "mau_uso";
+  marcarObrigatorios(document.getElementById("form-liberar"));
   abrirFechar("overlay-liberar", true);
 }
 async function salvarLiberacao(e) {

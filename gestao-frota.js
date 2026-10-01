@@ -34,11 +34,16 @@ let parametrosRecorrencia = { atencaoQtd: 2, atencaoDias: 90, altaQtd: 3, altaDi
   configurarFormsCadastros();
   configurarFiltroChamados();
   aplicarMascaraTelefone(document.getElementById("nu-telefone"));
+  aplicarMascaraTelefone(document.getElementById("fd-telefone"));
+  document.getElementById("nu-tipo").addEventListener("change", ajustarCamposFornecedor);
+  ajustarCamposFornecedor();
+  document.getElementById("btn-novo-chamado").addEventListener("click", () => abrirNovoChamado(usuarioAtual));
+  document.getElementById("btn-novo-chamado-fila").addEventListener("click", () => abrirNovoChamado(usuarioAtual));
+  document.getElementById("form-fornecedor-dados").addEventListener("submit", salvarDadosFornecedor);
   adicionarAtalhoMaster(usuarioAtual);
 })();
 
 function popularSelectsEstaticos() {
-  document.getElementById("eq-criticidade").innerHTML = optionsHtml(CRITICIDADE_LABELS, "P2");
   document.getElementById("eq-status").innerHTML = optionsHtml(STATUS_OPERACIONAL_LABELS, "operacional");
   aplicarMascaraMoeda(document.getElementById("eq-contrato"));
   aplicarMascaraFracionado(document.getElementById("eq-horimetro"));
@@ -270,6 +275,10 @@ async function cadastrarUsuario(e) {
   const email = document.getElementById("nu-email").value.trim();
   const senha = document.getElementById("nu-senha").value;
   const btn = document.getElementById("btn-novo-usuario");
+  if (tipo === "fornecedor" && (!empresa || telefone.replace(/\D/g, "").length < 10)) {
+    alert("Para cadastrar um Fornecedor, informe o nome da empresa e um telefone de contato válido (com DDD).");
+    return;
+  }
   btn.disabled = true;
   btn.textContent = "Cadastrando…";
   try {
@@ -293,6 +302,17 @@ async function cadastrarUsuario(e) {
   }
 }
 
+// Para o perfil Fornecedor, nome da empresa e telefone de contato são
+// obrigatórios (mesmos campos do cadastro da tela inicial).
+function ajustarCamposFornecedor() {
+  const forn = document.getElementById("nu-tipo").value === "fornecedor";
+  document.getElementById("nu-empresa").required = forn;
+  document.getElementById("nu-telefone").required = forn;
+  document.getElementById("nu-empresa-label").textContent = forn ? "Nome da empresa" : "Empresa";
+  document.getElementById("nu-telefone-label").textContent = forn ? "Telefone para contato" : "Telefone";
+  marcarObrigatorios(document.getElementById("form-novo-usuario"));
+}
+
 function renderUsuarios() {
   const el = document.getElementById("lista-usuarios");
   if (!el) return;
@@ -304,7 +324,7 @@ function renderUsuarios() {
           ${u.bloqueado ? '<span class="badge badge--red">Bloqueado</span>' : '<span class="badge badge--green">Ativo</span>'}
         </div>
         <div style="display:flex; gap:8px; width:100%; flex-wrap:wrap;">
-          <select style="flex:1; min-width:160px;" onchange="alterarPerfil('${u.id}', this.value)">
+          <select style="flex:1; min-width:160px;" onchange="alterarPerfil('${u.id}', this.value, this)">
             ${optionsHtml(PERFIL_LABELS_SEM_ADMIN(), u.tipo)}
           </select>
           <button class="btn btn--sm ${u.bloqueado ? "btn--primary" : "btn--secondary"}" onclick="alternarBloqueio('${u.id}', ${!!u.bloqueado})">${u.bloqueado ? "Desbloquear" : "Bloquear"}</button>
@@ -318,9 +338,39 @@ function PERFIL_LABELS_SEM_ADMIN() {
   return resto;
 }
 
-async function alterarPerfil(uid, novoTipo) {
+async function alterarPerfil(uid, novoTipo, selectEl) {
+  // Virando Fornecedor: pede nome da empresa e telefone antes de aplicar
+  if (novoTipo === "fornecedor") {
+    const u = usuariosCache.find((x) => x.id === uid);
+    if (selectEl && u) selectEl.value = u.tipo; // só muda de fato depois de confirmar os dados
+    document.getElementById("fd-uid").value = uid;
+    document.getElementById("fd-info").innerHTML = `<strong>${escapeHtml(u?.nome || "")}</strong> passará a ser Fornecedor. Confirme os dados da empresa para contato.`;
+    document.getElementById("fd-empresa").value = u?.empresa || "";
+    document.getElementById("fd-telefone").value = u?.telefone || "";
+    marcarObrigatorios(document.getElementById("form-fornecedor-dados"));
+    abrirFechar("overlay-fornecedor-dados", true);
+    return;
+  }
   try {
     await db.collection("usuarios").doc(uid).update({ tipo: novoTipo });
+  } catch (err) {
+    alert("Erro ao alterar perfil: " + err.message);
+  }
+}
+async function salvarDadosFornecedor(e) {
+  e.preventDefault();
+  const uid = document.getElementById("fd-uid").value;
+  const empresa = document.getElementById("fd-empresa").value.trim();
+  const telefone = document.getElementById("fd-telefone").value.trim();
+  if (!empresa || telefone.replace(/\D/g, "").length < 10) {
+    alert("Informe o nome da empresa e um telefone de contato válido (com DDD).");
+    return;
+  }
+  try {
+    await db.collection("usuarios").doc(uid).update({ tipo: "fornecedor", empresa, telefone });
+    abrirFechar("overlay-fornecedor-dados", false);
+    mostrarToast("Usuário alterado para Fornecedor.");
+    carregarFornecedores();
   } catch (err) {
     alert("Erro ao alterar perfil: " + err.message);
   }
@@ -357,7 +407,7 @@ function escutarChamados() {
   });
 }
 
-const STATUS_FILA_GESTAO = ["registrado", "em_triagem", "aguardando_autorizacao", "aguardando_ordem_compra"];
+const STATUS_FILA_GESTAO = ["registrado", "em_triagem", "contestacao_gestao", "aguardando_autorizacao", "aguardando_ordem_compra"];
 
 function renderStats() {
   const fila = chamadosCache.filter((c) => STATUS_FILA_GESTAO.includes(c.status)).length;
@@ -379,7 +429,7 @@ function renderStats() {
 
 function renderFila() {
   const el = document.getElementById("lista-fila");
-  const fila = chamadosCache.filter((c) => STATUS_FILA_GESTAO.includes(c.status));
+  const fila = chamadosCache.filter((c) => STATUS_FILA_GESTAO.includes(c.status)).sort(comDestaque());
   if (fila.length === 0) {
     el.innerHTML = `<div class="empty">${icone("checkCirculo", 34)}<div class="empty__title">Nenhuma pendência</div></div>`;
     return;
@@ -390,15 +440,17 @@ function renderFila() {
       acoes = `<button class="btn btn--primary btn--sm" onclick="abrirTriagem('${c.id}')">Iniciar triagem</button>`;
     } else if (c.status === "em_triagem") {
       acoes = `<button class="btn btn--primary btn--sm" onclick="abrirAcionar('${c.id}')">Acionar fornecedor</button>`;
+    } else if (c.status === "contestacao_gestao") {
+      acoes = `<a class="btn btn--primary btn--sm" href="chamado.html?id=${c.id}&acao=avaliar-contestacao">Avaliar contestação</a>`;
     } else if (c.status === "aguardando_autorizacao") {
       acoes = `<button class="btn btn--primary btn--sm" onclick="autorizarExecucao('${c.id}')">Autorizar execução</button>`;
     } else if (c.status === "aguardando_ordem_compra") {
       acoes = `<button class="btn btn--primary btn--sm" onclick="abrirOrdemCompra('${c.id}')">Anexar ordem de compra</button>`;
     }
     return `
-    <div class="ticket-card">
+    <div class="ticket-card ${classeDestaque(c)}">
       <div class="ticket-card__top">
-        <div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>
+        <div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)} ${seloDestaque(c)}</div>
         ${badgeHtml(c.status)}
       </div>
       <div style="font-size:13px; color:var(--text-dim);">${escapeHtml((c.descricao || "").slice(0, 80))}</div>
@@ -419,14 +471,15 @@ function renderTodosChamados() {
   const el = document.getElementById("lista-todos-chamados");
   // Fila de verdade: ordem cronológica, do mais antigo (quem está esperando
   // há mais tempo) para o mais novo — não o contrário.
-  const lista = aplicarFiltroStatus(chamadosCache, filtroChamadoAtual).slice().sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
+  // Destacados pela Gestão sempre no topo; o resto segue a ordem cronológica.
+  const lista = aplicarFiltroStatus(chamadosCache, filtroChamadoAtual).slice().sort(comDestaque((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0)));
 
   if (lista.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__text">Nenhum chamado nesse filtro.</div></div>`; return; }
   el.innerHTML = lista.map((c, i) => `
-    <a class="chamado-row" href="chamado.html?id=${c.id}">
+    <a class="chamado-row ${classeDestaque(c)}" href="chamado.html?id=${c.id}">
       <div class="chamado-row__principal">
         <div class="chamado-row__topo">
-          <span class="chamado-row__numero"><span style="color:var(--text-dim); font-weight:400;">#${i + 1}</span> ${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</span>
+          <span class="chamado-row__numero"><span style="color:var(--text-dim); font-weight:400;">#${i + 1}</span> ${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)} ${seloDestaque(c)}</span>
           ${badgeHtml(c.status)}
         </div>
         <div class="chamado-row__meta">
@@ -573,7 +626,7 @@ function renderEquipamentos() {
           <span class="equip-row__local">${escapeHtml(eq.plantaNome || "—")} / ${escapeHtml(eq.setorNome || "—")}</span>
           <div class="equip-row__badges">
             <span class="badge badge--${STATUS_OPERACIONAL_COLORS[eq.statusOperacional]}">${STATUS_OPERACIONAL_LABELS[eq.statusOperacional]}</span>
-            ${eq.criticidade ? `<span class="chip chip--${eq.criticidade}">${eq.criticidade}</span>` : ""}
+            ${eq.numeroSerie ? `<span class="badge badge--muted" title="Número de série">S/N ${escapeHtml(eq.numeroSerie)}</span>` : ""}
             <span class="badge badge--${RECORRENCIA_COLORS[nivel]}">${RECORRENCIA_LABELS[nivel]}</span>
           </div>
           <div class="hourmeter equip-row__horimetro"><div class="hourmeter__value">${(eq.horimetroAtual ?? 0).toLocaleString("pt-BR")}h</div><div class="hourmeter__label">Horímetro</div></div>
@@ -637,7 +690,7 @@ function abrirFormEquip(id) {
     definirValorMoeda(document.getElementById("eq-contrato"), eq.contratoValor || 0);
     document.getElementById("eq-capacidade").value = eq.capacidade || "";
     document.getElementById("eq-energia").value = eq.energiaCombustivel || "";
-    document.getElementById("eq-criticidade").value = eq.criticidade || "P2";
+    document.getElementById("eq-serie").value = eq.numeroSerie || "";
     document.getElementById("eq-backup").value = eq.backupDisponivel ? "sim" : "nao";
     document.getElementById("eq-status").value = eq.statusOperacional || "operacional";
     definirValorFracionado(document.getElementById("eq-horimetro"), eq.horimetroAtual || 0);
@@ -666,7 +719,7 @@ async function salvarEquipamento(e) {
     contratoValor: valorMoedaParaNumero(document.getElementById("eq-contrato")) || null,
     capacidade: document.getElementById("eq-capacidade").value.trim(),
     energiaCombustivel: document.getElementById("eq-energia").value.trim(),
-    criticidade: document.getElementById("eq-criticidade").value,
+    numeroSerie: document.getElementById("eq-serie").value.trim(),
     backupDisponivel: document.getElementById("eq-backup").value === "sim",
     statusOperacional: document.getElementById("eq-status").value,
     horimetroAtual: valorFracionadoParaNumero(document.getElementById("eq-horimetro"))

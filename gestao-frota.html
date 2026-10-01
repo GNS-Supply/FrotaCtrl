@@ -20,7 +20,7 @@
   <div class="page" id="view-fila">
     <div class="page-header"><h1>Painel da Gestão de Frota</h1><p>Pendências que aguardam sua ação, visão geral da frota e dos chamados.</p></div>
     <div class="stats-grid" id="stats-grid"></div>
-    <div class="section-title"><span>Pendências da Gestão de Frota</span></div>
+    <div class="section-title"><span>Pendências da Gestão de Frota</span><button class="btn btn--primary btn--sm" id="btn-novo-chamado-fila">+ Novo chamado</button></div>
     <div id="lista-fila" class="card-list"></div>
   </div>
 
@@ -31,7 +31,7 @@
   </div>
 
   <div class="page" id="view-chamados" style="display:none;">
-    <div class="section-title"><span>Fila de chamados</span></div>
+    <div class="section-title"><span>Fila de chamados</span><button class="btn btn--primary btn--sm" id="btn-novo-chamado">+ Novo chamado</button></div>
     <div class="pill-group" id="filtro-status-chamados">
       <button class="pill active" data-filtro="todos">Todos</button>
       <button class="pill" data-filtro="registrado">Registrado</button>
@@ -56,7 +56,7 @@
     <div id="sub-plantas">
       <div class="section-title"><span>Plantas</span></div>
       <form id="form-planta" class="grid-2" style="margin-bottom:14px;">
-        <input type="text" id="pl-nome" placeholder="Nome da planta" required style="grid-column: 1 / span 2;" />
+        <input type="text" id="pl-nome" placeholder="Nome da planta *" required style="grid-column: 1 / span 2;" />
         <button type="submit" class="btn btn--primary btn--sm" style="grid-column: 1 / span 2;">Adicionar planta</button>
       </form>
       <div id="lista-plantas-admin"></div>
@@ -102,8 +102,8 @@
           </select>
         </div>
         <div class="field"><label>Nome completo</label><input type="text" id="nu-nome" required /></div>
-        <div class="field"><label>Empresa</label><input type="text" id="nu-empresa" /></div>
-        <div class="field"><label>Telefone</label><input type="tel" id="nu-telefone" /></div>
+        <div class="field"><label id="nu-empresa-label">Empresa</label><input type="text" id="nu-empresa" /></div>
+        <div class="field"><label id="nu-telefone-label">Telefone</label><input type="tel" id="nu-telefone" placeholder="(00) 00000-0000" /></div>
         <div class="field"><label>E-mail</label><input type="email" id="nu-email" required /></div>
         <div class="field"><label>Senha temporária</label><input type="password" id="nu-senha" required minlength="6" placeholder="A pessoa pode trocar depois" /></div>
         <button type="submit" class="btn btn--primary" id="btn-novo-usuario" style="margin-top:16px;">Cadastrar usuário</button>
@@ -188,8 +188,23 @@
     <form id="form-ordem-compra">
       <input type="hidden" id="oc-chamado-id" />
       <div class="field"><label>Número da ordem de compra</label><input type="text" id="oc-numero" placeholder="Ex: OC-2026-0042" /></div>
-      <div class="field"><label>Anexo (opcional)</label><input type="file" id="oc-arquivo" accept=".pdf,image/*" /></div>
+      <div class="field"><label>Anexo (opcional)</label><input type="file" id="oc-arquivo" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" /></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: DADOS DO FORNECEDOR (ao trocar um usuário para o perfil Fornecedor) -->
+<div class="overlay hidden" id="overlay-fornecedor-dados">
+  <div class="sheet">
+    <div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Dados do fornecedor</h3><button type="button" class="close-x" data-close="overlay-fornecedor-dados" aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="callout" id="fd-info"></div>
+    <form id="form-fornecedor-dados">
+      <input type="hidden" id="fd-uid" />
+      <div class="field"><label>Nome da empresa</label><input type="text" id="fd-empresa" required /></div>
+      <div class="field"><label>Telefone para contato</label><input type="tel" id="fd-telefone" required placeholder="(00) 00000-0000" /></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Salvar e tornar Fornecedor</button>
     </form>
   </div>
 </div>
@@ -223,7 +238,7 @@
         <div class="field" style="margin-top:0;"><label>Energia / combustível</label><input type="text" id="eq-energia" placeholder="Elétrico, GLP…" /></div>
       </div>
       <div class="grid-2">
-        <div class="field" style="margin-top:0;"><label>Criticidade</label><select id="eq-criticidade"></select></div>
+        <div class="field" style="margin-top:0;"><label>Número de série</label><input type="text" id="eq-serie" placeholder="Ex: A1234567" autocomplete="off" /></div>
         <div class="field" style="margin-top:0;"><label>Backup disponível?</label><select id="eq-backup"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
       </div>
       <div class="grid-2">
@@ -240,6 +255,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
+<script src="novo-chamado.js"></script>
 <script src="gestao-frota.js"></script>
 </body>
 </html>

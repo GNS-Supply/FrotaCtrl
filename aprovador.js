@@ -36,12 +36,21 @@ function configurarOverlay() {
 }
 function abrirFechar(id, abrir) { document.getElementById(id).classList.toggle("hidden", !abrir); }
 
+const STATUS_CONTESTACAO = ["contestacao_gestao", "contestacao_fornecedor"];
+let contestacoesCache = [];
+
 function escutarChamados() {
-  db.collection("chamados").where("status", "==", "aguardando_aprovacao").onSnapshot((snap) => {
-    filaCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    filaCache.sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
+  db.collection("chamados").where("status", "in", ["aguardando_aprovacao", ...STATUS_CONTESTACAO]).onSnapshot((snap) => {
+    const todos = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const antigoPrimeiro = (a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0);
+    // Destacados pela Gestão de Frota sempre no topo
+    filaCache = todos.filter((c) => c.status === "aguardando_aprovacao").sort(comDestaque(antigoPrimeiro));
+    contestacoesCache = todos.filter((c) => STATUS_CONTESTACAO.includes(c.status)).sort(comDestaque(antigoPrimeiro));
     renderFila();
-    document.getElementById("stats-grid").innerHTML = `<div class="stat-card" style="grid-column:1/-1;"><div class="stat-card__value">${filaCache.length}</div><div class="stat-card__label">Aguardando ciência</div></div>`;
+    renderContestacoes();
+    document.getElementById("stats-grid").innerHTML = `
+      <div class="stat-card"><div class="stat-card__value">${filaCache.length}</div><div class="stat-card__label">Aguardando ciência</div></div>
+      <div class="stat-card"><div class="stat-card__value">${contestacoesCache.length}</div><div class="stat-card__label">Em contestação</div></div>`;
   });
 }
 
@@ -49,15 +58,31 @@ function renderFila() {
   const el = document.getElementById("lista-fila");
   if (filaCache.length === 0) { el.innerHTML = `<div class="empty">${icone("checkCirculo", 34)}<div class="empty__title">Nada pendente</div></div>`; return; }
   el.innerHTML = filaCache.map((c) => `
-    <div class="ticket-card">
-      <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>
+    <div class="ticket-card ${classeDestaque(c)}">
+      <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)} ${seloDestaque(c)}</div>${badgeHtml(c.status)}</div>
       <div class="callout">
         <strong>Parecer da Manutenção Magius:</strong> Mau uso confirmado<br/>
         ${escapeHtml(c.parecerMauUso?.justificativa || "")}
       </div>
       <div class="kv-row"><span class="kv-row__k">Valor apresentado pelo fornecedor</span><span>${formatarMoeda(c.financeiro?.valorApresentado)}</span></div>
-      <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver chamado completo</a><button class="btn btn--primary btn--sm" onclick="abrirDecisao('${c.id}')">Dar ciência</button></div>
+      <div class="small-btn-row">
+        <a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver chamado completo</a>
+        <a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}&acao=contestar">Contestar</a>
+        <button class="btn btn--primary btn--sm" onclick="abrirDecisao('${c.id}')">Dar ciência</button>
+      </div>
     </div>`).join("");
+}
+
+function renderContestacoes() {
+  const el = document.getElementById("lista-contestacoes");
+  if (!el) return;
+  if (contestacoesCache.length === 0) { el.innerHTML = `<div class="empty"><div class="empty__text">Nenhuma contestação em andamento.</div></div>`; return; }
+  el.innerHTML = contestacoesCache.map((c) => `
+    <a class="ticket-card ${classeDestaque(c)}" href="chamado.html?id=${c.id}">
+      <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)} ${seloDestaque(c)}</div>${badgeHtml(c.status)}</div>
+      <div style="font-size:13px; color:var(--text-dim);">${c.status === "contestacao_fornecedor" ? "A Gestão de Frota encaminhou sua contestação ao fornecedor." : "Sua contestação está sendo avaliada pela Gestão de Frota."}</div>
+      <div style="margin-top:4px;">${responsavelAtualHtml(c.status)}</div>
+    </a>`).join("");
 }
 
 function abrirDecisao(id) {
@@ -66,9 +91,8 @@ function abrirDecisao(id) {
   abrirFechar("overlay-decisao", true);
 }
 
-// O aprovador só registra ciência do mau uso já confirmado pela
-// Manutenção Magius — não existe opção de recusar aqui (isso já foi
-// decidido na validação técnica).
+// Ciência do mau uso já confirmado pela Manutenção Magius. Para pedir
+// desconto ou contestar, o aprovador usa o botão "Contestar".
 async function salvarDecisao(e) {
   e.preventDefault();
   const id = document.getElementById("dc-id").value;

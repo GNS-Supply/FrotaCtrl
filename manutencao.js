@@ -42,7 +42,7 @@ function escutarChamados() {
     const todos = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     filaCache = todos.filter((c) => c.status === "aguardando_validacao");
     pareceresCache = todos.filter((c) => c.parecerMauUso);
-    filaCache.sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0));
+    filaCache.sort(comDestaque((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0)));
     pareceresCache.sort((a, b) => (a.parecerMauUso?.timestamp || 0) < (b.parecerMauUso?.timestamp || 0) ? 1 : -1);
     renderFila();
     renderPareceres();
@@ -64,10 +64,10 @@ function renderFila() {
   // Nota: nenhum valor financeiro é exibido aqui de propósito — a
   // Manutenção Magius avalia só a evidência técnica, não o custo.
   el.innerHTML = filaCache.map((c) => `
-    <div class="ticket-card">
-      <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)}</div>${badgeHtml(c.status)}</div>
+    <div class="ticket-card ${classeDestaque(c)}">
+      <div class="ticket-card__top"><div class="ticket-card__title">${escapeHtml(c.numero)} — ${escapeHtml(c.numeroFrota)} ${seloDestaque(c)}</div>${badgeHtml(c.status)}</div>
       <div style="font-size:13px; color:var(--text-dim);"><strong>Diagnóstico do fornecedor:</strong> ${escapeHtml(c.diagnostico?.texto || "—")}</div>
-      ${(c.fotosDiagnostico || []).length ? `<div class="photo-grid">${c.fotosDiagnostico.map((u) => `<a href="${u}" target="_blank"><img src="${u}" /></a>`).join("")}</div>` : ""}
+      ${anexosHtml(c.fotosDiagnostico)}
       <div class="small-btn-row"><a class="btn btn--secondary btn--sm" href="chamado.html?id=${c.id}">Ver chamado completo</a><button class="btn btn--primary btn--sm" onclick="abrirParecer('${c.id}')">Emitir parecer</button></div>
     </div>`).join("");
 }

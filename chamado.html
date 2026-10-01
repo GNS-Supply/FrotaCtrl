@@ -96,7 +96,7 @@
     <div class="sheet__header"><h3>Anexar ordem de compra</h3><button class="close-x" data-close="overlay-ordem-compra"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-ordem-compra">
       <div class="field"><label>Número da ordem de compra</label><input type="text" id="oc-numero" placeholder="Ex: OC-2026-0042" /></div>
-      <div class="field"><label>Anexo (opcional)</label><input type="file" id="oc-arquivo" accept=".pdf,image/*" /></div>
+      <div class="field"><label>Anexo (opcional)</label><input type="file" id="oc-arquivo" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" /></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar</button>
     </form>
   </div>
@@ -125,7 +125,7 @@
         <select id="dg-mauuso"><option value="nao">Não — manutenção contratual normal</option><option value="sim">Sim — abrir fluxo de validação de mau uso</option></select>
       </div>
       <div class="field"><label>Valor apresentado / orçamento (R$)</label><input type="text" id="dg-valor" inputmode="numeric" placeholder="R$ 0,00" disabled /></div>
-      <div class="field"><label>Evidências (OS, relatório, fotos, vídeos) — pode anexar vários</label><input type="file" id="dg-anexos" accept="image/*,video/*,.pdf" multiple /></div>
+      <div class="field"><label>Evidências (OS, relatório, fotos, vídeos) — pode anexar vários</label><input type="file" id="dg-anexos" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" multiple /></div>
       <div class="callout" id="dg-aviso-obrigatorio" style="display:none;">Como é um caso de mau uso, o valor apresentado é obrigatório. O anexo de evidências é opcional, mas recomendado.</div>
       <button type="submit" class="btn btn--primary" id="btn-diagnostico" style="margin-top:20px;">Enviar diagnóstico</button>
     </form>
@@ -158,10 +158,76 @@
 <div class="overlay hidden" id="overlay-decisao">
   <div class="sheet"><div class="sheet__handle"></div>
     <div class="sheet__header"><h3>Dar ciência</h3><button class="close-x" data-close="overlay-decisao"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <div class="callout">O aprovador só registra ciência do mau uso já confirmado — não há opção de recusar aqui.</div>
+    <div class="callout">Ao dar ciência, o chamado segue para a autorização de execução. Se preferir pedir desconto ou contestar o mau uso, use o botão "Contestar".</div>
     <form id="form-decisao">
       <div class="field"><label>Comentário (opcional)</label><textarea id="dc-comentario"></textarea></div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar ciência</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: CONTESTAÇÃO DO APROVADOR -->
+<div class="overlay hidden" id="overlay-contestar">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Contestar</h3><button class="close-x" data-close="overlay-contestar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="callout">A contestação vai para a Gestão de Frota, que decide se responde diretamente a você ou se encaminha ao fornecedor.</div>
+    <form id="form-contestar">
+      <div class="field"><label>Motivo</label>
+        <select id="ct-assunto" required><option value="desconto">Solicitar desconto</option><option value="mau_uso">Contestar o mau uso</option><option value="outro">Outro</option></select>
+      </div>
+      <div class="field"><label>Mensagem</label><textarea id="ct-mensagem" required placeholder="Explique o que deseja contestar ou o desconto solicitado"></textarea></div>
+      <div class="field"><label>Anexos (opcional)</label><input type="file" id="ct-anexos" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" multiple /></div>
+      <button type="submit" class="btn btn--primary" id="btn-contestar" style="margin-top:20px;">Enviar contestação</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: GESTÃO AVALIA A CONTESTAÇÃO -->
+<div class="overlay hidden" id="overlay-resp-gestao">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Avaliar contestação</h3><button class="close-x" data-close="overlay-resp-gestao"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div id="rg-ultima" class="callout"></div>
+    <form id="form-resp-gestao">
+      <div class="field"><label>Como deseja seguir?</label>
+        <select id="rg-destino" required>
+          <option value="aprovador">Responder diretamente ao aprovador</option>
+          <option value="fornecedor">Enviar ao fornecedor para resposta</option>
+        </select>
+      </div>
+      <div class="field"><label id="rg-mensagem-label">Mensagem</label><textarea id="rg-mensagem" placeholder="Resposta ao aprovador"></textarea></div>
+      <div class="field"><label>Anexos (opcional)</label><input type="file" id="rg-anexos" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" multiple /></div>
+      <button type="submit" class="btn btn--primary" id="btn-resp-gestao" style="margin-top:20px;">Enviar</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: FORNECEDOR RESPONDE À GESTÃO -->
+<div class="overlay hidden" id="overlay-resp-fornecedor">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Responder à Gestão de Frota</h3><button class="close-x" data-close="overlay-resp-fornecedor"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div id="rf-ultima" class="callout"></div>
+    <form id="form-resp-fornecedor">
+      <div class="field"><label>Comentário (opcional)</label><textarea id="rf-mensagem" placeholder="Sua resposta sobre a contestação"></textarea></div>
+      <div class="field"><label>Anexos (opcional)</label><input type="file" id="rf-anexos" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" multiple /></div>
+      <button type="submit" class="btn btn--primary" id="btn-resp-fornecedor" style="margin-top:20px;">Enviar resposta</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: DESTACAR CHAMADO -->
+<div class="overlay hidden" id="overlay-destaque">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Destacar chamado</h3><button class="close-x" data-close="overlay-destaque"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="callout">Chamados destacados aparecem para todos os usuários com o selo de prioridade e sempre no topo das listas.</div>
+    <form id="form-destaque">
+      <div class="field"><label>Até quando destacar?</label>
+        <select id="ds-escopo" required>
+          <option value="etapa">Somente na etapa atual</option>
+          <option value="final">Até o final do chamado</option>
+        </select>
+      </div>
+      <div class="field"><label>Motivo (opcional)</label><input type="text" id="ds-motivo" placeholder="Ex: máquina crítica parada há muito tempo" /></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:20px;">Destacar</button>
     </form>
   </div>
 </div>
@@ -178,7 +244,7 @@
       <div id="lb-bloco-mauuso" style="display:none;">
         <div class="callout">Mau uso confirmado — anexe o orçamento com o valor final antes de liberar.</div>
         <div class="field"><label>Valor final (R$)</label><input type="text" id="lb-valor-final" inputmode="numeric" placeholder="R$ 0,00" /></div>
-        <div class="field"><label>Orçamento final (anexo)</label><input type="file" id="lb-orcamento" accept="image/*,.pdf" /></div>
+        <div class="field"><label>Orçamento final (anexo)</label><input type="file" id="lb-orcamento" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" /></div>
       </div>
       <button type="submit" class="btn btn--primary" style="margin-top:20px;">Confirmar liberação</button>
     </form>
@@ -190,7 +256,7 @@
   <div class="sheet"><div class="sheet__handle"></div>
     <div class="sheet__header"><h3>Anexar NF de cobrança</h3><button class="close-x" data-close="overlay-nf"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form id="form-nf">
-      <div class="field"><label>Nota fiscal</label><input type="file" id="nf-arquivo" accept=".pdf,image/*" required /></div>
+      <div class="field"><label>Nota fiscal</label><input type="file" id="nf-arquivo" accept="image/*,video/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.xlsm" required /></div>
       <button type="submit" class="btn btn--primary" id="btn-nf" style="margin-top:20px;">Enviar NF e concluir chamado</button>
     </form>
   </div>

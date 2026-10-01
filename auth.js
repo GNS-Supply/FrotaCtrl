@@ -7,12 +7,16 @@ const btnTabCadastro = document.getElementById("btn-tab-cadastro");
 const formLogin = document.getElementById("form-login");
 const formCadastro = document.getElementById("form-cadastro");
 const errorMsg = document.getElementById("error-msg");
+const formRecuperar = document.getElementById("form-recuperar");
+const okMsg = document.getElementById("ok-msg");
+auth.languageCode = "pt-BR"; // e-mail de recuperação em português
 
 btnTabLogin.addEventListener("click", () => {
   btnTabLogin.classList.add("active");
   btnTabCadastro.classList.remove("active");
   formLogin.style.display = "block";
   formCadastro.style.display = "none";
+  formRecuperar.style.display = "none";
   esconderErro();
 });
 btnTabCadastro.addEventListener("click", () => {
@@ -20,11 +24,12 @@ btnTabCadastro.addEventListener("click", () => {
   btnTabLogin.classList.remove("active");
   formCadastro.style.display = "block";
   formLogin.style.display = "none";
+  formRecuperar.style.display = "none";
   esconderErro();
 });
 
 function mostrarErro(msg) { errorMsg.textContent = msg; errorMsg.classList.add("show"); }
-function esconderErro() { errorMsg.classList.remove("show"); }
+function esconderErro() { errorMsg.classList.remove("show"); okMsg.style.display = "none"; }
 
 function traduzErro(err) {
   const map = {
@@ -37,6 +42,43 @@ function traduzErro(err) {
   };
   return map[err.code] || "Não foi possível concluir. Tente novamente.";
 }
+
+// ---------- Recuperação de conta ----------
+// O Firebase envia ao e-mail do usuário um link seguro para ele definir
+// uma nova senha (a senha em si nunca trafega por e-mail).
+document.getElementById("btn-esqueci").addEventListener("click", () => {
+  formLogin.style.display = "none";
+  formRecuperar.style.display = "block";
+  document.getElementById("rec-email").value = document.getElementById("login-email").value.trim();
+  document.querySelector(".auth-toggle").style.display = "none";
+  esconderErro();
+});
+document.getElementById("btn-voltar-login").addEventListener("click", () => {
+  formRecuperar.style.display = "none";
+  formLogin.style.display = "block";
+  document.querySelector(".auth-toggle").style.display = "flex";
+  esconderErro();
+});
+formRecuperar.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  esconderErro();
+  const email = document.getElementById("rec-email").value.trim();
+  const btn = formRecuperar.querySelector("button[type=submit]");
+  btn.disabled = true;
+  try {
+    await auth.sendPasswordResetEmail(email);
+    okMsg.textContent = `Se existir uma conta para ${email}, enviamos um e-mail com o link para definir uma nova senha. Verifique também a caixa de spam.`;
+    okMsg.style.display = "block";
+  } catch (err) {
+    const map = {
+      "auth/invalid-email": "E-mail inválido.",
+      "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente de novo."
+    };
+    mostrarErro(map[err.code] || "Não foi possível enviar o e-mail agora. Tente novamente.");
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 async function redirecionarPorPerfil(uid) {
   const snap = await db.collection("usuarios").doc(uid).get();
