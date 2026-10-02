@@ -592,35 +592,65 @@ function escutarEquipamentos() {
   });
 }
 
+// Situação operacional exibida no cartão: segue as mesmas regras dos
+// indicadores (parada = P1 confirmado ou avaliação técnica iniciada, até
+// o fornecedor liberar).
+function statusExibicaoEquip(eq, doEquip) {
+  if (doEquip.some(chamadoParandoMaquina)) return { label: "PARADA", icone: "parada", classe: "fr-status--parada" };
+  const chave = eq.statusOperacional;
+  if (chave === "operacional_restricao" || doEquip.some(chamadoComRestricao)) return { label: "operando com restrição", icone: "alerta", classe: "fr-status--restricao" };
+  const cor = STATUS_OPERACIONAL_COLORS[chave];
+  const label = STATUS_OPERACIONAL_LABELS[chave] || "operacional";
+  if (cor === "green" || !cor) return { label, icone: "checkQuadro", classe: "fr-status--ok" };
+  if (cor === "amber" || cor === "blue") return { label, icone: "alerta", classe: "fr-status--restricao" };
+  if (cor === "muted") return { label, icone: "parada", classe: "fr-status--inativo" };
+  return { label, icone: "parada", classe: "fr-status--parada" };
+}
+
 function renderEquipamentos() {
   const el = document.getElementById("lista-equipamentos");
   if (equipamentosCache.length === 0) {
-    el.innerHTML = `<div class="empty">${icone("caminhao", 34)}<div class="empty__title">Nenhum equipamento cadastrado</div></div>`;
+    el.innerHTML = `<div class="empty">${icone("empilhadeira", 34)}<div class="empty__title">Nenhum equipamento cadastrado</div></div>`;
     return;
   }
+  const iconeRecorrencia = { alta: "sirene", atencao: "alerta", normal: "checkCirculo" };
   el.innerHTML = equipamentosCache.map((eq) => {
     const doEquip = chamadosCache.filter((c) => c.equipamentoId === eq.id);
     const nivel = classificarRecorrencia(doEquip, parametrosRecorrencia);
+    const st = statusExibicaoEquip(eq, doEquip);
+    const aberto = doEquip
+      .filter((c) => !["concluido", "cancelado"].includes(c.status))
+      .sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0))[0];
+    const pendente = aberto ? PERFIL_LABELS[PROXIMO_RESPONSAVEL[aberto.status]] : null;
+    const spec = [eq.capacidade, eq.energia, eq.ano].filter(Boolean).map(escapeHtml).join(" – ");
+    const total = doEquip.length;
     return `
-    <div class="equip-row-wrap">
-      <div class="equip-row">
-        <div class="equip-row__clique" onclick="alternarHistoricoEquip('${eq.id}')">
-          <span class="equip-row__chevron" id="chevron-${eq.id}">${icone("seta", 14)}</span>
-          <div class="equip-row__id">
-            <span class="equip-row__numero">${escapeHtml(eq.numeroFrota)}</span>
-            <span class="equip-row__modelo">${escapeHtml(eq.tipoModelo || "")}</span>
-          </div>
-          <span class="equip-row__local">${escapeHtml(eq.plantaNome || "—")} / ${escapeHtml(eq.setorNome || "—")}</span>
-          <div class="equip-row__badges">
-            <span class="badge badge--${STATUS_OPERACIONAL_COLORS[eq.statusOperacional]}">${STATUS_OPERACIONAL_LABELS[eq.statusOperacional]}</span>
-            ${eq.numeroSerie ? `<span class="badge badge--muted" title="Número de série">S/N ${escapeHtml(eq.numeroSerie)}</span>` : ""}
-            <span class="badge badge--${RECORRENCIA_COLORS[nivel]}">${RECORRENCIA_LABELS[nivel]}</span>
-          </div>
-          <div class="hourmeter equip-row__horimetro"><div class="hourmeter__value">${(eq.horimetroAtual ?? 0).toLocaleString("pt-BR")}h</div><div class="hourmeter__label">Horímetro</div></div>
-          <span class="equip-row__chamados">${doEquip.length} chamado(s)</span>
+    <div class="fr-card" id="card-equip-${eq.id}">
+      <div class="fr-card__main" onclick="alternarHistoricoEquip('${eq.id}')">
+        <div class="fr-card__num">${escapeHtml(eq.numeroFrota)}</div>
+        <div class="fr-card__ident">
+          <div class="fr-card__modelo">${escapeHtml(eq.tipoModelo || "—")}</div>
+          <div class="fr-card__local">${escapeHtml(eq.plantaNome || "—")} / ${escapeHtml(eq.setorNome || "—")}</div>
+          <div class="fr-card__spec">${spec || "&nbsp;"}${eq.numeroSerie ? `${spec ? " · " : ""}S/N ${escapeHtml(eq.numeroSerie)}` : ""}</div>
         </div>
-        <button class="btn btn--secondary btn--sm" onclick="abrirFormEquip('${eq.id}')">Editar</button>
+        <div class="fr-card__col">
+          <div class="fr-card__rotulo">Horímetro</div>
+          <div class="fr-card__horimetro">${(eq.horimetroAtual ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="fr-card__col fr-rec fr-rec--${nivel}">
+          ${icone(iconeRecorrencia[nivel] || "checkCirculo", 30)}
+          <div class="fr-card__texto">${RECORRENCIA_LABELS[nivel]}</div>
+        </div>
+        <div class="fr-card__col fr-status ${st.classe}">
+          ${icone(st.icone, 30)}
+          <div class="fr-card__texto">${escapeHtml(st.label)}</div>
+        </div>
+        <div class="fr-card__chamado">
+          ${aberto ? `<a class="fr-card__aberto" href="chamado.html?id=${aberto.id}" onclick="event.stopPropagation()">CHAMADO ABERTO!${pendente ? ` Pendente com ${escapeHtml(pendente.toUpperCase())}.` : ""}</a>` : ""}
+          <div class="fr-card__total">${total} chamado${total === 1 ? "" : "s"} no total.</div>
+        </div>
       </div>
+      <button class="fr-card__editar" title="Editar equipamento" aria-label="Editar equipamento" onclick="event.stopPropagation(); abrirFormEquip('${eq.id}')">${icone("lapis", 18)}</button>
       <div class="equip-row__historico" id="historico-equip-${eq.id}" style="display:none;"></div>
     </div>`;
   }).join("");
@@ -630,10 +660,9 @@ function renderEquipamentos() {
 // sem precisar sair da tela de Frota para consultar o histórico.
 function alternarHistoricoEquip(id) {
   const painel = document.getElementById(`historico-equip-${id}`);
-  const chevron = document.getElementById(`chevron-${id}`);
   const abrindo = painel.style.display === "none";
   painel.style.display = abrindo ? "block" : "none";
-  chevron.classList.toggle("equip-row__chevron--aberto", abrindo);
+  document.getElementById(`card-equip-${id}`)?.classList.toggle("fr-card--aberto", abrindo);
   if (!abrindo || painel.dataset.carregado) return;
   painel.dataset.carregado = "1";
 

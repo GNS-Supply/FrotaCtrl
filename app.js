@@ -554,6 +554,11 @@ function aplicarFiltroStatus(lista, chaveFiltro) {
 // Traço fino consistente com os ícones do menu lateral. Uso:
 // icone("calendario", 16) retorna o <svg> pronto pra inserir no HTML.
 const ICONES_SVG = {
+  sirene: '<path d="M7 18v-6a5 5 0 0110 0v6"/><path d="M5 18h14v3H5z"/><path d="M12 2v2M4.2 5.2l1.4 1.4M19.8 5.2l-1.4 1.4M2 12h2M20 12h2"/>',
+  parada: '<path d="M8.2 2.5h7.6l5.7 5.7v7.6l-5.7 5.7H8.2L2.5 15.8V8.2z"/><path d="M6.5 6.5l11 11"/>',
+  checkQuadro: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12.5l3 3 5-6"/>',
+  lapis: '<path d="M4 20l1-4L16.5 4.5a2 2 0 012.8 0l.2.2a2 2 0 010 2.8L8 19z"/><path d="M14.5 6.5l3 3"/>',
+  empilhadeira: '<path d="M12 12H5a2 2 0 0 0-2 2v5"/><circle cx="13" cy="19" r="2"/><circle cx="5" cy="19" r="2"/><path d="M8 19h3m5-17v17h6M6 12V7c0-1.1.9-2 2-2h3l5 5"/>',
   calendario: '<path d="M8 2v4M16 2v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/>',
   check: '<path d="M20 6L9 17l-5-5"/>',
   checkCirculo: '<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.2 2.2L16 9.5"/>',

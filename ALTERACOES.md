@@ -38,3 +38,11 @@
 - **Linha do tempo detalhada**: cada etapa mostra "Aguardando: <tipo de usuário>" (quem devia agir) e há um resumo com o tempo total esperando cada responsável.
 - **Sem informação repetida**: removido o bloco extra de detalhes; clicar numa etapa do resumo rola até a(s) etapa(s) na linha do tempo detalhada e a destaca. O selo "repetiu N×" não aparece mais em "Chamado aberto".
 - **Pop-up de novo chamado** passou a ficar acima do menu lateral/topo (z-index 90).
+
+# Rodada 4 (frota)
+
+- **Lista de frota** (Gestão › Frota) em cartões de linha, como no anexo: faixa amarela + nº da frota grande, modelo, planta/setor,
+  capacidade – combustível – ano (e S/N), horímetro, recorrência (sirene / atenção), situação (PARADA / operacional / com restrição),
+  chamado aberto ("Pendente com …", abre o chamado) e total de chamados, lápis para editar. Clicar no cartão ainda expande o histórico.
+- A situação PARADA / com restrição segue as mesmas regras dos indicadores da frota.
+- **Menu "Frota"** com ícone de empilhadeira.
