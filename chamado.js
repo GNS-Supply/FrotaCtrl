@@ -166,20 +166,25 @@ function linhaDoTempoHtml(c, souManutencao) {
   const parada = paradaInfo(c);
   const encerrado = ["concluido", "cancelado"].includes(c.status);
   const itens = [];
+  const porResponsavel = {}; // tempo acumulado aguardando cada tipo de usuário
   completo.forEach((h, i) => {
-    if (!etapaVisivel(h)) return; // mantém o cálculo de tempo com o histórico completo
     const proximo = completo[i + 1];
+    const resp = encerrado && !proximo ? null : PROXIMO_RESPONSAVEL[h.status];
+    const ms = proximo ? proximo.timestamp - h.timestamp : (encerrado ? 0 : Date.now() - h.timestamp);
+    if (resp) porResponsavel[resp] = (porResponsavel[resp] || 0) + ms;
+    if (!etapaVisivel(h)) return; // mantém o cálculo de tempo com o histórico completo
     const ehUltimo = !proximo;
     let duracao;
-    if (proximo) duracao = `<span class="lt-item__tempo-valor">${msParaHMS(proximo.timestamp - h.timestamp)}</span>`;
+    if (proximo) duracao = `<span class="lt-item__tempo-valor">${msParaHMS(ms)}</span>`;
     else if (encerrado) duracao = `<span class="lt-item__tempo-valor">—</span>`;
     else duracao = `<span class="lt-item__tempo-valor lt-item__tempo-valor--vivo" data-desde="${h.timestamp}">${msParaHMS(Date.now() - h.timestamp)}</span>`;
     const rotuloTempo = ehUltimo && !encerrado ? "nesta etapa até agora" : ehUltimo ? "etapa final" : "tempo nesta etapa";
+    const aguardando = resp ? `<span class="lt-aguardando lt-aguardando--${resp}" title="Quem devia agir enquanto o chamado ficou nesta etapa">Aguardando: ${PERFIL_LABELS[resp] || resp}</span>` : "";
     const marcas = [];
     if (parada.inicio != null && h.timestamp === parada.inicio) marcas.push(`<span class="lt-marca lt-marca--parou">${icone("alerta", 12)} Máquina parou aqui</span>`);
     if (parada.fim != null && h.timestamp === parada.fim && h.dados?.tipo === "liberacao") marcas.push(`<span class="lt-marca lt-marca--liberou">${icone("check", 12)} Máquina liberada · parada por ${msParaHMS(parada.ms)}</span>`);
     itens.push(`
-      <div class="lt-item ${ehUltimo && !encerrado ? "lt-item--atual" : ""} lt-item--${STATUS_COLORS[h.status] || "muted"}">
+      <div class="lt-item ${ehUltimo && !encerrado ? "lt-item--atual" : ""} lt-item--${STATUS_COLORS[h.status] || "muted"}" data-etapa="${STATUS_PARA_ETAPA[h.status] ?? 0}" id="lt-${i}">
         <div class="lt-item__marcador">${itens.length + 1}</div>
         <div class="lt-item__corpo">
           <div class="lt-item__topo">
@@ -187,7 +192,7 @@ function linhaDoTempoHtml(c, souManutencao) {
               <div class="lt-item__titulo">${escapeHtml(h.obs || STATUS_LABELS[h.status] || h.status)}</div>
               <div class="lt-item__sub"><span class="lt-item__etapa">${MACRO_ETAPAS[STATUS_PARA_ETAPA[h.status] ?? 0]}</span> · ${badgeHtml(h.status)}</div>
             </div>
-            <div class="lt-item__tempo">${duracao}<span class="lt-item__tempo-label">${rotuloTempo}</span></div>
+            <div class="lt-item__tempo">${duracao}<span class="lt-item__tempo-label">${rotuloTempo}</span>${aguardando}</div>
           </div>
           <div class="lt-item__quem"><span class="etapa-card__avatar">${iniciais(h.autor)}</span><span><strong>${escapeHtml(h.autor || "—")}</strong>${h.perfil ? ` · ${escapeHtml(h.perfil)}` : ""}</span><span class="lt-item__data">${formatarDataCompleta(h.timestamp)}</span></div>
           ${marcas.length ? `<div class="lt-marcas">${marcas.join("")}</div>` : ""}
@@ -195,7 +200,10 @@ function linhaDoTempoHtml(c, souManutencao) {
         </div>
       </div>`);
   });
-  return `<div class="lt">${itens.join("")}</div>`;
+  // Resumo: quanto tempo o chamado ficou esperando por cada tipo de usuário
+  const totais = Object.entries(porResponsavel).sort((a, b) => b[1] - a[1]);
+  const resumo = totais.length ? `<div class="lt-resumo"><span class="lt-resumo__tit">Tempo do chamado aguardando cada responsável</span>${totais.map(([r, ms]) => `<span class="lt-aguardando lt-aguardando--${r}">${PERFIL_LABELS[r] || r}: <strong>${msParaHMS(ms)}</strong></span>`).join("")}</div>` : "";
+  return `${resumo}<div class="lt">${itens.join("")}</div>`;
 }
 
 // A contestação do aprovador e a resposta da Gestão ao aprovador são
@@ -211,28 +219,6 @@ function etapaVisivel(h) {
   return true;
 }
 const ASSUNTO_CONTESTACAO = { desconto: "Solicitação de desconto", mau_uso: "Contestação do mau uso", outro: "Outro" };
-
-// Cartão completo de uma etapa: quem deu sequência, quando, o que
-// registrou e todos os anexos/observações daquela etapa.
-function etapaCardHtml(h, indice, souManutencao, destacada) {
-  const macro = STATUS_PARA_ETAPA[h.status] ?? 0;
-  return `
-    <div class="etapa-card ${destacada ? "etapa-card--destacada" : ""}" id="etapa-${indice}">
-      <div class="etapa-card__head">
-        <span class="etapa-card__status">
-          <span class="etapa-card__macro">${MACRO_ETAPAS[macro]}</span>
-          ${STATUS_LABELS[h.status] || h.status}
-        </span>
-        <span class="etapa-card__meta">${formatarData(h.timestamp)}</span>
-      </div>
-      <div class="etapa-card__autor">
-        <span class="etapa-card__avatar">${iniciais(h.autor)}</span>
-        <span><strong>${escapeHtml(h.autor || "—")}</strong>${h.perfil ? ` · ${escapeHtml(h.perfil)}` : ""}</span>
-      </div>
-      ${h.obs ? `<div class="etapa-card__obs">${escapeHtml(h.obs)}</div>` : ""}
-      ${renderDadosEtapa(h.dados, souManutencao)}
-    </div>`;
-}
 
 // Linha do tempo vertical com as 9 etapas do processo. Mostra, num só
 // lugar: em qual etapa o chamado está agora, quais já foram concluídas,
@@ -263,12 +249,12 @@ const LABEL_ESTADO_ETAPA = { concluida: "Concluída", atual: "Em andamento", pen
 function timelineItemHtml(e) {
   const clicavel = e.registros.length > 0;
   return `
-    <button type="button" class="timeline-item timeline-item--${e.estado} ${clicavel ? "timeline-item--clicavel" : ""}" ${clicavel ? `onclick="mostrarEtapasMacro(${e.indice})"` : "disabled"} title="${clicavel ? "Ver detalhes desta etapa" : ""}">
+    <button type="button" class="timeline-item timeline-item--${e.estado} ${clicavel ? "timeline-item--clicavel" : ""}" ${clicavel ? `onclick="irParaEtapa(${e.indice})"` : "disabled"} title="${clicavel ? "Ir para esta etapa na linha do tempo detalhada" : ""}">
       <div class="timeline-item__marcador">${e.estado === "concluida" ? icone("check", 13) : e.indice + 1}</div>
       <div class="timeline-item__corpo">
         <div class="timeline-item__topo">
           <span class="timeline-item__titulo">${e.titulo}</span>
-          ${e.repeticoes > 1 ? `<span class="timeline-item__badge-rep">repetiu ${e.repeticoes}×</span>` : ""}
+          ${e.repeticoes > 1 && e.indice > 0 ? `<span class="timeline-item__badge-rep">repetiu ${e.repeticoes}×</span>` : ""}
         </div>
         <span class="timeline-item__responsavel">${PERFIL_LABELS[e.responsavel] || ""}</span>
         ${e.estado === "nao_aplicavel" ? `<span class="timeline-item__nota">Não houve indício de mau uso — etapa pulada</span>` : ""}
@@ -277,23 +263,14 @@ function timelineItemHtml(e) {
     </button>`;
 }
 
-// Mostra, num painel logo abaixo da linha do tempo, todas as etapas
-// registradas dentro daquela macro-etapa.
-function mostrarEtapasMacro(indiceMacro) {
-  const souManutencao = usuarioAtual.tipo === "manutencao";
-  const historico = (chamadoAtual.historico || []).filter(etapaVisivel).sort((a, b) => a.timestamp - b.timestamp);
-  const doGrupo = historico.filter((h) => (STATUS_PARA_ETAPA[h.status] ?? 0) === indiceMacro);
-  const wrap = document.getElementById("detalhe-etapa-selecionada");
-  if (doGrupo.length === 0) { wrap.innerHTML = ""; return; }
-  wrap.innerHTML = `
-    <div class="etapa-foco">
-      <div class="etapa-foco__head">
-        <span class="etapa-foco__titulo">${MACRO_ETAPAS[indiceMacro]} — ${doGrupo.length} registro(s)</span>
-        <button class="close-x" onclick="document.getElementById('detalhe-etapa-selecionada').innerHTML=''">${icone("x", 14)}</button>
-      </div>
-      ${doGrupo.map((h, i) => etapaCardHtml(h, `foco-${i}`, souManutencao, true)).join("")}
-    </div>`;
-  wrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+// Clicar numa etapa do resumo leva direto à(s) etapa(s) correspondente(s) na
+// linha do tempo detalhada, destacando-as — sem abrir bloco extra.
+function irParaEtapa(indiceMacro) {
+  const itens = [...document.querySelectorAll(`.lt-item[data-etapa="${indiceMacro}"]`)];
+  if (!itens.length) return;
+  document.querySelectorAll(".lt-item--selecionado").forEach((el) => el.classList.remove("lt-item--selecionado"));
+  itens.forEach((el) => el.classList.add("lt-item--selecionado"));
+  itens[0].scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // Renderiza os dados específicos de cada tipo de etapa (o que foi

@@ -30,3 +30,11 @@
 - **Fornecedor**: tela Mau uso com 3 kanbans (contestado / aguardando Manutenção / Renegociação). Resposta da renegociação: Aceito/Negado,
   manter ou reclassificar o mau uso, novo valor e novo documento.
 - **PDF com erro 401 (Cloudinary)**: configuração da conta — Settings → Security → "Restricted media types": liberar PDF.
+
+# Rodada 3 (layout)
+
+- **Gestão › Todos os chamados**: lista e contagem do botão usam, por padrão, os últimos 60 dias (data de abertura). O botão de filtro tem "Período" (7/30/60/90/180 dias, 1 ano, todo o período ou datas personalizadas).
+- **Gestão › Notas fiscais**: só 2 kanbans — Aguardando NF e NF recebidas (concluídos ficam em "Todos os chamados").
+- **Linha do tempo detalhada**: cada etapa mostra "Aguardando: <tipo de usuário>" (quem devia agir) e há um resumo com o tempo total esperando cada responsável.
+- **Sem informação repetida**: removido o bloco extra de detalhes; clicar numa etapa do resumo rola até a(s) etapa(s) na linha do tempo detalhada e a destaca. O selo "repetiu N×" não aparece mais em "Chamado aberto".
+- **Pop-up de novo chamado** passou a ficar acima do menu lateral/topo (z-index 90).

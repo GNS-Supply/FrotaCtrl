@@ -574,7 +574,7 @@ a.ticket-card:hover::after { color: var(--accent-dark); }
 .overlay {
   position: fixed; inset: 0;
   background: rgba(16, 25, 34, 0.55);
-  z-index: 30;
+  z-index: 90; /* acima do menu lateral/inferior e da barra do topo */
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1656,18 +1656,6 @@ select {
 .timeline-item--atual .timeline-item__status { color: var(--accent-dark); }
 .timeline-item--cancelada .timeline-item__status { color: var(--red); }
 
-/* ---------- Painel de foco de uma etapa ---------- */
-.etapa-foco {
-  background: var(--surface-2);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius);
-  padding: 14px;
-  margin-top: 14px;
-}
-.etapa-foco__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.etapa-foco__titulo { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
-.etapa-card--destacada { border-left-color: var(--blue); }
-
 /* ---------- Cartão de etapa enriquecido ---------- */
 .etapa-card__macro {
   display: inline-block;
@@ -2098,3 +2086,26 @@ label.req::after, .req-ast { content: " *"; color: var(--red); font-weight: 700;
 .lt-marca { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
 .lt-marca--parou { background: var(--red-tint); color: var(--red); }
 .lt-marca--liberou { background: #e3f4ea; color: #1f6b3f; }
+
+
+/* ---- Linha do tempo: "aguardando quem", seleção ao clicar no resumo ---- */
+.lt-item { scroll-margin-top: 90px; }
+.lt-item--selecionado .lt-item__corpo { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.lt-item--selecionado .lt-item__marcador { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.lt-aguardando {
+  display: inline-block; margin-top: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+}
+.lt-aguardando strong { font-family: var(--font-mono); }
+.lt-aguardando--gestao_frota { background: #e8f0fb; border-color: #b9d0f3; color: #1f4f99; }
+.lt-aguardando--fornecedor { background: #fdf1e3; border-color: #f2cf9f; color: #8a5311; }
+.lt-aguardando--solicitante { background: #eef6ee; border-color: #c5e0c5; color: #2d6a30; }
+.lt-aguardando--aprovador { background: #f3ecfa; border-color: #d9c6ef; color: #5b2f8a; }
+.lt-aguardando--manutencao { background: #e8f6f6; border-color: #b5dede; color: #1b6666; }
+.lt-resumo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.lt-resumo__tit { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); margin-right: 4px; }
+.lt-resumo .lt-aguardando { margin-top: 0; }
+
+.filtro-select, .filtro-datas input { width: 100%; height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font: inherit; font-size: 13px; }
+.filtro-datas { gap: 8px; margin-top: 8px; }
+.filtro-datas label { flex: 1; font-size: 11px; font-weight: 600; color: var(--text-dim); display: flex; flex-direction: column; gap: 3px; }

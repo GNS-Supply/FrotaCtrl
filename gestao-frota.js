@@ -407,9 +407,8 @@ function escutarChamados() {
 // ============================================================
 // Fila de chamados da Gestão de Frota — 6 telas (botões) com kanbans
 // ============================================================
-const recentesPrimeiro = (a, b) => (tsToMs(b.concluidoEm) || tsToMs(b.registradoEm) || 0) - (tsToMs(a.concluidoEm) || tsToMs(a.registradoEm) || 0);
 const TELAS_GESTAO = [
-  { id: "todos", titulo: "Todos os chamados", subtitulo: "Consulta geral e filtros", tipo: "lista" },
+  { id: "todos", titulo: "Todos os chamados", subtitulo: "Últimos 60 dias por padrão — use o filtro para mudar o período", tipo: "lista" },
   { id: "triagem", titulo: "Triagem e acionamento", subtitulo: "Triar e acionar fornecedor", tipo: "kanban", colunas: [
     { id: "triar", titulo: "Realizar triagem", sub: "Confirmar criticidade", cor: "amber", status: ["registrado"] },
     { id: "acionar", titulo: "Acionar fornecedor", sub: "Triagem concluída", cor: "blue", status: ["em_triagem"] }
@@ -429,10 +428,9 @@ const TELAS_GESTAO = [
     { id: "ex_execucao", titulo: "Em execução", sub: "Fornecedor executando o serviço", cor: "blue", status: ["em_teste"] },
     { id: "ex_oc", titulo: "Máquinas liberadas", sub: "Anexar ordem de compra (PDF)", cor: "amber", status: ["aguardando_ordem_compra", "liberado"] }
   ]},
-  { id: "encerramento", titulo: "Notas fiscais e concluídos", subtitulo: "NF do fornecedor e conclusão", tipo: "kanban", colunas: [
+  { id: "encerramento", titulo: "Notas fiscais", subtitulo: "Aguardando NF e NF recebidas", tipo: "kanban", colunas: [
     { id: "en_nf", titulo: "Aguardando NF", sub: "Ordem de compra enviada ao fornecedor", cor: "muted", status: ["aguardando_nf"] },
-    { id: "en_concluir", titulo: "NF recebida", sub: "Conferir e concluir o chamado", cor: "amber", status: ["aguardando_conclusao"] },
-    { id: "en_concluidos", titulo: "Concluídos", sub: "Com ordem de compra e nota fiscal", cor: "green", status: ["concluido"], ordenar: recentesPrimeiro, limite: 40 }
+    { id: "en_concluir", titulo: "NF recebidas", sub: "Conferir e concluir o chamado", cor: "amber", status: ["aguardando_conclusao"] }
   ]}
 ];
 
@@ -463,7 +461,8 @@ const painelGestao = TelasKanban.criar({
   telas: TELAS_GESTAO,
   obter: () => chamadosCache,
   acoes: acoesGestao,
-  extra: extraGestao
+  extra: extraGestao,
+  periodoPadraoDias: 60 // "Todos os chamados" mostra os últimos 60 dias até o filtro mudar
 });
 function renderFila() { painelGestao.render(); }
 

@@ -25,10 +25,12 @@ const TelasKanban = (() => {
   const ICONE_FILTRO = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="16" cy="6" r="2.6" fill="currentColor"/><circle cx="8" cy="12" r="2.6" fill="currentColor"/><circle cx="13" cy="18" r="2.6" fill="currentColor"/></svg>`;
 
   function criar(cfg) {
+    // Período padrão da lista geral (dias); sem cfg.periodoPadraoDias mostra todo o período
+    const PERIODO_PADRAO = cfg.periodoPadraoDias ? String(cfg.periodoPadraoDias) : "todos";
     const st = {
       telaId: cfg.telas[0].id,
       busca: "",
-      lista: { busca: "", status: new Set(), criticidade: new Set(), fluxo: new Set() },
+      lista: { busca: "", status: new Set(), criticidade: new Set(), fluxo: new Set(), periodo: PERIODO_PADRAO, de: "", ate: "" },
       painelAberto: false
     };
     const self = { cfg, st };
@@ -42,8 +44,32 @@ const TelasKanban = (() => {
       const base = todos().filter((c) => (col.filtro ? col.filtro(c) : (col.status || []).includes(c.status)));
       return base;
     }
+    // ---------- Período (lista geral) ----------
+    function dataDoChamado(c) {
+      return tsToMs(c.registradoEm) || (c.historico || []).reduce((m, h) => Math.min(m, h.timestamp || Infinity), Infinity) || 0;
+    }
+    function dentroPeriodo(c) {
+      const f = st.lista;
+      if (f.periodo === "todos") return true;
+      const ms = dataDoChamado(c);
+      if (f.periodo === "custom") {
+        if (f.de && ms < new Date(f.de + "T00:00:00").getTime()) return false;
+        if (f.ate && ms > new Date(f.ate + "T23:59:59.999").getTime()) return false;
+        return true;
+      }
+      return ms >= Date.now() - Number(f.periodo) * 86400000;
+    }
+    function rotuloPeriodo() {
+      const f = st.lista;
+      if (f.periodo === "todos") return "todo o período";
+      if (f.periodo === "custom") {
+        const fmt = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : "…";
+        return `${fmt(f.de)} a ${fmt(f.ate)}`;
+      }
+      return `últimos ${f.periodo} dias`;
+    }
     function contagemTela(t) {
-      if (t.tipo === "lista") return todos().length;
+      if (t.tipo === "lista") return todos().filter(dentroPeriodo).length;
       return t.colunas.reduce((soma, col) => soma + itensDaColuna(col).length, 0);
     }
 
@@ -99,6 +125,7 @@ const TelasKanban = (() => {
     // ---------- Lista geral + filtro ----------
     function passaLista(c) {
       const f = st.lista;
+      if (!dentroPeriodo(c)) return false;
       if (f.busca && !`${c.numeroFrota || ""} ${c.numero || ""} ${c.descricao || ""} ${c.plantaNome || ""} ${c.setorNome || ""} ${c.fornecedorNome || ""}`.toLowerCase().includes(f.busca)) return false;
       if (f.status.size && !f.status.has(c.status)) return false;
       if (f.criticidade.size && !f.criticidade.has(c.criticidade)) return false;
@@ -112,11 +139,11 @@ const TelasKanban = (() => {
       if (!aEnc) return porRegistroPadrao(a, b);
       return (tsToMs(b.concluidoEm) || tsToMs(b.registradoEm) || 0) - (tsToMs(a.concluidoEm) || tsToMs(a.registradoEm) || 0);
     }
-    function totalFiltros() { return st.lista.status.size + st.lista.criticidade.size + st.lista.fluxo.size; }
+    function totalFiltros() { return st.lista.status.size + st.lista.criticidade.size + st.lista.fluxo.size + (st.lista.periodo !== PERIODO_PADRAO ? 1 : 0); }
     function htmlResultado() {
       const lista = todos().filter(passaLista).sort(comDestaque(ordenarLista));
       const abertos = lista.filter((c) => !ENCERRADOS.includes(c.status)).length;
-      return `<div class="lista-total"><strong>${lista.length}</strong> chamados · <strong>${abertos}</strong> abertos · <strong>${lista.length - abertos}</strong> encerrados</div>
+      return `<div class="lista-total"><strong>${lista.length}</strong> chamados (${rotuloPeriodo()}) · <strong>${abertos}</strong> abertos · <strong>${lista.length - abertos}</strong> encerrados</div>
       <div class="chamados-lista">${lista.length ? lista.map((c) => {
         const enc = ENCERRADOS.includes(c.status);
         return `<a class="chamado-lista-row ${enc ? "chamado-lista-row--encerrado" : ""} ${classeDestaque(c)}" href="chamado.html?id=${c.id}">
@@ -145,6 +172,15 @@ const TelasKanban = (() => {
       </div>
       <div id="${cfg.id}-painel-filtro" class="painel-filtro ${st.painelAberto ? "" : "hidden"}">
         <div class="painel-filtro__grid">
+          <div class="filtro-grupo"><div class="filtro-grupo__tit">Período (data de abertura)</div>
+            <select class="filtro-select" onchange="${q("setPeriodo(this.value)")}">
+              ${[["7", "Últimos 7 dias"], ["30", "Últimos 30 dias"], ["60", "Últimos 60 dias"], ["90", "Últimos 90 dias"], ["180", "Últimos 180 dias"], ["365", "Último ano"], ["todos", "Todo o período"], ["custom", "Personalizado…"]].map(([v, n]) => `<option value="${v}" ${st.lista.periodo === v ? "selected" : ""}>${n}</option>`).join("")}
+            </select>
+            <div class="filtro-datas" style="display:${st.lista.periodo === "custom" ? "flex" : "none"};">
+              <label>De<input type="date" value="${st.lista.de}" onchange="${q("setData('de', this.value)")}"></label>
+              <label>Até<input type="date" value="${st.lista.ate}" onchange="${q("setData('ate', this.value)")}"></label>
+            </div>
+          </div>
           ${grupo("Status", "status", statusOpcoes)}
           ${grupo("Prioridade", "criticidade", [["P1", "P1"], ["P2", "P2"], ["P3", "P3"]])}
           ${grupo("Fluxo", "fluxo", [["contratual", "Contratual"], ["mau_uso", "Mau uso"]])}
@@ -176,9 +212,11 @@ const TelasKanban = (() => {
       toggleFiltro(campo, valor, marcado) { if (marcado) st.lista[campo].add(valor); else st.lista[campo].delete(valor); atualizarResultado(); },
       limparFiltros() {
         st.lista.status.clear(); st.lista.criticidade.clear(); st.lista.fluxo.clear();
-        document.querySelectorAll(`#${cfg.id}-painel-filtro input[type=checkbox]`).forEach((i) => { i.checked = false; });
-        atualizarResultado();
+        st.lista.periodo = PERIODO_PADRAO; st.lista.de = ""; st.lista.ate = "";
+        render();
       },
+      setPeriodo(v) { st.lista.periodo = v; render(); },
+      setData(campo, v) { st.lista[campo] = v; render(); },
       togglePainel() {
         st.painelAberto = !st.painelAberto;
         document.getElementById(`${cfg.id}-painel-filtro`)?.classList.toggle("hidden", !st.painelAberto);
