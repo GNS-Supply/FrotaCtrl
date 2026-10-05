@@ -596,9 +596,9 @@ function escutarEquipamentos() {
 // indicadores (parada = P1 confirmado ou avaliação técnica iniciada, até
 // o fornecedor liberar).
 function statusExibicaoEquip(eq, doEquip) {
-  if (doEquip.some(chamadoParandoMaquina)) return { label: "PARADA", icone: "parada", classe: "fr-status--parada" };
+  if (doEquip.some(chamadoParandoMaquina)) return { label: "Parada", icone: "parada", classe: "fr-status--parada" };
   const chave = eq.statusOperacional;
-  if (chave === "operacional_restricao" || doEquip.some(chamadoComRestricao)) return { label: "operando com restrição", icone: "alerta", classe: "fr-status--restricao" };
+  if (chave === "operacional_restricao" || doEquip.some(chamadoComRestricao)) return { label: "Com restrição", icone: "alerta", classe: "fr-status--restricao" };
   const cor = STATUS_OPERACIONAL_COLORS[chave];
   const label = STATUS_OPERACIONAL_LABELS[chave] || "operacional";
   if (cor === "green" || !cor) return { label, icone: "checkQuadro", classe: "fr-status--ok" };
@@ -622,35 +622,42 @@ function renderEquipamentos() {
       .filter((c) => !["concluido", "cancelado"].includes(c.status))
       .sort((a, b) => (tsToMs(a.registradoEm) || 0) - (tsToMs(b.registradoEm) || 0))[0];
     const pendente = aberto ? PERFIL_LABELS[PROXIMO_RESPONSAVEL[aberto.status]] : null;
-    const spec = [eq.capacidade, eq.energia, eq.ano].filter(Boolean).map(escapeHtml).join(" – ");
+    const pills = [eq.capacidade, eq.energia, eq.ano].filter(Boolean).map((t) => `<span class="fr-pill">${escapeHtml(t)}</span>`).join("")
+      + (eq.numeroSerie ? `<span class="fr-pill fr-pill--serie" title="Número de série">S/N ${escapeHtml(eq.numeroSerie)}</span>` : "");
     const total = doEquip.length;
+    const numero = String(eq.numeroFrota || "");
+    const tamNum = numero.length >= 9 ? "fr-card__num--p" : numero.length >= 6 ? "fr-card__num--m" : "";
     return `
     <div class="fr-card" id="card-equip-${eq.id}">
-      <div class="fr-card__main" onclick="alternarHistoricoEquip('${eq.id}')">
-        <div class="fr-card__num">${escapeHtml(eq.numeroFrota)}</div>
-        <div class="fr-card__ident">
-          <div class="fr-card__modelo">${escapeHtml(eq.tipoModelo || "—")}</div>
-          <div class="fr-card__local">${escapeHtml(eq.plantaNome || "—")} / ${escapeHtml(eq.setorNome || "—")}</div>
-          <div class="fr-card__spec">${spec || "&nbsp;"}${eq.numeroSerie ? `${spec ? " · " : ""}S/N ${escapeHtml(eq.numeroSerie)}` : ""}</div>
+      <div class="fr-card__main" role="button" tabindex="0" aria-label="Ver últimos chamados de ${escapeHtml(numero)}" onclick="alternarHistoricoEquip('${eq.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();alternarHistoricoEquip('${eq.id}')}">
+        <div class="fr-card__topo">
+          <div class="fr-card__num ${tamNum}" title="${escapeHtml(numero)}">${escapeHtml(numero)}</div>
+          <div class="fr-card__ident">
+            <div class="fr-card__modelo" title="${escapeHtml(eq.tipoModelo || "")}">${escapeHtml(eq.tipoModelo || "—")}</div>
+            <div class="fr-card__local">${icone("pin", 13)}<span>${escapeHtml(eq.plantaNome || "—")} / ${escapeHtml(eq.setorNome || "—")}</span></div>
+            ${pills ? `<div class="fr-card__pills">${pills}</div>` : ""}
+          </div>
         </div>
-        <div class="fr-card__col">
-          <div class="fr-card__rotulo">Horímetro</div>
-          <div class="fr-card__horimetro">${(eq.horimetroAtual ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-        </div>
-        <div class="fr-card__col fr-rec fr-rec--${nivel}">
-          ${icone(iconeRecorrencia[nivel] || "checkCirculo", 30)}
-          <div class="fr-card__texto">${RECORRENCIA_LABELS[nivel]}</div>
-        </div>
-        <div class="fr-card__col fr-status ${st.classe}">
-          ${icone(st.icone, 30)}
-          <div class="fr-card__texto">${escapeHtml(st.label)}</div>
+        <div class="fr-card__metricas">
+          <div class="fr-card__col">
+            <div class="fr-card__rotulo">Horímetro</div>
+            <div class="fr-card__horimetro">${(eq.horimetroAtual ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<small>h</small></div>
+          </div>
+          <div class="fr-card__col fr-rec fr-rec--${nivel}">
+            ${icone(iconeRecorrencia[nivel] || "checkCirculo", 26)}
+            <div class="fr-card__texto">${RECORRENCIA_LABELS[nivel]}</div>
+          </div>
+          <div class="fr-card__col fr-status ${st.classe}">
+            ${icone(st.icone, 26)}
+            <div class="fr-card__texto">${escapeHtml(st.label)}</div>
+          </div>
         </div>
         <div class="fr-card__chamado">
-          ${aberto ? `<a class="fr-card__aberto" href="chamado.html?id=${aberto.id}" onclick="event.stopPropagation()">CHAMADO ABERTO!${pendente ? ` Pendente com ${escapeHtml(pendente.toUpperCase())}.` : ""}</a>` : ""}
-          <div class="fr-card__total">${total} chamado${total === 1 ? "" : "s"} no total.</div>
+          ${aberto ? `<a class="fr-chamado" href="chamado.html?id=${aberto.id}" onclick="event.stopPropagation()"><span class="fr-chamado__titulo"><i class="fr-chamado__ponto"></i>Chamado aberto</span><span class="fr-chamado__sub">${escapeHtml(aberto.numero || "")}${pendente ? ` · pendente com <strong>${escapeHtml(pendente)}</strong>` : ""}</span></a>` : `<span class="fr-chamado fr-chamado--vazio">Sem chamado aberto</span>`}
+          <div class="fr-card__total">${total} chamado${total === 1 ? "" : "s"} no total</div>
         </div>
       </div>
-      <button class="fr-card__editar" title="Editar equipamento" aria-label="Editar equipamento" onclick="event.stopPropagation(); abrirFormEquip('${eq.id}')">${icone("lapis", 18)}</button>
+      <button class="fr-card__editar" title="Editar equipamento" aria-label="Editar equipamento" onclick="event.stopPropagation(); abrirFormEquip('${eq.id}')">${icone("lapis", 17)}</button>
       <div class="equip-row__historico" id="historico-equip-${eq.id}" style="display:none;"></div>
     </div>`;
   }).join("");

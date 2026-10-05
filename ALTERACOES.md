@@ -46,3 +46,15 @@
   chamado aberto ("Pendente com …", abre o chamado) e total de chamados, lápis para editar. Clicar no cartão ainda expande o histórico.
 - A situação PARADA / com restrição segue as mesmas regras dos indicadores da frota.
 - **Menu "Frota"** com ícone de empilhadeira.
+
+# Rodada 5 (acabamento, PWA e mobile)
+
+- **Lista de frota** refeita com colunas de largura fixa (tudo alinhado), cartão branco com sombra suave, tipografia do sistema
+  (Oswald no número, Inter no resto), cápsulas para capacidade/combustível/ano/S-N, ícones de traço único e cores do design
+  (vermelho = parada/alta recorrência, âmbar = atenção/restrição, verde = operacional), chamado aberto em destaque clicável.
+- **PWA instalável**: `manifest.webmanifest`, `sw.js` (cache + offline), `offline.html`, ícones do "F" (192/512/maskable/apple-touch),
+  `pwa.js` (convite de instalação no Android, instruções no iPhone, botão "Instalar aplicativo" no perfil, aviso de nova versão e de falta de conexão).
+  Guia em `INSTALAR-APP.md`.
+- **Mobile com cara de app**: menu inferior estilo tab bar com safe-area, abas e kanbans deslizantes (swipe), pop-ups como bottom sheets
+  (arrastar para baixo fecha; botão Voltar do Android fecha a tela aberta), campos de 16px/48px (sem zoom no iPhone), alvos de toque
+  grandes, feedback ao toque, transição entre abas, status bar e notch tratados.

@@ -276,6 +276,7 @@ function renderFila() {
   const wrap = document.getElementById("paineis-fornecedor");
   const tela = telaAtual();
   wrap.innerHTML = `<div class="fornecedor-telas">${TELAS_FORNECEDOR.map((t) => `<button class="fornecedor-tela-btn ${t.id === telaFornecedor ? "active" : ""}" data-tela="${t.id}" onclick="setTelaFornecedor('${t.id}')"><span class="fornecedor-tela-btn__txt"><strong>${t.titulo}</strong><small>${t.subtitulo}</small></span><b class="fornecedor-tela-btn__qtd">${contagemTela(t)}</b></button>`).join("")}</div><div class="tela-header"><div><h2>${tela.titulo}</h2><p>${tela.subtitulo}</p></div></div>${tela.tipo === "lista" ? renderListaTodos() : renderKanbanTela(tela)}`;
+  wrap.querySelector(".fornecedor-tela-btn.active")?.scrollIntoView({ inline: "center", block: "nearest" });
 }
 
 // ---------- Programar atendimento ----------

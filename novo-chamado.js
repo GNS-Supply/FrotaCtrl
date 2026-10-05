@@ -201,7 +201,6 @@ const NovoChamado = (() => {
       }
 
       e.target.reset();
-      fechar();
       sessionStorage.setItem("toastPendente", `Chamado ${numero} criado com sucesso!`);
       window.location.href = `chamado.html?id=${docRef.id}`;
     } catch (err) {

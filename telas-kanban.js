@@ -202,6 +202,7 @@ const TelasKanban = (() => {
         </button>`).join("")}</div>
         <div class="tela-header"><div><h2>${tela.titulo}</h2><p>${tela.subtitulo}</p></div></div>
         ${tela.tipo === "lista" ? renderLista() : renderKanban(tela)}`;
+      wrap.querySelector(".fornecedor-tela-btn.active")?.scrollIntoView({ inline: "center", block: "nearest" });
     }
 
     Object.assign(self, {

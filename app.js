@@ -554,6 +554,7 @@ function aplicarFiltroStatus(lista, chaveFiltro) {
 // Traço fino consistente com os ícones do menu lateral. Uso:
 // icone("calendario", 16) retorna o <svg> pronto pra inserir no HTML.
 const ICONES_SVG = {
+  pin: '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0112 2.5a7 7 0 017 7C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
   sirene: '<path d="M7 18v-6a5 5 0 0110 0v6"/><path d="M5 18h14v3H5z"/><path d="M12 2v2M4.2 5.2l1.4 1.4M19.8 5.2l-1.4 1.4M2 12h2M20 12h2"/>',
   parada: '<path d="M8.2 2.5h7.6l5.7 5.7v7.6l-5.7 5.7H8.2L2.5 15.8V8.2z"/><path d="M6.5 6.5l11 11"/>',
   checkQuadro: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12.5l3 3 5-6"/>',
