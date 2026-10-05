@@ -79,12 +79,67 @@
       </a>
     </div>
 
+    <div class="section-title"><span>Dados do sistema</span></div>
+    <div class="card-list">
+      <button type="button" class="ticket-card launcher-card launcher-card--perigo" id="btn-abrir-limpeza">
+        <div class="icon-tile icon-tile--red"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14M10 11v6M14 11v6"/></svg></div>
+        <div class="ticket-card__title">Apagar dados do banco</div>
+        <div class="launcher-card__desc">Apague dados específicos ou reinicie o aplicativo por completo (100%). Ação irreversível.</div>
+      </button>
+    </div>
+
     <div class="section-title"><span>Minha conta</span></div>
     <div class="stat-card" style="margin-bottom:16px;">
       <div class="kv-row"><span class="kv-row__k">Nome</span><span id="perfil-nome"></span></div>
       <div class="kv-row"><span class="kv-row__k">E-mail</span><span id="perfil-email"></span></div>
     </div>
     <button class="btn btn--danger" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<!-- SHEET: APAGAR DADOS — 1) escolher o que apagar -->
+<div class="overlay hidden" id="overlay-limpar">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Apagar dados do banco</h3><button type="button" class="close-x" data-close="overlay-limpar" aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="callout callout--perigo"><strong>Atenção:</strong> os dados apagados <strong>não podem ser recuperados</strong>. Escolha apenas o que realmente quer remover.</div>
+    <div id="limpar-carregando" class="callout">Contando registros…</div>
+    <div id="limpar-opcoes" style="display:none;">
+      <label class="limpar-tudo"><input type="checkbox" id="limpar-tudo" /><span><strong>Apagar TUDO (100%)</strong><small>Reinicia o aplicativo do zero: apaga todos os itens abaixo. Só a sua conta Master é mantida.</small></span></label>
+      <div class="limpar-lista" id="limpar-lista"></div>
+      <p class="limpar-aviso">Os arquivos anexados (fotos, PDFs) ficam guardados no Cloudinary e as contas de acesso (login) ficam no Firebase Authentication — o sistema não apaga esses dois. Se quiser, remova-os nos respectivos painéis.</p>
+      <button type="button" class="btn btn--danger" id="btn-limpar-continuar" disabled>Continuar…</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: APAGAR DADOS — 2) "tem certeza?" -->
+<div class="overlay hidden" id="overlay-limpar-1">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Tem certeza?</h3><button type="button" class="close-x" data-close="overlay-limpar-1" aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="callout callout--perigo">Você está prestes a <strong>apagar definitivamente</strong> os dados abaixo. Esta ação não pode ser desfeita.</div>
+    <ul class="limpar-resumo" id="limpar-resumo"></ul>
+    <div class="small-btn-row" style="margin-top:20px;">
+      <button type="button" class="btn btn--secondary" id="btn-limpar-cancelar-1">Não, cancelar</button>
+      <button type="button" class="btn btn--danger" id="btn-limpar-sim">Sim, tenho certeza</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: APAGAR DADOS — 3) digitar o e-mail para concluir -->
+<div class="overlay hidden" id="overlay-limpar-2">
+  <div class="sheet"><div class="sheet__handle"></div>
+    <div class="sheet__header"><h3>Confirmar com seu e-mail</h3><button type="button" class="close-x" data-close="overlay-limpar-2" aria-label="Fechar" id="limpar-fechar-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="callout callout--perigo">Para concluir, digite o seu <strong>e-mail completo</strong> (<span id="limpar-email-dica"></span>).</div>
+    <form id="form-limpar" autocomplete="off">
+      <div class="field"><label>Seu e-mail</label><input type="email" id="limpar-email" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite seu e-mail completo" /></div>
+      <div class="error-msg" id="limpar-erro"></div>
+      <div id="limpar-progresso" class="limpar-progresso" style="display:none;"></div>
+      <div class="small-btn-row" style="margin-top:20px;" id="limpar-botoes">
+        <button type="button" class="btn btn--secondary" id="btn-limpar-cancelar-2">Cancelar</button>
+        <button type="submit" class="btn btn--danger-solid" id="btn-limpar-apagar" disabled>Apagar definitivamente</button>
+      </div>
+      <button type="button" class="btn btn--primary" id="btn-limpar-fim" style="display:none; margin-top:20px;">Concluir</button>
+    </form>
   </div>
 </div>
 

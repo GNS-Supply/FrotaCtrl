@@ -58,3 +58,15 @@
 - **Mobile com cara de app**: menu inferior estilo tab bar com safe-area, abas e kanbans deslizantes (swipe), pop-ups como bottom sheets
   (arrastar para baixo fecha; botão Voltar do Android fecha a tela aberta), campos de 16px/48px (sem zoom no iPhone), alvos de toque
   grandes, feedback ao toque, transição entre abas, status bar e notch tratados.
+
+# Rodada 6 (Painel Master › Apagar dados)
+
+- Novo card **"Apagar dados do banco"** no Painel Master: escolha dados específicos (chamados, numeração dos chamados, equipamentos,
+  plantas e setores, parâmetros, usuários) ou **"Apagar TUDO (100%)"** para reiniciar o aplicativo.
+- Cada opção mostra quantos registros existem. Usuários: a conta Master e o registro de bootstrap nunca são apagados.
+- Confirmação em duas etapas: **"Tem certeza?"** (com o resumo do que será apagado) → **digitar o e-mail completo** da conta Master.
+  O botão final só habilita quando o e-mail confere; durante a exclusão não dá para fechar a tela.
+- Exclusão em lotes de 400 com progresso por item e relatório final.
+- `firestore.rules`: apenas o administrador pode apagar chamados — **publique as regras novamente no Firebase**.
+- Login: quem teve o cadastro apagado vê mensagem clara em vez de erro genérico.
+- Não são apagados: anexos no Cloudinary e contas de login no Firebase Authentication.

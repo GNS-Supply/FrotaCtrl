@@ -38,7 +38,8 @@ function traduzErro(err) {
     "auth/wrong-password": "Senha incorreta.",
     "auth/invalid-credential": "E-mail ou senha incorretos.",
     "auth/email-already-in-use": "Este e-mail já está cadastrado.",
-    "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres."
+    "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
+    "perfil/inexistente": "Seu cadastro não existe mais neste sistema. Peça à Gestão de Frota para cadastrá-lo novamente."
   };
   return map[err.code] || "Não foi possível concluir. Tente novamente.";
 }
@@ -82,6 +83,12 @@ formRecuperar.addEventListener("submit", async (e) => {
 
 async function redirecionarPorPerfil(uid) {
   const snap = await db.collection("usuarios").doc(uid).get();
+  if (!snap.exists) {
+    await auth.signOut();
+    const e = new Error("perfil inexistente");
+    e.code = "perfil/inexistente";
+    throw e;
+  }
   const dados = snap.data();
   window.location.href = PERFIL_HOME[dados.tipo] || "index.html";
 }

@@ -77,7 +77,8 @@ service cloud.firestore {
         resource.data.solicitanteId == request.auth.uid &&
         resource.data.status == 'registrado'
       );
-      allow delete: if false;
+      // Só a conta master apaga chamados (Painel Master › Apagar dados)
+      allow delete: if souAdmin();
     }
   }
 }
