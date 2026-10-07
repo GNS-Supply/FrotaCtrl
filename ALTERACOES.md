@@ -70,3 +70,17 @@
 - `firestore.rules`: apenas o administrador pode apagar chamados — **publique as regras novamente no Firebase**.
 - Login: quem teve o cadastro apagado vê mensagem clara em vez de erro genérico.
 - Não são apagados: anexos no Cloudinary e contas de login no Firebase Authentication.
+
+# Rodada 7 (mobile autoral + PWA completo)
+
+- **Visual mobile novo** (`mobile.css`, só abaixo de 900px): cabeçalho escuro em camadas com anel e faixa de alerta que se movem ao rolar,
+  indicadores em "tijolos" escalonados com números grandes (o primeiro de grupos ímpares ocupa a largura toda), cartões com cantos assimétricos
+  e sombras profundas, botões e ações com sombra "carimbo" que afunda ao toque, folhas (pop-ups) com faixa de alerta, login com hero e cartão sobreposto.
+- **Menu flutuante** (dock): ícones; a aba ativa vira uma pílula âmbar com o nome; some ao rolar para baixo e volta ao subir; some com o teclado aberto.
+- **Sem rolagem lateral**: kanbans viram **abas com indicador deslizante** (uma coluna por vez, contagem em cada aba e alerta quando há ação sua);
+  botões de tela viram **ladrilhos** (grade 2 colunas); abas de página em grade; gráficos com rótulos abreviados e fontes menores no celular.
+- **Microinterações** (`mobile-ui.js`): cartões aparecem em cascata ao rolar, números contam de 0 ao valor na primeira exibição,
+  ondas ao toque nos botões, vibração leve, quique no ícone ativo, anel pulsante no botão flutuante.
+- **PWA**: barra de status translúcida (conteúdo vai até o topo), imagens de abertura para 11 modelos de iPhone, `prefer_related_applications=false`,
+  cache do Chart.js e service worker `v2` (aumente a versão em `sw.js` para forçar atualização).
+- `Respeita "reduzir movimento"` do aparelho: animações desligadas.

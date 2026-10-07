@@ -6,13 +6,13 @@
 //  - Firestore, Auth e Cloudinary NÃO passam pelo cache.
 // Para forçar todo mundo a atualizar, aumente VERSAO.
 // ============================================================
-const VERSAO = "frotactrl-v1";
+const VERSAO = "frotactrl-v2";
 const CACHE_APP = `${VERSAO}-app`;
 const CACHE_EXTRA = `${VERSAO}-extra`;
 
 const NUCLEO = [
   "./", "index.html", "offline.html", "manifest.webmanifest", "style.css",
-  "firebase-config.js", "app.js", "auth.js", "novo-chamado.js", "telas-kanban.js", "pwa.js",
+  "mobile.css", "mobile-ui.js", "firebase-config.js", "app.js", "auth.js", "novo-chamado.js", "telas-kanban.js", "pwa.js",
   "solicitante.html", "solicitante.js", "gestao-frota.html", "gestao-frota.js",
   "fornecedor.html", "fornecedor.js", "aprovador.html", "aprovador.js",
   "manutencao.html", "manutencao.js", "chamado.html", "chamado.js",
@@ -42,7 +42,7 @@ self.addEventListener("message", (event) => {
   if (event.data === "PULAR_ESPERA") self.skipWaiting();
 });
 
-const HOSTS_EXTRA = ["fonts.googleapis.com", "fonts.gstatic.com"];
+const HOSTS_EXTRA = ["fonts.googleapis.com", "fonts.gstatic.com", "cdn.jsdelivr.net"]; // jsdelivr = Chart.js (versionado)
 const ehSdkFirebase = (u) => u.hostname === "www.gstatic.com" && u.pathname.startsWith("/firebasejs/");
 
 self.addEventListener("fetch", (event) => {

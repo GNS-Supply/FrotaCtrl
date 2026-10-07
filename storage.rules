@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /chamados/{chamadoId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      // Só exige autenticação e limite de tamanho — a checagem estrita de
+      // contentType foi removida porque câmeras/scanners de celular nem
+      // sempre reportam o MIME type exatamente como "image/*" ou
+      // "application/pdf", e isso rejeitava anexos válidos silenciosamente.
+      allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024;
+    }
+  }
+}

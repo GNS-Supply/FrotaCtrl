@@ -81,6 +81,20 @@ function criarGrafico(canvasEl, config, opcoes = {}) {
       return moeda ? formatarMoeda(valor) : valor;
     }
   };
+  // Telas estreitas (celular): rótulos menores/abreviados, nada vaza para os lados
+  if (window.innerWidth < 640) {
+    config.options.layout = Object.assign({ padding: { top: 16, right: 10 } }, config.options.layout || {});
+    config.options.plugins.datalabels.font = { size: 9.5, weight: "600" };
+    Object.values(config.options.scales || {}).forEach((eixo) => {
+      eixo.ticks = Object.assign({ font: { size: 10 }, maxRotation: 40, autoSkip: true, maxTicksLimit: 8 }, eixo.ticks || {});
+      if (!eixo.ticks.callback) {
+        eixo.ticks.callback = function (valor) {
+          const rotulo = this.getLabelForValue ? this.getLabelForValue(valor) : valor;
+          return this.type === "category" && String(rotulo).length > 14 ? String(rotulo).slice(0, 13) + "…" : rotulo;
+        };
+      }
+    });
+  }
   const grafico = new Chart(canvasEl, config);
   graficosPorBloco[blocoDoCanvas(canvasEl.id)].push(grafico);
   return grafico;

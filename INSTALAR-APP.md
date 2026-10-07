@@ -17,6 +17,12 @@ O endereço precisa ser **HTTPS** — o GitHub Pages já é. Publique **todos** 
 2. Toque em **Compartilhar** (quadrado com seta ↑).
 3. **Adicionar à Tela de Início → Adicionar.**
 
+## Como o app se comporta depois de instalado
+- Abre em **tela cheia**, sem barra de endereço, com tela de abertura escura com o **F** (no iPhone há uma imagem de abertura para cada modelo).
+- Barra de status do celular integrada ao topo escuro do app; menu flutuante embaixo que some ao rolar para baixo.
+- Botão **Voltar** do Android fecha a tela aberta (formulários, filtros) em vez de sair do app; arrastar uma folha para baixo também fecha.
+- Nenhuma tela rola para o lado: kanbans viram **abas**, os botões de tela viram **ladrilhos** e os gráficos se ajustam à largura.
+
 ## Atualizações
 - Com internet, o app sempre busca a versão mais nova dos arquivos.
 - Quando você publicar uma versão nova, o app mostra a faixa **"Nova versão disponível — Atualizar"**.
@@ -31,4 +37,4 @@ O app abre (tela "Sem conexão" ou a última tela visitada), mas **os dados vêm
 - Teste de qualidade: Chrome → Lighthouse → categoria "Progressive Web App".
 
 ## Arquivos do PWA
-`manifest.webmanifest` · `sw.js` · `pwa.js` · `offline.html` · `icons/` (192, 512, maskable, apple-touch-icon, favicons)
+`manifest.webmanifest` · `sw.js` · `pwa.js` · `offline.html` · `mobile.css` · `mobile-ui.js` · `icons/` (192, 512, maskable, apple-touch-icon, favicons) · `icons/splash/` (aberturas do iPhone)
