@@ -2310,3 +2310,5 @@ body.has-nav .pwa-aviso { bottom: calc(86px + env(safe-area-inset-bottom)); }
 .limpar-progresso__linha { display: flex; gap: 10px; padding: 4px 0; }
 .limpar-progresso__linha.ok { color: var(--green); }
 .limpar-progresso__linha.erro { color: var(--red); }
+
+.pwa-instrucoes__diag { display: block; text-align: center; margin-top: 14px; font-size: 13px; color: var(--accent-dark); text-decoration: underline; }

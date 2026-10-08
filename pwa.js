@@ -146,6 +146,7 @@
         <h3>Instalar o FrotaCTRL</h3>
         <ol>${passos.map((p) => `<li>${p}</li>`).join("")}</ol>
         <button type="button" class="pwa-instrucoes__ok">Entendi</button>
+        <a class="pwa-instrucoes__diag" href="instalar.html">Não consegue instalar? Fazer diagnóstico</a>
       </div>`;
     document.body.appendChild(el);
     const fechar = () => el.remove();

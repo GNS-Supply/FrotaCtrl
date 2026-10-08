@@ -84,3 +84,11 @@
 - **PWA**: barra de status translúcida (conteúdo vai até o topo), imagens de abertura para 11 modelos de iPhone, `prefer_related_applications=false`,
   cache do Chart.js e service worker `v2` (aumente a versão em `sw.js` para forçar atualização).
 - `Respeita "reduzir movimento"` do aparelho: animações desligadas.
+
+# Rodada 8 (instalação + alinhamento)
+
+- **Instalação**: manifesto simplificado e com identidade própria (`id: frotactrl-app`, `start_url: ./index.html`), service worker `v3`,
+  nova página **`instalar.html`** de diagnóstico no próprio celular (HTTPS, navegador/webview, modo computador, manifesto, ícones, service worker,
+  convite do navegador, relatório copiável) e links para ela na tela de login e no aviso de instalação.
+- **Indicadores da Gestão** alinhados: cartões da mesma linha com a mesma altura, número no topo e rótulo na base. Removido o escalonamento
+  e também o recuo alternado de cartões em listas e na frota, para tudo ficar na mesma linha.

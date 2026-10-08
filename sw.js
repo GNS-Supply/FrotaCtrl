@@ -6,12 +6,12 @@
 //  - Firestore, Auth e Cloudinary NÃO passam pelo cache.
 // Para forçar todo mundo a atualizar, aumente VERSAO.
 // ============================================================
-const VERSAO = "frotactrl-v2";
+const VERSAO = "frotactrl-v3";
 const CACHE_APP = `${VERSAO}-app`;
 const CACHE_EXTRA = `${VERSAO}-extra`;
 
 const NUCLEO = [
-  "./", "index.html", "offline.html", "manifest.webmanifest", "style.css",
+  "./", "index.html", "offline.html", "instalar.html", "instalar.js", "manifest.webmanifest", "style.css",
   "mobile.css", "mobile-ui.js", "firebase-config.js", "app.js", "auth.js", "novo-chamado.js", "telas-kanban.js", "pwa.js",
   "solicitante.html", "solicitante.js", "gestao-frota.html", "gestao-frota.js",
   "fornecedor.html", "fornecedor.js", "aprovador.html", "aprovador.js",

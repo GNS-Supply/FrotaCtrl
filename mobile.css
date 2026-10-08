@@ -88,22 +88,21 @@ body.has-nav { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
 .section-title span:first-child::before { width: 24px; height: 10px; border-radius: 2px; background: var(--faixa); transform: skewX(-18deg); }
 .section-title .btn { text-transform: none; letter-spacing: 0; font-family: var(--font-body); }
 
-/* ---------- Indicadores: "tijolos" escalonados ---------- */
-.stats-grid { gap: 12px; align-items: start; padding-bottom: 14px; }
+/* ---------- Indicadores: alinhados em grade ---------- */
+.stats-grid { gap: 12px; align-items: stretch; padding-bottom: 14px; }
 .stat-card {
+  display: flex; flex-direction: column; justify-content: space-between; min-height: 112px;
   position: relative; overflow: hidden; border: 0; border-radius: var(--raio-a); padding: 16px 16px 14px;
   background: var(--surface); box-shadow: 0 18px 30px -18px rgba(16,25,34,.5), 0 1px 0 rgba(16,25,34,.05);
 }
 .stat-card::before { content: ""; position: absolute; right: -22px; top: -22px; width: 78px; height: 78px; border-radius: 50%; background: var(--accent-tint); }
 .stat-card::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 4px; background: var(--accent); transform-origin: left; transform: scaleX(.34); transition: transform .6s cubic-bezier(.2,.8,.2,1); }
 .stat-card:hover::after { transform: scaleX(1); }
-.stat-card:nth-child(even) { margin-top: 18px; }
 .stat-card > * { position: relative; }
 .stat-card__value { font-family: var(--font-display); font-weight: 600; font-size: 42px; line-height: 1; color: var(--text); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .stat-card__label { margin-top: 10px; font-size: 10px; letter-spacing: .12em; color: var(--text-dim); line-height: 1.35; }
 .stats-grid > .stat-card:first-child:nth-last-child(odd) { grid-column: 1 / -1; }
 .stats-grid > .stat-card:first-child:nth-last-child(odd) .stat-card__value { font-size: 58px; }
-.stats-grid > .stat-card:first-child:nth-last-child(odd) ~ .stat-card:nth-child(even) { margin-top: 0; }
 .stat-card--alerta { background: var(--dark); }
 .stat-card--alerta::before { background: rgba(214,69,69,.32); }
 .stat-card--alerta .stat-card__value { color: #ff7b7b; }
@@ -115,7 +114,6 @@ body.has-nav { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
 
 /* ---------- Cartões de chamado / listas ---------- */
 .card-list { display: flex; flex-direction: column; gap: 14px; }
-.card-list > :nth-child(even) { margin-left: 10px; }
 .ticket-card, .chamado-row, .chamado-lista-row, .equip-historico-item {
   position: relative; overflow: hidden; border: 0; border-radius: var(--raio-a); margin-bottom: 0;
   background: var(--surface); box-shadow: 0 18px 30px -20px rgba(16,25,34,.55), 0 1px 0 rgba(16,25,34,.04);
@@ -256,7 +254,6 @@ input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; accent-
 
 /* ---------- Lista de frota ---------- */
 .fr-card { border: 0; border-radius: var(--raio-a); box-shadow: 0 18px 30px -20px rgba(16,25,34,.55); margin-bottom: 14px; }
-.fr-card:nth-child(even) { margin-left: 10px; }
 .fr-card::before { width: 6px; }
 .fr-card--aberto { box-shadow: 0 0 0 2px var(--accent), 0 18px 30px -18px rgba(232,163,61,.55); }
 .fr-card__num { font-size: 26px; }
@@ -377,7 +374,6 @@ body:has(.auth-shell) { background: var(--dark); }
   .grid-2 { grid-template-columns: 1fr; }
   .stat-card__value { font-size: 36px; }
   .fornecedor-tela-btn__qtd { font-size: 38px; }
-  .card-list > :nth-child(even), .fr-card:nth-child(even) { margin-left: 6px; }
 }
 
 /* ---------- Movimento reduzido ---------- */

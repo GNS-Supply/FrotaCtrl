@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#101922" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<title>FrotaCTRL — Instalar o aplicativo</title>
+<style>
+  :root{--dark:#101922;--accent:#E8A33D;--ink:#2B1C04;--bg:#F4F5F6;--ok:#1f8a4c;--erro:#c62828;--aviso:#b7791f;--borda:#dfe3e6;--txt:#17212b;--dim:#5b6770}
+  *{box-sizing:border-box}
+  html,body{margin:0;max-width:100%;overflow-x:clip;background:var(--bg);color:var(--txt);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+  body{padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+  p,li,span,strong,code,summary,h1,h2,h3{overflow-wrap:anywhere}
+  .hero{background:radial-gradient(90% 120% at 100% 0%,rgba(232,163,61,.34),transparent 58%),linear-gradient(180deg,#101922,#172530);color:#fff;padding:calc(26px + env(safe-area-inset-top)) 20px 54px;border-radius:0 0 40px 10px}
+  .logo{width:56px;height:56px;border-radius:16px 16px 16px 5px;background:var(--accent);color:var(--ink);display:grid;place-items:center;font:700 32px Oswald,"Arial Narrow",sans-serif;box-shadow:4px 4px 0 rgba(232,163,61,.3);margin-bottom:18px}
+  h1{font:600 30px/1.05 Oswald,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.02em;margin:0 0 8px}
+  .hero p{margin:0;color:rgba(255,255,255,.7);font-size:14px;line-height:1.5;max-width:34em}
+  main{padding:0 16px;max-width:720px;margin:-30px auto 0;position:relative}
+  .card{background:#fff;border-radius:6px 22px 6px 22px;box-shadow:0 18px 30px -20px rgba(16,25,34,.55);padding:16px;margin-bottom:14px}
+  .card h2{font:500 15px Oswald,"Arial Narrow",sans-serif;letter-spacing:.1em;text-transform:uppercase;margin:0 0 10px}
+  .resumo{display:flex;gap:12px;align-items:center}
+  .resumo__icone{flex:none;width:44px;height:44px;border-radius:14px 14px 14px 4px;display:grid;place-items:center;font-size:22px;font-weight:800;color:#fff;background:var(--dim)}
+  .resumo--ok .resumo__icone{background:var(--ok)} .resumo--erro .resumo__icone{background:var(--erro)} .resumo--aviso .resumo__icone{background:var(--aviso)}
+  .resumo strong{display:block;font-size:16px} .resumo span{font-size:13px;color:var(--dim);line-height:1.4}
+  button.btn{width:100%;min-height:52px;border:1.5px solid var(--dark);border-radius:20px 20px 20px 6px;background:var(--accent);color:var(--ink);font:700 15px Inter,system-ui,sans-serif;box-shadow:4px 4px 0 var(--dark);margin-top:14px}
+  button.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--dark)}
+  button.btn[disabled]{opacity:.45;box-shadow:none}
+  button.btn--sec{background:#fff}
+  ul.checks{list-style:none;margin:0;padding:0}
+  .check{display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--borda)}
+  .check:first-child{border-top:0}
+  .check__ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:14px;font-weight:800;background:var(--dim)}
+  .check--ok .check__ic{background:var(--ok)} .check--erro .check__ic{background:var(--erro)} .check--aviso .check__ic{background:var(--aviso)}
+  .check strong{display:block;font-size:14px} .check span{display:block;font-size:12.5px;color:var(--dim);line-height:1.45;margin-top:2px}
+  details{border-top:1px solid var(--borda);padding:10px 0} details:first-of-type{border-top:0}
+  summary{font-weight:700;font-size:14px;cursor:pointer;min-height:32px;display:flex;align-items:center}
+  ol{margin:8px 0 2px;padding-left:20px;display:grid;gap:7px;font-size:13.5px;line-height:1.5}
+  .nota{font-size:12.5px;color:var(--dim);line-height:1.5;margin:8px 0 0}
+  a.voltar{display:block;text-align:center;margin:18px 0 0;color:var(--dim);font-size:13px}
+  code{background:#eef0f2;border-radius:6px;padding:1px 6px;font-size:12px}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="logo">F</div>
+  <h1>Instalar o aplicativo</h1>
+  <p>Esta página testa seu aparelho e mostra exatamente o que falta para instalar o FrotaCTRL na tela inicial.</p>
+</header>
+<main>
+  <section class="card" id="resumo"><div class="resumo"><div class="resumo__icone">…</div><div><strong>Verificando…</strong><span>Aguarde alguns segundos.</span></div></div>
+    <button class="btn" id="btn-instalar" disabled>Instalar agora</button>
+  </section>
+
+  <section class="card"><h2>Verificações</h2><ul class="checks" id="lista"></ul></section>
+
+  <section class="card"><h2>Instalar manualmente</h2>
+    <details id="det-android"><summary>Android (Chrome)</summary>
+      <ol>
+        <li>Abra o endereço do sistema no <strong>Chrome</strong> (não dentro do WhatsApp, Instagram ou e-mail).</li>
+        <li>Use uma aba <strong>normal</strong> (não anônima) e deixe o "Site para computador" <strong>desligado</strong>.</li>
+        <li>Toque no menu <strong>⋮</strong> (três pontos).</li>
+        <li>Escolha <strong>Instalar app</strong>. Se só aparecer "Adicionar à tela inicial", volte aqui e veja qual verificação acima está em vermelho.</li>
+        <li>Confirme em <strong>Instalar</strong>. O ícone <strong>F</strong> aparece na tela inicial.</li>
+      </ol>
+    </details>
+    <details id="det-ios"><summary>iPhone / iPad (Safari)</summary>
+      <ol>
+        <li>Abra o endereço no <strong>Safari</strong>.</li>
+        <li>Toque em <strong>Compartilhar</strong> (quadrado com seta para cima).</li>
+        <li>Role e toque em <strong>Adicionar à Tela de Início</strong>.</li>
+        <li>Toque em <strong>Adicionar</strong>.</li>
+      </ol>
+    </details>
+    <p class="nota">Se acabou de publicar uma versão nova, espere 1–2 minutos (o GitHub Pages demora para atualizar) e recarregue esta página.</p>
+  </section>
+
+  <section class="card"><h2>Relatório</h2>
+    <p class="nota" style="margin-top:0">Se ainda não funcionar, copie o relatório e envie para quem está dando suporte.</p>
+    <button class="btn btn--sec" id="btn-copiar">Copiar relatório</button>
+  </section>
+  <a class="voltar" href="index.html">← Voltar ao FrotaCTRL</a>
+</main>
+<script src="instalar.js"></script>
+</body>
+</html>

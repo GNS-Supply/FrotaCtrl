@@ -5,6 +5,16 @@ O sistema já está configurado como PWA: pode ser instalado no celular (Android
 ## Requisito
 O endereço precisa ser **HTTPS** — o GitHub Pages já é. Publique **todos** os arquivos desta pasta (inclusive `icons/`, `manifest.webmanifest`, `sw.js`, `offline.html` e `pwa.js`).
 
+## Não consegue instalar? Faça o diagnóstico
+Abra **`instalar.html`** no celular (há um link na tela de login e em "Instalar aplicativo" no Perfil). A página testa o endereço (HTTPS), o navegador, o manifesto,
+os ícones, o service worker e o convite do navegador, e mostra em vermelho o que impede a instalação. Há também o botão **Copiar relatório**.
+
+Causas mais comuns:
+- Abrir o link **dentro do WhatsApp, Instagram ou e-mail** (navegador embutido) → abra no **Chrome**.
+- Aba **anônima** ou **"Site para computador"** ligado no Chrome.
+- Arquivos novos **não enviados ao GitHub** (`manifest.webmanifest`, `sw.js`, `pwa.js`, `instalar.html`, `instalar.js`, pasta `icons/`) ou Pages ainda atualizando (aguarde 1–2 min).
+- O app já instalado antes: remova o ícone antigo e instale de novo.
+
 ## Como instalar
 **Android (Chrome)**
 1. Abra o endereço do sistema no Chrome.
