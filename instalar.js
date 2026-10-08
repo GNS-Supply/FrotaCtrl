@@ -160,7 +160,7 @@
       }));
       const lista = await Promise.all(testes);
       const falhas = lista.filter((i) => !i.ok);
-      if (falhas.length) add("erro", "Ícones não carregam", falhas.map((f) => f.src).join(", ") + " — envie a pasta icons/ ao GitHub.");
+      if (falhas.length) add("erro", "Ícones não carregam", falhas.map((f) => f.src).join(", ") + " — envie esses arquivos .png para o GitHub, na mesma pasta dos arquivos .html.");
       else add("ok", "Ícones do aplicativo", lista.map((i) => `${i.w}×${i.h}`).join(" · "));
     }
 

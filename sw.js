@@ -6,18 +6,18 @@
 //  - Firestore, Auth e Cloudinary NÃO passam pelo cache.
 // Para forçar todo mundo a atualizar, aumente VERSAO.
 // ============================================================
-const VERSAO = "frotactrl-v3";
+const VERSAO = "frotactrl-v4";
 const CACHE_APP = `${VERSAO}-app`;
 const CACHE_EXTRA = `${VERSAO}-extra`;
 
 const NUCLEO = [
   "./", "index.html", "offline.html", "instalar.html", "instalar.js", "manifest.webmanifest", "style.css",
-  "mobile.css", "mobile-ui.js", "firebase-config.js", "app.js", "auth.js", "novo-chamado.js", "telas-kanban.js", "pwa.js",
+  "mobile.css", "mobile-ui.js", "firebase-config.js", "app.js", "auth.js", "novo-chamado.js", "telas-kanban.js", "pwa.js", "intro.js",
   "solicitante.html", "solicitante.js", "gestao-frota.html", "gestao-frota.js",
   "fornecedor.html", "fornecedor.js", "aprovador.html", "aprovador.js",
   "manutencao.html", "manutencao.js", "chamado.html", "chamado.js",
   "dashboard.html", "dashboard.js", "administrador.html", "administrador.js",
-  "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "icons/apple-touch-icon.png"
+  "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"
 ];
 
 self.addEventListener("install", (event) => {

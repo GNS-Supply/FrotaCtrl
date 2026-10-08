@@ -92,3 +92,12 @@
   convite do navegador, relatório copiável) e links para ela na tela de login e no aviso de instalação.
 - **Indicadores da Gestão** alinhados: cartões da mesma linha com a mesma altura, número no topo e rótulo na base. Removido o escalonamento
   e também o recuo alternado de cartões em listas e na frota, para tudo ficar na mesma linha.
+
+# Rodada 9 (instalação sem pastas + abertura animada)
+
+- **Causa do erro de instalação**: o diagnóstico mostrou que só os ícones não carregavam (a pasta `icons/` não existe no repositório). Agora
+  **todos os arquivos ficam na raiz**: `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `favicon-*.png`, `splash-*.png`.
+  Manifesto, páginas, service worker (`v4`) e diagnóstico foram atualizados para os novos caminhos.
+- **Abertura animada** (`intro.js`): fundo escuro, "F" sem quadrado que se desenha e acende, faixa de sinalização, nome e o texto
+  "Desenvolvido por Genesis A. Goncalves" na base. Só no app instalado, uma vez por abertura; toque pula; `?intro` para testar no navegador.
+- **Abertura do iPhone** (`splash-*.png`) refeita no mesmo estilo (F sem fundo, tudo escuro, texto na base).
